@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { useTheme } from "@/components/theme-provider"
 import { Moon, Sun, Waves, Droplets, Fish, Settings, BarChart3, Menu } from "lucide-react"
+import koiSensaiLogo from "@/assets/koi-sensai-logo.png"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useState } from "react"
 
@@ -23,10 +24,14 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
 
   const NavContent = () => (
     <nav className="flex flex-col space-y-2 p-4">
-      <div className="flex items-center space-x-2 mb-6">
-        <Waves className="h-8 w-8 text-primary" />
+      <div className="flex items-center space-x-3 mb-6">
+        <img 
+          src={koiSensaiLogo} 
+          alt="Koi Sensai Logo" 
+          className="h-10 w-10 object-contain"
+        />
         <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          Koi Pond Manager
+          Koi Sensai
         </h1>
       </div>
 
@@ -72,8 +77,12 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center space-x-2">
-            <Waves className="h-6 w-6 text-primary" />
-            <span className="font-semibold">Koi Pond</span>
+            <img 
+              src={koiSensaiLogo} 
+              alt="Koi Sensai Logo" 
+              className="h-7 w-7 object-contain"
+            />
+            <span className="font-semibold">Koi Sensai</span>
           </div>
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
