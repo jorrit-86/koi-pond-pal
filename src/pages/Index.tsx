@@ -1,14 +1,53 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react"
+import { Navigation } from "@/components/layout/navigation"
+import { Dashboard } from "@/components/dashboard/dashboard"
+import { ParameterForm } from "@/components/water-parameters/parameter-form"
+import { KoiManagement } from "@/components/koi/koi-management"
+import { SettingsPage } from "@/components/settings/settings-page"
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState("dashboard")
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "dashboard":
+        return <Dashboard onNavigate={setActiveTab} />
+      case "parameters":
+        return <ParameterForm onNavigate={setActiveTab} />
+      case "koi":
+        return <KoiManagement onNavigate={setActiveTab} />
+      case "analytics":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Analytics</h1>
+              <p className="text-muted-foreground">Historical data and trends coming soon with Supabase integration</p>
+            </div>
+            <div className="p-8 text-center bg-gradient-water rounded-lg border border-border">
+              <h3 className="text-lg font-semibold mb-2">Charts & Historical Data</h3>
+              <p className="text-muted-foreground">This section will show water parameter trends over time once you connect Supabase for data storage.</p>
+            </div>
+          </div>
+        )
+      case "settings":
+        return <SettingsPage />
+      default:
+        return <Dashboard onNavigate={setActiveTab} />
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-background">
+      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+      
+      {/* Main Content */}
+      <div className="lg:pl-72 pt-16 lg:pt-0">
+        <main className="p-4 lg:p-8">
+          {renderContent()}
+        </main>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Index;
+export default Index
