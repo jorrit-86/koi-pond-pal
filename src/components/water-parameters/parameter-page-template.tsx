@@ -2,13 +2,15 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Info } from "lucide-react"
+import { ArrowLeft, Info, Timer, Play, Pause, RotateCcw } from "lucide-react"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { useParameterTimers } from "@/hooks/use-parameter-timers"
 
 interface ParameterPageProps {
   onNavigate: (tab: string) => void
   parameterName: string
+  parameterKey: string
   currentValue: number | string
   unit: string
   idealRange: string
@@ -32,6 +34,7 @@ const chartConfig = {
 export const ParameterPageTemplate = ({
   onNavigate,
   parameterName,
+  parameterKey,
   currentValue,
   unit,
   idealRange,
@@ -40,6 +43,21 @@ export const ParameterPageTemplate = ({
   infoContent
 }: ParameterPageProps) => {
   const [showInfo, setShowInfo] = useState(false)
+  const { timerConfigs, timerStates, startTimer, stopTimer, resetTimer } = useParameterTimers()
+  
+  const timerConfig = timerConfigs[parameterKey]
+  const timerState = timerStates[parameterKey]
+  
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -100,6 +118,70 @@ export const ParameterPageTemplate = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Timer Card */}
+      {timerConfig?.enabled && (
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Timer className="h-5 w-5 text-primary" />
+              Testing Timer
+            </CardTitle>
+            <CardDescription>
+              {timerState?.isRunning 
+                ? `Time remaining until next ${parameterName.toLowerCase()} test`
+                : `Start countdown for ${parameterName.toLowerCase()} testing reminder`
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="text-3xl font-bold text-primary">
+                  {timerState ? formatTime(timerState.timeLeft) : formatTime(timerConfig.duration * 60)}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <div>Duration: {timerConfig.duration} minutes</div>
+                  {timerState?.startTime && (
+                    <div className="text-xs">Started: {timerState.startTime.toLocaleTimeString()}</div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                {!timerState?.isRunning ? (
+                  <Button 
+                    onClick={() => startTimer(parameterKey)}
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Play className="h-4 w-4" />
+                    Start
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => stopTimer(parameterKey)}
+                    variant="secondary"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Pause className="h-4 w-4" />
+                    Pause
+                  </Button>
+                )}
+                <Button
+                  onClick={() => resetTimer(parameterKey)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reset
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Historic Chart */}
       <Card>

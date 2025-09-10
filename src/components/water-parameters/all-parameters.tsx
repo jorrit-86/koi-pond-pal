@@ -59,6 +59,7 @@ export const KhPage = ({ onNavigate }: ParameterPageProps) => (
   <ParameterPageTemplate
     onNavigate={onNavigate}
     parameterName="KH (Carbonate Hardness)"
+    parameterKey="kh"
     currentValue={7}
     unit="°dKH"
     idealRange="6 - 10°dKH"
@@ -87,6 +88,7 @@ export const GhPage = ({ onNavigate }: ParameterPageProps) => (
   <ParameterPageTemplate
     onNavigate={onNavigate}
     parameterName="GH (General Hardness)"
+    parameterKey="gh"
     currentValue={10}
     unit="°dGH"
     idealRange="6 - 12°dGH"
@@ -115,6 +117,7 @@ export const NitritePage = ({ onNavigate }: ParameterPageProps) => (
   <ParameterPageTemplate
     onNavigate={onNavigate}
     parameterName="Nitrite (NO₂)"
+    parameterKey="nitrite"
     currentValue={0.05}
     unit=" mg/L"
     idealRange="0 - 0.1 mg/L"
@@ -143,6 +146,7 @@ export const NitratePage = ({ onNavigate }: ParameterPageProps) => (
   <ParameterPageTemplate
     onNavigate={onNavigate}
     parameterName="Nitrate (NO₃)"
+    parameterKey="nitrate"
     currentValue={18}
     unit=" mg/L"
     idealRange="< 25 mg/L"
@@ -171,6 +175,7 @@ export const PhosphatePage = ({ onNavigate }: ParameterPageProps) => (
   <ParameterPageTemplate
     onNavigate={onNavigate}
     parameterName="Phosphate (PO₄)"
+    parameterKey="phosphate"
     currentValue={0.03}
     unit=" mg/L"
     idealRange="< 0.05 mg/L"

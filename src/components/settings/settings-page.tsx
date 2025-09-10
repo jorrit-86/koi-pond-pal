@@ -5,15 +5,27 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { useTheme } from "@/components/theme-provider"
-import { Settings, Home, Bell, Database, Wifi } from "lucide-react"
+import { useParameterTimers } from "@/hooks/use-parameter-timers"
+import { Settings, Home, Bell, Database, Wifi, Timer } from "lucide-react"
 import { useState } from "react"
 
 export function SettingsPage() {
   const { theme, setTheme } = useTheme()
+  const { timerConfigs, updateTimerConfig } = useParameterTimers()
   const [homeAssistantUrl, setHomeAssistantUrl] = useState("")
   const [homeAssistantToken, setHomeAssistantToken] = useState("")
   const [notifications, setNotifications] = useState(true)
   const [autoLogging, setAutoLogging] = useState(false)
+
+  const parameterNames = {
+    ph: "pH Level",
+    temperature: "Temperature",
+    kh: "KH (Carbonate Hardness)",
+    gh: "GH (General Hardness)",
+    nitrite: "Nitrite",
+    nitrate: "Nitrate",
+    phosphate: "Phosphate"
+  }
 
   return (
     <div className="space-y-6">
@@ -100,6 +112,64 @@ export function SettingsPage() {
               Test Connection
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Parameter Timers */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Timer className="h-5 w-5 text-primary" />
+            Parameter Testing Timers
+          </CardTitle>
+          <CardDescription>Set countdown timers for regular water parameter testing</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {Object.entries(parameterNames).map(([key, name]) => (
+            <div key={key} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>{name} Timer</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Enable timer reminders for {name.toLowerCase()} testing
+                  </p>
+                </div>
+                <Switch
+                  checked={timerConfigs[key]?.enabled || false}
+                  onCheckedChange={(checked) => 
+                    updateTimerConfig(key, { 
+                      ...timerConfigs[key], 
+                      enabled: checked 
+                    })
+                  }
+                />
+              </div>
+              
+              {timerConfigs[key]?.enabled && (
+                <div className="ml-4 space-y-2">
+                  <Label htmlFor={`${key}-duration`} className="text-sm">
+                    Timer Duration (minutes)
+                  </Label>
+                  <Input
+                    id={`${key}-duration`}
+                    type="number"
+                    min={1}
+                    max={1440}
+                    value={timerConfigs[key]?.duration || 30}
+                    onChange={(e) => 
+                      updateTimerConfig(key, {
+                        ...timerConfigs[key],
+                        duration: parseInt(e.target.value) || 30
+                      })
+                    }
+                    className="w-32"
+                  />
+                </div>
+              )}
+              
+              {key !== "phosphate" && <Separator />}
+            </div>
+          ))}
         </CardContent>
       </Card>
 
