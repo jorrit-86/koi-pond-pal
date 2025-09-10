@@ -30,6 +30,22 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const koiCount = 7
   const lastUpdate = "2 hours ago"
 
+  const handleParameterClick = (parameterName: string) => {
+    const parameterRoutes: Record<string, string> = {
+      "pH": "ph",
+      "KH": "kh", 
+      "GH": "gh",
+      "Nitrite": "nitrite",
+      "Nitrate": "nitrate",
+      "Phosphate": "phosphate"
+    }
+    
+    const route = parameterRoutes[parameterName]
+    if (route) {
+      onNavigate(route)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "good": return "bg-success text-success-foreground"
@@ -49,7 +65,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-water">
+        <Card 
+          className="bg-gradient-water cursor-pointer hover:shadow-water transition-shadow"
+          onClick={() => onNavigate("temperature")}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -106,25 +125,28 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {waterParameters.map((param) => (
-              <div
+              <Card 
                 key={param.name}
-                className="p-4 rounded-lg border border-border bg-card hover:shadow-water transition-shadow"
+                className="cursor-pointer hover:shadow-water transition-shadow"
+                onClick={() => handleParameterClick(param.name)}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold">{param.name}</h3>
-                  <Badge className={getStatusColor(param.status)}>
-                    {param.status}
-                  </Badge>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-2xl font-bold">
-                    {param.value}{param.unit}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Ideal: {param.range}
-                  </p>
-                </div>
-              </div>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">{param.name}</h3>
+                    <Badge className={getStatusColor(param.status)}>
+                      {param.status}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-2xl font-bold">
+                      {param.value}{param.unit}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Ideal: {param.range}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </CardContent>

@@ -4,6 +4,9 @@ import { Dashboard } from "@/components/dashboard/dashboard"
 import { ParameterForm } from "@/components/water-parameters/parameter-form"
 import { KoiManagement } from "@/components/koi/koi-management"
 import { SettingsPage } from "@/components/settings/settings-page"
+import { PhPage } from "@/components/water-parameters/ph-page"
+import { TemperaturePage } from "@/components/water-parameters/temperature-page"
+import { KhPage, GhPage, NitritePage, NitratePage, PhosphatePage } from "@/components/water-parameters/all-parameters"
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard")
@@ -31,6 +34,20 @@ const Index = () => {
         )
       case "settings":
         return <SettingsPage />
+      case "ph":
+        return <PhPage onNavigate={setActiveTab} />
+      case "temperature":
+        return <TemperaturePage onNavigate={setActiveTab} />
+      case "kh":
+        return <KhPage onNavigate={setActiveTab} />
+      case "gh":
+        return <GhPage onNavigate={setActiveTab} />
+      case "nitrite":
+        return <NitritePage onNavigate={setActiveTab} />
+      case "nitrate":
+        return <NitratePage onNavigate={setActiveTab} />
+      case "phosphate":
+        return <PhosphatePage onNavigate={setActiveTab} />
       default:
         return <Dashboard onNavigate={setActiveTab} />
     }
