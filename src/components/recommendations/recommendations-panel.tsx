@@ -21,6 +21,7 @@ import { Recommendation, RiskAssessment, TrendAnalysis } from '@/lib/recommendat
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
+import { useTranslation } from 'react-i18next'
 
 interface RecommendationsPanelProps {
   recommendations: Recommendation[]
@@ -37,6 +38,7 @@ export function RecommendationsPanel({
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const { user } = useAuth()
   const { toast } = useToast()
+  const { t } = useTranslation()
 
   const toggleExpanded = (recommendationId: string) => {
     const newExpanded = new Set(expandedRecommendations)
@@ -108,14 +110,7 @@ export function RecommendationsPanel({
   }
 
   const getPriorityText = (priority: number) => {
-    switch (priority) {
-      case 1: return "Kritiek"
-      case 2: return "Hoog"
-      case 3: return "Gemiddeld"
-      case 4: return "Laag"
-      case 5: return "Info"
-      default: return "Onbekend"
-    }
+    return t(`recommendations.priorities.${priority}`)
   }
 
   const getTypeIcon = (type: string) => {
@@ -140,13 +135,7 @@ export function RecommendationsPanel({
   }
 
   const getRiskText = (risk: string) => {
-    switch (risk) {
-      case 'critical': return "Kritiek"
-      case 'high': return "Hoog"
-      case 'medium': return "Gemiddeld"
-      case 'low': return "Laag"
-      default: return "Onbekend"
-    }
+    return t(`recommendations.riskLevels.${risk}`)
   }
 
   if (recommendations.length === 0 && riskAssessment.overall_risk === 'low') {
@@ -156,9 +145,9 @@ export function RecommendationsPanel({
           <div className="flex items-center space-x-3">
             <CheckCircle className="h-8 w-8 text-green-600" />
             <div>
-              <h3 className="font-semibold text-green-800">Uitstekende waterkwaliteit!</h3>
+              <h3 className="font-semibold text-green-800">{t('recommendations.excellent_water')}</h3>
               <p className="text-sm text-green-600">
-                Alle parameters zijn binnen de ideale waarden. Geen actie vereist.
+                {t('recommendations.no_action_needed')}
               </p>
             </div>
           </div>
@@ -176,10 +165,10 @@ export function RecommendationsPanel({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className={`h-5 w-5 ${getRiskColor(riskAssessment.overall_risk)}`} />
-            Risico Assessment
+            {t('recommendations.riskAssessment')}
           </CardTitle>
           <CardDescription>
-            Huidige risico score: <span className={`font-semibold ${getRiskColor(riskAssessment.overall_risk)}`}>
+            {t('recommendations.riskScore')}: <span className={`font-semibold ${getRiskColor(riskAssessment.overall_risk)}`}>
               {getRiskText(riskAssessment.overall_risk)} ({riskAssessment.risk_score}/100)
             </span>
           </CardDescription>
@@ -207,10 +196,10 @@ export function RecommendationsPanel({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-primary" />
-              Slimme Aanbevelingen
+              {t('recommendations.title')}
             </CardTitle>
             <CardDescription>
-              {recommendations.length} aanbeveling{recommendations.length !== 1 ? 'en' : ''} gebaseerd op je waterkwaliteit
+              {t('recommendations.subtitle')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -228,7 +217,7 @@ export function RecommendationsPanel({
                           {getPriorityText(recommendation.priority)}
                         </Badge>
                         {recommendation.action_required && (
-                          <Badge variant="destructive">Actie vereist</Badge>
+                          <Badge variant="destructive">{t('recommendations.actionRequired')}</Badge>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
@@ -240,13 +229,13 @@ export function RecommendationsPanel({
                           <span>{recommendation.estimated_duration}</span>
                         </div>
                         <div className="flex items-center space-x-1">
-                          <span>Moeilijkheid:</span>
-                          <span className="capitalize">{recommendation.estimated_effort}</span>
+                          <span>{t('recommendations.difficulty')}:</span>
+                          <span className="capitalize">{t(`recommendations.efforts.${recommendation.estimated_effort}`)}</span>
                         </div>
                         {recommendation.related_parameters.length > 0 && (
                           <div className="flex items-center space-x-1">
-                            <span>Parameters:</span>
-                            <span>{recommendation.related_parameters.join(', ')}</span>
+                            <span>{t('recommendations.parameters_label')}:</span>
+                            <span>{recommendation.related_parameters.map(p => t(`recommendations.parameters.${p}`)).join(', ')}</span>
                           </div>
                         )}
                       </div>
@@ -287,12 +276,12 @@ export function RecommendationsPanel({
                   <div className="pl-7 space-y-2">
                     <Alert>
                       <AlertDescription>
-                        <strong>Gedetailleerde informatie:</strong>
+                        <strong>{t('recommendations.conditions')}:</strong>
                         <ul className="mt-2 space-y-1">
-                          <li>• Type: {recommendation.type}</li>
-                          <li>• Prioriteit: {getPriorityText(recommendation.priority)}</li>
-                          <li>• Geschatte tijd: {recommendation.estimated_duration}</li>
-                          <li>• Moeilijkheid: {recommendation.estimated_effort}</li>
+                          <li>• {t('recommendations.types.' + recommendation.type)}</li>
+                          <li>• {t('recommendations.priorities.' + recommendation.priority)}</li>
+                          <li>• {t('recommendations.duration')}: {recommendation.estimated_duration}</li>
+                          <li>• {t('recommendations.difficulty')}: {t(`recommendations.efforts.${recommendation.estimated_effort}`)}</li>
                           {recommendation.conditions && Object.keys(recommendation.conditions).length > 0 && (
                             <li>• Condities: {JSON.stringify(recommendation.conditions, null, 2)}</li>
                           )}

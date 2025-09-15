@@ -59,9 +59,57 @@ export interface RiskAssessment {
 export class RecommendationEngine {
   private userPreferences: UserPreferences
   private historicalData: WaterParameter[] = []
+  private language: string = 'nl'
 
-  constructor(userPreferences: UserPreferences) {
+  constructor(userPreferences: UserPreferences, language: string = 'nl') {
     this.userPreferences = userPreferences
+    this.language = language
+  }
+
+  // Helper function for multilingual texts
+  private getText(key: string): string {
+    const texts: Record<string, Record<string, string>> = {
+      nl: {
+        'water_change_title': 'Water Verversen Aanbevolen',
+        'water_change_critical': 'Kritieke water parameters gedetecteerd. Onmiddellijke water verversing vereist om visgezondheid te beschermen.',
+        'water_change_warning': 'Meerdere water parameters zijn buiten de ideale waarden. Een water verversing helpt de balans te herstellen.',
+        'filter_maintenance_title': 'Filter Onderhoud Nodig',
+        'filter_maintenance_desc': 'Stikstofcyclus parameters suggereren dat filter efficiëntie mogelijk is verminderd. Reinig of vervang filter media.',
+        'ph_adjustment_title': 'pH Aanpassing Vereist',
+        'ph_low': 'pH is te laag. Voeg baking soda of gemalen koraal toe om pH geleidelijk te verhogen.',
+        'ph_high': 'pH is te hoog. Voeg turf of drijfhout toe om pH natuurlijk te verlagen.',
+        'temperature_control_title': 'Temperatuur Controle Nodig',
+        'temperature_low': 'Water temperatuur is te koud. Overweeg het gebruik van een vijver verwarming of verhoog beluchting.',
+        'temperature_high': 'Water temperatuur is te warm. Verhoog schaduw, beluchting of voeg koel water toe.',
+        'chemical_treatment_title': 'Noodbehandeling Chemisch',
+        'chemical_treatment_desc': 'Kritieke water parameters gedetecteerd. Overweeg noodbehandeling producten om omstandigheden snel te stabiliseren.',
+        '1_2_hours': '1-2 uur',
+        '30_minutes': '30 minuten',
+        '15_minutes': '15 minuten',
+        '1_hour': '1 uur'
+      },
+      en: {
+        'water_change_title': 'Water Change Recommended',
+        'water_change_critical': 'Critical water parameters detected. Immediate water change required to protect fish health.',
+        'water_change_warning': 'Multiple water parameters are outside ideal ranges. A water change will help restore balance.',
+        'filter_maintenance_title': 'Filter Maintenance Needed',
+        'filter_maintenance_desc': 'Nitrogen cycle parameters suggest filter efficiency may be reduced. Clean or replace filter media.',
+        'ph_adjustment_title': 'pH Adjustment Required',
+        'ph_low': 'pH is too low. Add baking soda or crushed coral to raise pH gradually.',
+        'ph_high': 'pH is too high. Add peat moss or driftwood to lower pH naturally.',
+        'temperature_control_title': 'Temperature Control Needed',
+        'temperature_low': 'Water temperature is too cold. Consider using a pond heater or increase aeration.',
+        'temperature_high': 'Water temperature is too warm. Increase shade, aeration or add cool water.',
+        'chemical_treatment_title': 'Emergency Chemical Treatment',
+        'chemical_treatment_desc': 'Critical water parameters detected. Consider emergency water treatment products to stabilize conditions quickly.',
+        '1_2_hours': '1-2 hours',
+        '30_minutes': '30 minutes',
+        '15_minutes': '15 minutes',
+        '1_hour': '1 hour'
+      }
+    }
+    
+    return texts[this.language]?.[key] || texts['en'][key] || key
   }
 
   // Main analysis function
@@ -251,13 +299,13 @@ export class RecommendationEngine {
       id: `water_change_${Date.now()}`,
       type: 'water_change',
       priority: priority as 1 | 2,
-      title: 'Water Change Recommended',
+      title: this.getText('water_change_title'),
       description: criticalCount > 0 
-        ? 'Critical water parameters detected. Immediate water change required to protect fish health.'
-        : 'Multiple water parameters are outside ideal ranges. A water change will help restore balance.',
+        ? this.getText('water_change_critical')
+        : this.getText('water_change_warning'),
       action_required: true,
       estimated_effort: 'medium',
-      estimated_duration: '1-2 hours',
+      estimated_duration: this.getText('1_2_hours'),
       related_parameters: parameters.filter(p => p.status !== 'good').map(p => p.name.toLowerCase()),
       conditions: {
         critical_parameters: criticalCount,
@@ -279,11 +327,11 @@ export class RecommendationEngine {
       id: `filter_maintenance_${Date.now()}`,
       type: 'filter_maintenance',
       priority: 3,
-      title: 'Filter Maintenance Needed',
-      description: 'Nitrogen cycle parameters suggest filter efficiency may be reduced. Clean or replace filter media.',
+      title: this.getText('filter_maintenance_title'),
+      description: this.getText('filter_maintenance_desc'),
       action_required: false,
       estimated_effort: 'low',
-      estimated_duration: '30 minutes',
+      estimated_duration: this.getText('30_minutes'),
       related_parameters: ['nitrite', 'nitrate'],
       conditions: {
         filter_efficiency: 'reduced'
@@ -299,13 +347,13 @@ export class RecommendationEngine {
       id: `ph_adjustment_${Date.now()}`,
       type: 'ph_adjustment',
       priority: priority as 1 | 2,
-      title: `pH ${isLow ? 'Increase' : 'Decrease'} Required`,
+      title: this.getText('ph_adjustment_title'),
       description: isLow 
-        ? 'pH is too low. Add baking soda or crushed coral to raise pH gradually.'
-        : 'pH is too high. Add peat moss or driftwood to lower pH naturally.',
+        ? this.getText('ph_low')
+        : this.getText('ph_high'),
       action_required: phParam.status === 'danger',
       estimated_effort: 'low',
-      estimated_duration: '15 minutes',
+      estimated_duration: this.getText('15_minutes'),
       related_parameters: ['ph'],
       conditions: {
         current_ph: phParam.value,
@@ -322,13 +370,13 @@ export class RecommendationEngine {
       id: `temperature_control_${Date.now()}`,
       type: 'temperature_control',
       priority: priority as 1 | 3,
-      title: `Temperature ${isLow ? 'Heating' : 'Cooling'} Needed`,
+      title: this.getText('temperature_control_title'),
       description: isLow
-        ? 'Water temperature is too cold. Consider using a pond heater or increasing aeration.'
-        : 'Water temperature is too warm. Increase shade, aeration, or add cool water.',
+        ? this.getText('temperature_low')
+        : this.getText('temperature_high'),
       action_required: tempParam.status === 'danger',
       estimated_effort: 'medium',
-      estimated_duration: '1 hour',
+      estimated_duration: this.getText('1_hour'),
       related_parameters: ['temperature'],
       conditions: {
         current_temperature: tempParam.value,
@@ -349,11 +397,11 @@ export class RecommendationEngine {
       id: `chemical_treatment_${Date.now()}`,
       type: 'chemical_treatment',
       priority: 1,
-      title: 'Emergency Chemical Treatment',
-      description: 'Critical water parameters detected. Consider emergency water treatment products to stabilize conditions quickly.',
+      title: this.getText('chemical_treatment_title'),
+      description: this.getText('chemical_treatment_desc'),
       action_required: true,
       estimated_effort: 'low',
-      estimated_duration: '15 minutes',
+      estimated_duration: this.getText('15_minutes'),
       related_parameters: criticalParams.map(p => p.name.toLowerCase()),
       conditions: {
         critical_parameters: criticalParams.length,

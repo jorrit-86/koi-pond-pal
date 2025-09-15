@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { RecommendationEngine, WaterParameter, UserPreferences, Recommendation, RiskAssessment, TrendAnalysis } from '@/lib/recommendation-engine'
+import { useTranslation } from 'react-i18next'
 
 interface UseRecommendationsReturn {
   recommendations: Recommendation[]
@@ -24,6 +25,7 @@ export function useRecommendations(): UseRecommendationsReturn {
   const [recommendationEngine, setRecommendationEngine] = useState<RecommendationEngine | null>(null)
 
   const { user } = useAuth()
+  const { i18n } = useTranslation()
 
   // Load user preferences
   const loadUserPreferences = useCallback(async () => {
@@ -57,7 +59,7 @@ export function useRecommendations(): UseRecommendationsReturn {
       }
 
       setUserPreferences(preferences)
-      setRecommendationEngine(new RecommendationEngine(preferences))
+      setRecommendationEngine(new RecommendationEngine(preferences, i18n.language))
     } catch (error) {
       console.error('Error in loadUserPreferences:', error)
     }

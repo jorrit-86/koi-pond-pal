@@ -6,8 +6,10 @@ import { Label } from '@/components/ui/label'
 import { RecommendationsPanel } from '@/components/recommendations/recommendations-panel'
 import { RecommendationEngine, WaterParameter, UserPreferences } from '@/lib/recommendation-engine'
 import { TestTube, Droplets, Thermometer } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export function RecommendationsTest() {
+  const { i18n } = useTranslation()
   const [testParameters, setTestParameters] = useState<WaterParameter[]>([
     { name: 'ph', value: 6.2, unit: '', status: 'danger', range: '6.8-8.2' },
     { name: 'temperature', value: 28, unit: '°C', status: 'warning', range: '15-25°C' },
@@ -37,7 +39,7 @@ export function RecommendationsTest() {
     
     // Simulate analysis delay
     setTimeout(() => {
-      const engine = new RecommendationEngine(userPreferences)
+      const engine = new RecommendationEngine(userPreferences, i18n.language)
       const result = engine.analyzeWaterParameters(testParameters)
       setAnalysis({
         recommendations: result.recommendations,

@@ -283,6 +283,79 @@
     "invalidCode": "Invalid verification code",
     "2FASetupComplete": "2FA setup completed successfully"
   },
+  "recommendations": {
+    "title": "Smart Recommendations",
+    "subtitle": "AI-driven advice based on your water quality",
+    "refresh": "Refresh",
+    "riskAssessment": "Risk Assessment",
+    "riskScore": "Current risk score",
+    "riskLevels": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "types": {
+      "water_change": "Water Change",
+      "filter_maintenance": "Filter Maintenance",
+      "ph_adjustment": "pH Adjustment",
+      "temperature_control": "Temperature Control",
+      "chemical_treatment": "Chemical Treatment"
+    },
+    "priorities": {
+      "1": "Critical",
+      "2": "High",
+      "3": "Medium",
+      "4": "Low",
+      "5": "Info"
+    },
+    "efforts": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "titles": {
+      "water_change": "Water Change Recommended",
+      "filter_maintenance": "Filter Maintenance Needed",
+      "ph_adjustment": "pH Adjustment Required",
+      "temperature_control": "Temperature Control Needed",
+      "chemical_treatment": "Emergency Chemical Treatment"
+    },
+    "descriptions": {
+      "water_change_critical": "Critical water parameters detected. Immediate water change required to protect fish health.",
+      "water_change_warning": "Multiple water parameters are outside ideal ranges. A water change will help restore balance.",
+      "filter_maintenance": "Nitrogen cycle parameters suggest filter efficiency may be reduced. Clean or replace filter media.",
+      "ph_low": "pH is too low. Add baking soda or crushed coral to raise pH gradually.",
+      "ph_high": "pH is too high. Add peat moss or driftwood to lower pH naturally.",
+      "temperature_low": "Water temperature is too cold. Consider using a pond heater or increase aeration.",
+      "temperature_high": "Water temperature is too warm. Increase shade, aeration or add cool water.",
+      "chemical_treatment": "Critical water parameters detected. Consider emergency water treatment products to stabilize conditions quickly."
+    },
+    "parameters": {
+      "ph": "pH",
+      "temperature": "Temperature",
+      "kh": "KH",
+      "gh": "GH",
+      "nitrite": "Nitrite",
+      "nitrate": "Nitrate",
+      "phosphate": "Phosphate"
+    },
+    "durations": {
+      "15_minutes": "15 minutes",
+      "30_minutes": "30 minutes",
+      "1_hour": "1 hour",
+      "1_2_hours": "1-2 hours"
+    },
+    "actionRequired": "Action required",
+    "difficulty": "Difficulty",
+    "duration": "Estimated time",
+    "parameters_label": "Parameters",
+    "conditions": "Detailed information",
+    "completed": "Recommendation completed",
+    "dismissed": "Recommendation dismissed",
+    "excellent_water": "Excellent water quality!",
+    "no_action_needed": "All parameters are within ideal values. No action required."
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",

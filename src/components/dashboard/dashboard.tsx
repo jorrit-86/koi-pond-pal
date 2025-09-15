@@ -483,10 +483,10 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Lightbulb className="h-5 w-5 text-primary" />
-                  Slimme Aanbevelingen
+                  {t("recommendations.title")}
                 </CardTitle>
                 <CardDescription>
-                  AI-gedreven advies gebaseerd op je waterkwaliteit
+                  {t("recommendations.subtitle")}
                 </CardDescription>
               </div>
               <Button 
@@ -496,7 +496,7 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
                 disabled={recommendationsLoading}
               >
                 <TrendingUp className="h-4 w-4 mr-2" />
-                Vernieuwen
+                {t("recommendations.refresh")}
               </Button>
             </div>
           </CardHeader>

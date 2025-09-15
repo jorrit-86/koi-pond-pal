@@ -283,6 +283,79 @@
     "invalidCode": "Ongeldige verificatiecode",
     "2FASetupComplete": "2FA setup succesvol voltooid"
   },
+  "recommendations": {
+    "title": "Slimme Aanbevelingen",
+    "subtitle": "AI-gedreven advies gebaseerd op je waterkwaliteit",
+    "refresh": "Vernieuwen",
+    "riskAssessment": "Risico Assessment",
+    "riskScore": "Huidige risico score",
+    "riskLevels": {
+      "low": "Laag",
+      "medium": "Gemiddeld", 
+      "high": "Hoog",
+      "critical": "Kritiek"
+    },
+    "types": {
+      "water_change": "Water Verversen",
+      "filter_maintenance": "Filter Onderhoud",
+      "ph_adjustment": "pH Aanpassing",
+      "temperature_control": "Temperatuur Controle",
+      "chemical_treatment": "Chemische Behandeling"
+    },
+    "priorities": {
+      "1": "Kritiek",
+      "2": "Hoog",
+      "3": "Gemiddeld",
+      "4": "Laag",
+      "5": "Info"
+    },
+    "efforts": {
+      "low": "Laag",
+      "medium": "Gemiddeld",
+      "high": "Hoog"
+    },
+    "titles": {
+      "water_change": "Water Verversen Aanbevolen",
+      "filter_maintenance": "Filter Onderhoud Nodig",
+      "ph_adjustment": "pH Aanpassing Vereist",
+      "temperature_control": "Temperatuur Controle Nodig",
+      "chemical_treatment": "Noodbehandeling Chemisch"
+    },
+    "descriptions": {
+      "water_change_critical": "Kritieke water parameters gedetecteerd. Onmiddellijke water verversing vereist om visgezondheid te beschermen.",
+      "water_change_warning": "Meerdere water parameters zijn buiten de ideale waarden. Een water verversing helpt de balans te herstellen.",
+      "filter_maintenance": "Stikstofcyclus parameters suggereren dat filter efficiëntie mogelijk is verminderd. Reinig of vervang filter media.",
+      "ph_low": "pH is te laag. Voeg baking soda of gemalen koraal toe om pH geleidelijk te verhogen.",
+      "ph_high": "pH is te hoog. Voeg turf of drijfhout toe om pH natuurlijk te verlagen.",
+      "temperature_low": "Water temperatuur is te koud. Overweeg het gebruik van een vijver verwarming of verhoog beluchting.",
+      "temperature_high": "Water temperatuur is te warm. Verhoog schaduw, beluchting of voeg koel water toe.",
+      "chemical_treatment": "Kritieke water parameters gedetecteerd. Overweeg noodbehandeling producten om omstandigheden snel te stabiliseren."
+    },
+    "parameters": {
+      "ph": "pH",
+      "temperature": "Temperatuur",
+      "kh": "KH",
+      "gh": "GH", 
+      "nitrite": "Nitriet",
+      "nitrate": "Nitraat",
+      "phosphate": "Fosfaat"
+    },
+    "durations": {
+      "15_minutes": "15 minuten",
+      "30_minutes": "30 minuten",
+      "1_hour": "1 uur",
+      "1_2_hours": "1-2 uur"
+    },
+    "actionRequired": "Actie vereist",
+    "difficulty": "Moeilijkheid",
+    "duration": "Geschatte tijd",
+    "parameters_label": "Parameters",
+    "conditions": "Gedetailleerde informatie",
+    "completed": "Aanbeveling voltooid",
+    "dismissed": "Aanbeveling genegeerd",
+    "excellent_water": "Uitstekende waterkwaliteit!",
+    "no_action_needed": "Alle parameters zijn binnen de ideale waarden. Geen actie vereist."
+  },
   "common": {
     "save": "Opslaan",
     "cancel": "Annuleren",
