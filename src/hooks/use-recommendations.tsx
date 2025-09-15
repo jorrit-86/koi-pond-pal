@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { RecommendationEngine, WaterParameter, UserPreferences, Recommendation, RiskAssessment, TrendAnalysis } from '@/lib/recommendation-engine'
 import { useTranslation } from 'react-i18next'
+import { AILearningService } from '@/lib/ai-learning-service'
 
 interface UseRecommendationsReturn {
   recommendations: Recommendation[]
@@ -137,6 +138,15 @@ export function useRecommendations(): UseRecommendationsReturn {
     try {
       setLoading(true)
       setError(null)
+
+      // Load AI learning data for improved recommendations
+      const [patterns, effectiveness] = await Promise.all([
+        AILearningService.getLearningPatterns(),
+        AILearningService.getRecommendationEffectiveness()
+      ])
+      
+      // Set learning data in the recommendation engine
+      recommendationEngine.setLearningData(patterns, effectiveness)
 
       // Get latest water parameters - use the same approach as dashboard
       const { data: waterData, error: waterError } = await supabase

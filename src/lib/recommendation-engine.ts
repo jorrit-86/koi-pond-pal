@@ -60,10 +60,18 @@ export class RecommendationEngine {
   private userPreferences: UserPreferences
   private historicalData: WaterParameter[] = []
   private language: string = 'nl'
+  private learningPatterns: any[] = []
+  private effectivenessData: any[] = []
 
   constructor(userPreferences: UserPreferences, language: string = 'nl') {
     this.userPreferences = userPreferences
     this.language = language
+  }
+
+  // Set learning data for improved recommendations
+  public setLearningData(patterns: any[], effectiveness: any[]) {
+    this.learningPatterns = patterns
+    this.effectivenessData = effectiveness
   }
 
   // Helper function for multilingual texts

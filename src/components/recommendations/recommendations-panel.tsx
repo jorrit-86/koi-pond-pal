@@ -22,6 +22,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import { useTranslation } from 'react-i18next'
+import { RecommendationFeedback } from './recommendation-feedback'
 
 interface RecommendationsPanelProps {
   recommendations: Recommendation[]
@@ -282,6 +283,14 @@ export function RecommendationsPanel({
                     </Alert>
                   </div>
                 )}
+                
+                {/* Feedback Component */}
+                <RecommendationFeedback 
+                  recommendation={recommendation}
+                  onFeedbackSubmitted={() => {
+                    // Optionally refresh recommendations or show success message
+                  }}
+                />
               </div>
             ))}
         </div>
