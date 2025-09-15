@@ -57,9 +57,18 @@ export function AISettings() {
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
         console.error('Error loading AI preferences:', error)
+        
+        // More specific error message
+        let errorMessage = 'Kon AI instellingen niet laden'
+        if (error.message.includes('column') && error.message.includes('does not exist')) {
+          errorMessage = 'Database kolommen bestaan nog niet. Voer eerst het AI instellingen SQL script uit.'
+        } else if (error.message.includes('permission')) {
+          errorMessage = 'Geen toestemming om instellingen te laden'
+        }
+        
         toast({
           title: t('common.error'),
-          description: 'Kon AI instellingen niet laden',
+          description: errorMessage,
           variant: 'destructive'
         })
         return
@@ -165,9 +174,20 @@ export function AISettings() {
           ...prev,
           [key]: !newValue
         }))
+        
+        // More specific error message
+        let errorMessage = 'Kon instelling niet opslaan'
+        if (error.message.includes('column') && error.message.includes('does not exist')) {
+          errorMessage = 'Database kolommen bestaan nog niet. Voer eerst het AI instellingen SQL script uit.'
+        } else if (error.message.includes('permission')) {
+          errorMessage = 'Geen toestemming om instellingen op te slaan'
+        } else if (error.message.includes('network') || error.message.includes('connection')) {
+          errorMessage = 'Netwerkfout. Controleer je internetverbinding'
+        }
+        
         toast({
           title: t('common.error'),
-          description: 'Kon instelling niet opslaan',
+          description: errorMessage,
           variant: 'destructive'
         })
         return
@@ -382,6 +402,33 @@ export function AISettings() {
                 Wijzigingen worden automatisch opgeslagen wanneer je een toggle aanpast. Uitgeschakelde functies 
                 worden niet uitgevoerd en verbruiken geen verwerkingskracht.
               </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Database Setup Info */}
+      <Card className="bg-yellow-50 border-yellow-200">
+        <CardContent className="pt-6">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-yellow-900">Database Setup Vereist</h4>
+              <p className="text-sm text-yellow-700 mt-1">
+                Als je de foutmelding "Database kolommen bestaan nog niet" krijgt, moet je eerst het AI instellingen 
+                SQL script uitvoeren in je Supabase SQL Editor. Kopieer en plak het script dat hieronder staat:
+              </p>
+              <div className="mt-3 p-3 bg-yellow-100 rounded border text-xs font-mono text-yellow-800 overflow-x-auto">
+                <pre>{`-- AI Settings Database Update
+-- Run this in your Supabase SQL Editor
+
+ALTER TABLE public.user_preferences 
+ADD COLUMN IF NOT EXISTS ai_recommendations_enabled BOOLEAN DEFAULT TRUE,
+ADD COLUMN IF NOT EXISTS ai_risk_assessment_enabled BOOLEAN DEFAULT TRUE,
+ADD COLUMN IF NOT EXISTS ai_trend_analysis_enabled BOOLEAN DEFAULT TRUE,
+ADD COLUMN IF NOT EXISTS ai_notifications_enabled BOOLEAN DEFAULT TRUE,
+ADD COLUMN IF NOT EXISTS ai_learning_enabled BOOLEAN DEFAULT TRUE;`}</pre>
+              </div>
             </div>
           </div>
         </CardContent>
