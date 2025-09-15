@@ -387,7 +387,7 @@ export class RecommendationEngine {
     const priority = criticalCount > 0 ? 1 : 2
 
     return {
-      id: `water_change_${Date.now()}`,
+      id: crypto.randomUUID(),
       type: 'water_change',
       priority: priority as 1 | 2,
       title: this.getText('water_change_title'),
@@ -415,7 +415,7 @@ export class RecommendationEngine {
 
   private createFilterMaintenanceRecommendation(): Recommendation {
     return {
-      id: `filter_maintenance_${Date.now()}`,
+      id: crypto.randomUUID(),
       type: 'filter_maintenance',
       priority: 3,
       title: this.getText('filter_maintenance_title'),
@@ -435,7 +435,7 @@ export class RecommendationEngine {
     const priority = phParam.status === 'danger' ? 1 : 2
 
     return {
-      id: `ph_adjustment_${Date.now()}`,
+      id: crypto.randomUUID(),
       type: 'ph_adjustment',
       priority: priority as 1 | 2,
       title: this.getText('ph_adjustment_title'),
@@ -458,7 +458,7 @@ export class RecommendationEngine {
     const priority = tempParam.status === 'danger' ? 1 : 3
 
     return {
-      id: `temperature_control_${Date.now()}`,
+      id: crypto.randomUUID(),
       type: 'temperature_control',
       priority: priority as 1 | 3,
       title: this.getText('temperature_control_title'),
@@ -485,7 +485,7 @@ export class RecommendationEngine {
     const criticalParams = parameters.filter(p => p.status === 'danger')
     
     return {
-      id: `chemical_treatment_${Date.now()}`,
+      id: crypto.randomUUID(),
       type: 'chemical_treatment',
       priority: 1,
       title: this.getText('chemical_treatment_title'),
