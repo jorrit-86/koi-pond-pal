@@ -1,11 +1,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Thermometer, Activity, Droplets, AlertTriangle, TrendingUp, Plus, History } from "lucide-react"
+import { Thermometer, Activity, Droplets, AlertTriangle, TrendingUp, Plus, History, Lightbulb } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
+import { RecommendationsPanel } from "@/components/recommendations/recommendations-panel"
+import { useRecommendations } from "@/hooks/use-recommendations"
 
 interface WaterParameter {
   name: string
@@ -27,6 +29,15 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
   const [loading, setLoading] = useState(true)
   const [koiCount, setKoiCount] = useState(0)
   const [lastUpdate, setLastUpdate] = useState("No data")
+  
+  // Smart recommendations
+  const { 
+    recommendations, 
+    riskAssessment, 
+    trends, 
+    loading: recommendationsLoading,
+    refreshRecommendations 
+  } = useRecommendations()
 
   // Load water parameters from database
   useEffect(() => {
@@ -464,6 +475,47 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Smart Recommendations */}
+      {!recommendationsLoading && (recommendations.length > 0 || (riskAssessment && riskAssessment.overall_risk !== 'low')) && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5 text-primary" />
+                  Slimme Aanbevelingen
+                </CardTitle>
+                <CardDescription>
+                  AI-gedreven advies gebaseerd op je waterkwaliteit
+                </CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={refreshRecommendations}
+                disabled={recommendationsLoading}
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Vernieuwen
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <RecommendationsPanel
+              recommendations={recommendations}
+              riskAssessment={riskAssessment!}
+              trends={trends}
+              onRecommendationAction={(recommendationId, action) => {
+                // Refresh recommendations after action
+                setTimeout(() => {
+                  refreshRecommendations()
+                }, 1000)
+              }}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
