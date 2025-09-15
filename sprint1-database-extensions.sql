@@ -3,7 +3,7 @@
 
 -- Create recommendations table
 CREATE TABLE IF NOT EXISTS public.recommendations (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  id UUID PRIMARY KEY,
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN (
     'water_change', 'filter_maintenance', 'ph_adjustment', 

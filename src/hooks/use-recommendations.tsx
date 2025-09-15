@@ -242,8 +242,9 @@ export function useRecommendations(): UseRecommendationsReturn {
         .eq('user_id', user.id)
         .eq('status', 'active')
 
-      // Insert new recommendations
+      // Insert new recommendations with their generated IDs
       const recommendationsToInsert = newRecommendations.map(rec => ({
+        id: rec.id, // Use the generated UUID from the recommendation engine
         user_id: user.id,
         type: rec.type,
         priority: rec.priority,
