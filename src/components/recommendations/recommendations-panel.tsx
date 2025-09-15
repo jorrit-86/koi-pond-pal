@@ -194,17 +194,7 @@ export function RecommendationsPanel({
 
       {/* Recommendations */}
       {recommendations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-primary" />
-              {t('recommendations.title')}
-            </CardTitle>
-            <CardDescription>
-              {t('recommendations.subtitle')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="space-y-4">
             {recommendations.map((recommendation) => (
               <div key={recommendation.id} className="border rounded-lg p-4 space-y-3">
                 <div className="flex items-start justify-between">
@@ -294,8 +284,7 @@ export function RecommendationsPanel({
                 )}
               </div>
             ))}
-          </CardContent>
-        </Card>
+        </div>
       )}
 
     </div>

@@ -483,10 +483,10 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Lightbulb className="h-5 w-5 text-primary" />
-                  {t("recommendations.title")}
+                  AI Water Analyse
                 </CardTitle>
                 <CardDescription>
-                  {t("recommendations.subtitle")}
+                  Intelligente analyse van je waterkwaliteit en gepersonaliseerde aanbevelingen
                 </CardDescription>
               </div>
               <Button 
