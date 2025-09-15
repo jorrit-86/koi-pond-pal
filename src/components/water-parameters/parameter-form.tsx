@@ -3,9 +3,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { PhotoUpload } from "@/components/ui/photo-upload"
 import { useState } from "react"
-import { Droplets, Save, History } from "lucide-react"
+import { Droplets, Save, History, Camera } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/contexts/AuthContext"
+import { usePhotoUpload } from "@/hooks/use-photo-upload"
 
 interface WaterReading {
   ph: string
@@ -16,14 +20,18 @@ interface WaterReading {
   phosphate: string
   temperature: string
   notes: string
+  test_strip_photo?: string
 }
 
 interface ParameterFormProps {
   onNavigate: (tab: string) => void
+  onDataSaved?: () => void // Callback to refresh dashboard
 }
 
-export function ParameterForm({ onNavigate }: ParameterFormProps) {
+export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
   const { toast } = useToast()
+  const { user } = useAuth()
+  const { uploadPhoto, uploading } = usePhotoUpload()
   const [reading, setReading] = useState<WaterReading>({
     ph: "",
     kh: "",
@@ -32,89 +40,180 @@ export function ParameterForm({ onNavigate }: ParameterFormProps) {
     nitrate: "",
     phosphate: "",
     temperature: "",
-    notes: ""
+    notes: "",
+    test_strip_photo: ""
   })
+  const [saving, setSaving] = useState(false)
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false)
 
   const handleInputChange = (field: keyof WaterReading, value: string) => {
     setReading(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleSave = () => {
+  const handleTestStripPhoto = async (photoUrl: string, photoFile: File) => {
+    try {
+      const result = await uploadPhoto(photoFile, 'water-tests')
+      if (result) {
+        setReading(prev => ({ ...prev, test_strip_photo: result.url }))
+      }
+    } catch (error) {
+      console.error('Error uploading test strip photo:', error)
+    }
+  }
+
+  const handleSave = async () => {
     // Validate required fields
     if (!reading.ph || !reading.temperature) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in at least pH and temperature values.",
+        title: "Ontbrekende informatie",
+        description: "Vul ten minste pH en temperatuur waarden in.",
         variant: "destructive",
       })
       return
     }
 
-    // Here you would save to database
-    toast({
-      title: "Reading Saved",
-      description: "Water parameters have been recorded successfully.",
-    })
-    
-    // Reset form
-    setReading({
-      ph: "",
-      kh: "",
-      gh: "",
-      nitrite: "",
-      nitrate: "",
-      phosphate: "",
-      temperature: "",
-      notes: ""
-    })
+    if (!user) {
+      toast({
+        title: "Authenticatie vereist",
+        description: "Je moet ingelogd zijn om water parameters op te slaan.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setSaving(true)
+
+    try {
+      // Prepare data for database insertion
+      const parametersToSave = [
+        { type: 'ph', value: parseFloat(reading.ph), unit: '' },
+        { type: 'temperature', value: parseFloat(reading.temperature), unit: '°C' },
+        ...(reading.kh ? [{ type: 'kh', value: parseFloat(reading.kh), unit: '°dH' }] : []),
+        ...(reading.gh ? [{ type: 'gh', value: parseFloat(reading.gh), unit: '°dH' }] : []),
+        ...(reading.nitrite ? [{ type: 'nitrite', value: parseFloat(reading.nitrite), unit: 'mg/l' }] : []),
+        ...(reading.nitrate ? [{ type: 'nitrate', value: parseFloat(reading.nitrate), unit: 'mg/l' }] : []),
+        ...(reading.phosphate ? [{ type: 'phosphate', value: parseFloat(reading.phosphate), unit: 'mg/l' }] : []),
+      ]
+
+      // Insert each parameter into database
+      const insertPromises = parametersToSave.map(param => 
+        supabase.from('water_parameters').insert({
+          user_id: user.id,
+          parameter_type: param.type,
+          value: param.value,
+          unit: param.unit,
+          notes: reading.notes || null,
+          test_strip_photo_url: reading.test_strip_photo || null,
+          measured_at: new Date().toISOString()
+        })
+      )
+
+      const results = await Promise.all(insertPromises)
+      
+      // Check for errors
+      const hasErrors = results.some(result => result.error)
+      if (hasErrors) {
+        console.error('Error saving water parameters:', results)
+        
+        // Log detailed error information
+        results.forEach((result, index) => {
+          if (result.error) {
+            console.error(`Parameter ${index} error:`, result.error)
+          }
+        })
+        
+        toast({
+        title: "Opslag fout",
+        description: "Sommige parameters konden niet worden opgeslagen. Probeer opnieuw.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      toast({
+        title: "Meting opgeslagen",
+        description: "Water parameters zijn succesvol geregistreerd.",
+      })
+      
+      // Reset form
+      setReading({
+        ph: "",
+        kh: "",
+        gh: "",
+        nitrite: "",
+        nitrate: "",
+        phosphate: "",
+        temperature: "",
+        notes: "",
+        test_strip_photo: ""
+      })
+
+      // Trigger dashboard refresh
+      if (onDataSaved) {
+        onDataSaved()
+      }
+
+      // Navigate back to dashboard after successful save
+      onNavigate("dashboard")
+
+    } catch (error) {
+      console.error('Error saving water parameters:', error)
+      toast({
+        title: "Opslag fout",
+        description: "Er is een onverwachte fout opgetreden. Probeer opnieuw.",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const parameters = [
     {
       key: "ph" as keyof WaterReading,
-      label: "pH Level",
+      label: "pH Waarde",
       placeholder: "7.0",
       unit: "",
       range: "6.8 - 8.2"
     },
     {
       key: "kh" as keyof WaterReading,
-      label: "KH (Carbonate Hardness)",
+      label: "KH (Carbonaat Hardheid)",
       placeholder: "4.0",
       unit: "°dH",
       range: "3 - 8 °dH"
     },
     {
       key: "gh" as keyof WaterReading,
-      label: "GH (General Hardness)",
+      label: "GH (Totale Hardheid)",
       placeholder: "8.0",
       unit: "°dH",
       range: "4 - 12 °dH"
     },
     {
       key: "nitrite" as keyof WaterReading,
-      label: "Nitrite",
+      label: "Nitriet",
       placeholder: "0.1",
       unit: "mg/l",
       range: "0 - 0.3 mg/l"
     },
     {
       key: "nitrate" as keyof WaterReading,
-      label: "Nitrate",
+      label: "Nitraat",
       placeholder: "15",
       unit: "mg/l",
       range: "< 25 mg/l"
     },
     {
       key: "phosphate" as keyof WaterReading,
-      label: "Phosphate",
+      label: "Fosfaat",
       placeholder: "0.3",
       unit: "mg/l",
       range: "< 0.5 mg/l"
     },
     {
       key: "temperature" as keyof WaterReading,
-      label: "Water Temperature",
+      label: "Water Temperatuur",
       placeholder: "18.5",
       unit: "°C",
       range: "15 - 25 °C"
@@ -127,11 +226,11 @@ export function ParameterForm({ onNavigate }: ParameterFormProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">Water Parameters</h1>
-          <p className="text-muted-foreground">Log your pond's water quality measurements</p>
+          <p className="text-muted-foreground">Registreer de waterkwaliteit van je vijver</p>
         </div>
-        <Button variant="outline" onClick={() => onNavigate("analytics")}>
+        <Button variant="outline" onClick={() => onNavigate("water-history")}>
           <History className="h-4 w-4 mr-2" />
-          View History
+          Bekijk eerdere metingen
         </Button>
       </div>
 
@@ -139,10 +238,10 @@ export function ParameterForm({ onNavigate }: ParameterFormProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Droplets className="h-5 w-5 text-primary" />
-            New Water Reading
+            Nieuwe watermeting
           </CardTitle>
           <CardDescription>
-            Enter the current measurements from your water test kit
+            Voer de huidige metingen van je water testkit in
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -163,19 +262,48 @@ export function ParameterForm({ onNavigate }: ParameterFormProps) {
                   className="w-full"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Ideal range: {param.range}
+                  Ideale waarde: {param.range}
                 </p>
               </div>
             ))}
           </div>
 
           <div className="space-y-2">
+            <Label className="text-sm font-medium">
+              Teststrip foto (Optioneel)
+            </Label>
+            <div className="flex gap-2">
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={() => setShowPhotoUpload(true)}
+                className="flex-1"
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Voeg teststrip foto toe
+              </Button>
+              {reading.test_strip_photo && (
+                <div className="flex-1">
+                  <img 
+                    src={reading.test_strip_photo} 
+                    alt="Teststrip voorbeeld" 
+                    className="w-full h-20 object-cover rounded-lg"
+                  />
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Selecteer een foto van je water teststrip als referentie
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="notes" className="text-sm font-medium">
-              Notes (Optional)
+              Notities (Optioneel)
             </Label>
             <Textarea
               id="notes"
-              placeholder="Any observations about water quality, pond condition, or koi behavior..."
+              placeholder="Eventuele observaties over waterkwaliteit, vijverconditie of koi gedrag..."
               value={reading.notes}
               onChange={(e) => handleInputChange("notes", e.target.value)}
               rows={3}
@@ -183,12 +311,16 @@ export function ParameterForm({ onNavigate }: ParameterFormProps) {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button onClick={handleSave} className="flex-1">
+            <Button 
+              onClick={handleSave} 
+              className="flex-1" 
+              disabled={saving || uploading}
+            >
               <Save className="h-4 w-4 mr-2" />
-              Save Reading
+              {saving ? "Opslaan..." : uploading ? "Uploaden..." : "Meting opslaan"}
             </Button>
             <Button variant="outline" onClick={() => onNavigate("dashboard")}>
-              Back to Dashboard
+              Terug naar Dashboard
             </Button>
           </div>
         </CardContent>
@@ -197,18 +329,28 @@ export function ParameterForm({ onNavigate }: ParameterFormProps) {
       {/* Quick Tips */}
       <Card className="bg-gradient-water">
         <CardHeader>
-          <CardTitle className="text-lg">Testing Tips</CardTitle>
+          <CardTitle className="text-lg">Test Tips</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2 text-sm">
-            <li>• Test water parameters weekly, or more frequently if issues arise</li>
-            <li>• Always test at the same time of day for consistency</li>
-            <li>• Clean test equipment between uses to avoid contamination</li>
-            <li>• Keep test kits away from direct sunlight and extreme temperatures</li>
-            <li>• Replace test kits annually or when reagents expire</li>
+            <li>• Test water parameters wekelijks, of vaker als er problemen zijn</li>
+            <li>• Test altijd op hetzelfde tijdstip voor consistentie</li>
+            <li>• Reinig test apparatuur tussen gebruik om besmetting te voorkomen</li>
+            <li>• Bewaar testkits weg van direct zonlicht en extreme temperaturen</li>
+            <li>• Vervang testkits jaarlijks of wanneer reagentia verlopen</li>
           </ul>
         </CardContent>
       </Card>
+
+      {/* Photo Upload Modal */}
+      {showPhotoUpload && (
+        <PhotoUpload
+          onPhotoSelected={handleTestStripPhoto}
+          onClose={() => setShowPhotoUpload(false)}
+          title="Voeg teststrip foto toe"
+          description="Selecteer een foto van je water teststrip van je apparaat"
+        />
+      )}
     </div>
   )
 }

@@ -4,36 +4,62 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTheme } from "@/components/theme-provider"
 import { useParameterTimers } from "@/hooks/use-parameter-timers"
-import { Settings, Home, Bell, Database, Wifi, Timer } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
+import { AdminPanel } from "@/components/admin/admin-panel"
+import { Settings, Home, Bell, Database, Wifi, Timer, Globe, Shield } from "lucide-react"
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 
 export function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const { timerConfigs, updateTimerConfig } = useParameterTimers()
+  const { user } = useAuth()
+  const { t, i18n } = useTranslation()
   const [homeAssistantUrl, setHomeAssistantUrl] = useState("")
   const [homeAssistantToken, setHomeAssistantToken] = useState("")
   const [notifications, setNotifications] = useState(true)
   const [autoLogging, setAutoLogging] = useState(false)
+  const [activeSubmenu, setActiveSubmenu] = useState<string>("general")
+
 
   const parameterNames = {
-    ph: "pH Level",
-    temperature: "Temperature",
-    kh: "KH (Carbonate Hardness)",
-    gh: "GH (General Hardness)",
-    nitrite: "Nitrite",
-    nitrate: "Nitrate",
-    phosphate: "Phosphate"
+    ph: t("waterParameters.ph"),
+    temperature: t("waterParameters.temperature"),
+    kh: t("waterParameters.kh"),
+    gh: t("waterParameters.gh"),
+    nitrite: t("waterParameters.nitrite"),
+    nitrate: t("waterParameters.nitrate"),
+    phosphate: t("waterParameters.phosphate")
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Settings</h1>
-        <p className="text-muted-foreground">Configure your koi pond management preferences</p>
-      </div>
+  const changeLanguage = (newLang: string) => {
+    i18n.changeLanguage(newLang)
+    document.documentElement.lang = newLang
+  }
+
+  const getLanguageName = (langCode: string) => {
+    switch (langCode) {
+      case 'en': return 'English'
+      case 'nl': return 'Nederlands'
+      default: return langCode
+    }
+  }
+
+  const renderContent = () => {
+    if (activeSubmenu === "admin") {
+      return <AdminPanel />
+    }
+    
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold mb-2">{t("settings.title")}</h1>
+          <p className="text-muted-foreground">Configure your koi pond management preferences</p>
+        </div>
 
       {/* Theme Settings */}
       <Card>
@@ -56,6 +82,37 @@ export function SettingsPage() {
               checked={theme === "dark"}
               onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
             />
+          </div>
+          
+          <Separator />
+          
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              {t("settings.language")}
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Choose your preferred language
+            </p>
+            <Select value={i18n.language} onValueChange={changeLanguage}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🇬🇧</span>
+                    <span>English</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="nl">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🇳🇱</span>
+                    <span>Nederlands</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -214,11 +271,11 @@ export function SettingsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm">Nitrate Warning (mg/l)</Label>
+                <Label className="text-sm">Nitraat Waarschuwing (mg/l)</Label>
                 <Input placeholder="20" type="number" />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm">Nitrate Danger (mg/l)</Label>
+                <Label className="text-sm">Nitraat Gevaar (mg/l)</Label>
                 <Input placeholder="30" type="number" />
               </div>
             </div>
@@ -258,6 +315,38 @@ export function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Submenu Navigation */}
+      <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
+        <Button
+          variant={activeSubmenu === "general" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveSubmenu("general")}
+          className="flex items-center gap-2"
+        >
+          <Settings className="h-4 w-4" />
+          General
+        </Button>
+        {user?.role === 'admin' && (
+          <Button
+            variant={activeSubmenu === "admin" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveSubmenu("admin")}
+            className="flex items-center gap-2"
+          >
+            <Shield className="h-4 w-4" />
+            Admin Panel
+          </Button>
+        )}
+      </div>
+
+      {/* Content */}
+      {renderContent()}
     </div>
   )
 }

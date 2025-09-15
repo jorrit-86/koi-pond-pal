@@ -2,6 +2,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Fish, Plus, Calendar, Ruler, Heart } from "lucide-react"
+import { useState, useEffect } from "react"
+import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/contexts/AuthContext"
+import { calculateCurrentAge, getAgeDisplayText } from "@/lib/koi-age-utils"
 
 interface Koi {
   id: string
@@ -14,61 +18,127 @@ interface Koi {
   healthStatus: "excellent" | "good" | "needs-attention"
   dateAdded: string
   notes?: string
+  photo_url?: string
+  breeder?: string
+  dealer?: string
+  purchase_price?: number
+  primary_photo_url?: string
+  purchase_date?: string
+  age_at_purchase?: number
+  length_at_purchase?: number
 }
 
 interface KoiManagementProps {
   onNavigate: (tab: string) => void
+  onEditKoi: (koiId: string, koiName: string) => void
+  refreshTrigger?: number // Trigger om data te refreshen
 }
 
-export function KoiManagement({ onNavigate }: KoiManagementProps) {
-  // Mock data - will be replaced with real data later
-  const koiList: Koi[] = [
-    {
-      id: "1",
-      name: "Sakura",
-      variety: "Kohaku",
-      age: 3,
-      length: 45,
-      weight: 1.2,
-      color: "White with red markings",
-      healthStatus: "excellent",
-      dateAdded: "2021-05-15",
-      notes: "Beautiful red pattern development"
-    },
-    {
-      id: "2",
-      name: "Yuki",
-      variety: "Showa Sanshoku",
-      age: 5,
-      length: 52,
-      weight: 1.8,
-      color: "Black, red, and white",
-      healthStatus: "good",
-      dateAdded: "2020-03-10",
-    },
-    {
-      id: "3",
-      name: "Hoshi",
-      variety: "Asagi",
-      age: 2,
-      length: 35,
-      color: "Blue-grey with red belly",
-      healthStatus: "excellent",
-      dateAdded: "2022-08-20",
-    },
-    {
-      id: "4",
-      name: "Kenzo",
-      variety: "Sanke",
-      age: 4,
-      length: 48,
-      weight: 1.5,
-      color: "White with red and black",
-      healthStatus: "needs-attention",
-      dateAdded: "2021-01-12",
-      notes: "Monitor for fin rot - treatment ongoing"
+export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiManagementProps) {
+  const { user } = useAuth()
+  const [koiList, setKoiList] = useState<Koi[]>([])
+  const [loading, setLoading] = useState(true)
+
+
+  // Load koi data from database
+  useEffect(() => {
+    const loadKoiData = async () => {
+      if (!user) return
+      
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('koi')
+        .select('*')
+          .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading koi data:', error)
+        return
+      }
+
+        // Load primary photos for each koi
+        const koiIds = data.map((koi: any) => koi.id)
+        const { data: photosData } = await supabase
+          .from('koi_photos')
+          .select('koi_id, photo_url')
+          .eq('is_primary', true)
+          .in('koi_id', koiIds)
+
+        // Create a map of koi_id to primary photo
+        const primaryPhotos = new Map()
+        photosData?.forEach((photo: any) => {
+          primaryPhotos.set(photo.koi_id, photo.photo_url)
+        })
+
+        // Load current lengths from logbook entries (latest measurement per koi)
+        const { data: lengthData } = await supabase
+          .from('koi_log_entries')
+          .select('koi_id, length_cm, entry_date')
+          .eq('entry_type', 'measurement')
+          .not('length_cm', 'is', null)
+          .in('koi_id', koiIds)
+          .order('entry_date', { ascending: false })
+
+        // Create a map of koi_id to current length (latest measurement)
+        const currentLengths = new Map()
+        lengthData?.forEach((entry: any) => {
+          // Only keep the latest measurement for each koi
+          if (!currentLengths.has(entry.koi_id)) {
+            currentLengths.set(entry.koi_id, entry.length_cm)
+          }
+        })
+
+      // Transform database data to match our interface
+        const transformedData: Koi[] = data.map((koi: any) => {
+          // Determine current length: latest measurement > length at purchase > original length
+          const currentLength = currentLengths.get(koi.id) || koi.length_at_purchase || koi.size_cm || 0
+          
+          return {
+        id: koi.id,
+        name: koi.name,
+        variety: koi.species || koi.variety || 'Unknown',
+        age: koi.age_years || 0,
+            length: currentLength,
+        weight: koi.weight,
+        color: koi.color || '',
+        healthStatus: 'excellent' as const, // Default for now
+        dateAdded: koi.purchase_date || koi.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            notes: koi.notes || undefined,
+            photo_url: koi.photo_url || undefined,
+            primary_photo_url: primaryPhotos.get(koi.id) || koi.photo_url || undefined,
+            breeder: koi.breeder || undefined,
+            dealer: koi.dealer || undefined,
+            purchase_price: koi.purchase_price || undefined,
+            purchase_date: koi.purchase_date || undefined,
+            age_at_purchase: koi.age_at_purchase || undefined,
+            length_at_purchase: koi.length_at_purchase || undefined
+          }
+        })
+
+      setKoiList(transformedData)
+    } catch (error) {
+      console.error('Error in loadKoiData:', error)
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
+
+    loadKoiData()
+  }, [user])
+
+  // React to refresh trigger changes
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      loadKoiData()
+    }
+  }, [refreshTrigger, user])
+
+  const handleEditKoi = (koi: Koi) => {
+    onEditKoi(koi.id, koi.name)
+    onNavigate("koi-edit")
+  }
 
   const getHealthColor = (status: string) => {
     switch (status) {
@@ -81,11 +151,22 @@ export function KoiManagement({ onNavigate }: KoiManagementProps) {
 
   const getHealthLabel = (status: string) => {
     switch (status) {
-      case "excellent": return "Excellent"
-      case "good": return "Good"
-      case "needs-attention": return "Needs Attention"
-      default: return "Unknown"
+      case "excellent": return "Uitstekend"
+      case "good": return "Goed"
+      case "needs-attention": return "Aandacht Nodig"
+      default: return "Onbekend"
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Je koi collectie laden...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -93,13 +174,14 @@ export function KoiManagement({ onNavigate }: KoiManagementProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">My Koi Collection</h1>
-          <p className="text-muted-foreground">Manage information about your koi fish</p>
+          <h1 className="text-3xl font-bold mb-2">Mijn Koi Collectie</h1>
+          <p className="text-muted-foreground">Beheer informatie over je koi vissen</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Koi
-        </Button>
+        <Button onClick={() => onNavigate("koi-add")}>
+              <Plus className="h-4 w-4 mr-2" />
+          Nieuwe Koi Toevoegen
+            </Button>
+
       </div>
 
       {/* Stats Cards */}
@@ -108,7 +190,7 @@ export function KoiManagement({ onNavigate }: KoiManagementProps) {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Koi</p>
+                <p className="text-sm font-medium text-muted-foreground">Totaal aantal koi</p>
                 <p className="text-2xl font-bold">{koiList.length}</p>
               </div>
               <Fish className="h-8 w-8 text-primary" />
@@ -120,9 +202,9 @@ export function KoiManagement({ onNavigate }: KoiManagementProps) {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Average Age</p>
+                <p className="text-sm font-medium text-muted-foreground">Gemiddelde Leeftijd</p>
                 <p className="text-2xl font-bold">
-                  {Math.round(koiList.reduce((acc, koi) => acc + koi.age, 0) / koiList.length * 10) / 10} years
+                  {Math.round(koiList.reduce((acc, koi) => acc + koi.age, 0) / koiList.length * 10) / 10} jaar
                 </p>
               </div>
               <Calendar className="h-8 w-8 text-primary" />
@@ -134,7 +216,7 @@ export function KoiManagement({ onNavigate }: KoiManagementProps) {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Largest Koi</p>
+                <p className="text-sm font-medium text-muted-foreground">Grootste Koi</p>
                 <p className="text-2xl font-bold">
                   {Math.max(...koiList.map(k => k.length))}cm
                 </p>
@@ -149,50 +231,70 @@ export function KoiManagement({ onNavigate }: KoiManagementProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {koiList.map((koi) => (
           <Card key={koi.id} className="hover:shadow-water transition-shadow">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{koi.name}</CardTitle>
+            <CardContent className="p-6">
+              <div className="flex gap-4">
+                {/* Left Section - Text Information */}
+                <div className="flex-1 space-y-3">
+                  {/* Header */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{koi.name}</h3>
+                    <p className="text-sm text-gray-600">{koi.variety}</p>
+                  </div>
+
+                  {/* Details */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm gap-2">
+                      <span className="text-gray-600">Leeftijd:</span>
+                      <span className="text-gray-900">
+                        {koi.purchase_date && koi.age_at_purchase !== undefined 
+                          ? getAgeDisplayText(calculateCurrentAge(koi.purchase_date, koi.age_at_purchase))
+                          : `${koi.age} jaar`
+                        }
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-2">
+                      <span className="text-gray-600">Lengte:</span>
+                      <span className="text-gray-900">{koi.length} cm</span>
+                    </div>
+                    <div className="flex justify-between text-sm gap-2">
+                      <span className="text-gray-600">Kweker:</span>
+                      <span className="text-gray-900">{koi.breeder || 'Onbekend'}</span>
+                    </div>
+                    {koi.dealer && (
+                      <div className="flex justify-between text-sm gap-2">
+                        <span className="text-gray-600">Dealer:</span>
+                        <span className="text-gray-900">{koi.dealer}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-8">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditKoi(koi)}>
+                      Details
+                    </Button>
+                    <Button variant="outline" size="sm" className="px-3">
+                      <Heart className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Right Section - Koi Image */}
+                {(koi.primary_photo_url || koi.photo_url) && (
+                  <div className="w-28 h-52 flex-shrink-0 self-start relative" style={{ marginTop: '1.5rem' }}>
+                    <img 
+                      src={koi.primary_photo_url || koi.photo_url} 
+                      alt={`${koi.name} photo`}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    {/* Health Status Badge over de afbeelding */}
+                    <div className="absolute top-1 right-1">
                 <Badge className={getHealthColor(koi.healthStatus)}>
                   {getHealthLabel(koi.healthStatus)}
                 </Badge>
               </div>
-              <CardDescription>{koi.variety}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Age:</span>
-                  <span>{koi.age} years</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Length:</span>
-                  <span>{koi.length} cm</span>
-                </div>
-                {koi.weight && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Weight:</span>
-                    <span>{koi.weight} kg</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Color:</span>
-                  <span className="text-right">{koi.color}</span>
-                </div>
-              </div>
-
-              {koi.notes && (
-                <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm">{koi.notes}</p>
-                </div>
-              )}
-
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm" className="flex-1">
-                  Edit Details
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Heart className="h-4 w-4" />
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -202,31 +304,32 @@ export function KoiManagement({ onNavigate }: KoiManagementProps) {
       {/* Care Tips */}
       <Card className="bg-gradient-water">
         <CardHeader>
-          <CardTitle className="text-lg">Koi Care Guidelines</CardTitle>
+          <CardTitle className="text-lg">Koi Verzorging Richtlijnen</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="font-semibold mb-2">Feeding Schedule</h4>
+              <h4 className="font-semibold mb-2">Voedingsschema</h4>
               <ul className="space-y-1 text-sm">
-                <li>• Spring/Fall: 1-2 times daily when water is 10-18°C</li>
-                <li>• Summer: 2-3 times daily when water is 18-25°C</li>
-                <li>• Winter: Stop feeding when water drops below 10°C</li>
-                <li>• Feed only what they can consume in 5 minutes</li>
+                <li>• Lente/Herfst: 1-2 keer per dag bij watertemperatuur 10-18°C</li>
+                <li>• Zomer: 2-3 keer per dag bij watertemperatuur 18-25°C</li>
+                <li>• Winter: Stop met voeren wanneer water onder 10°C daalt</li>
+                <li>• Voer alleen wat ze binnen 5 minuten kunnen opeten</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">Health Monitoring</h4>
+              <h4 className="font-semibold mb-2">Gezondheidsmonitoring</h4>
               <ul className="space-y-1 text-sm">
-                <li>• Watch for changes in swimming behavior</li>
-                <li>• Check for white spots, red streaks, or fin damage</li>
-                <li>• Monitor appetite and feeding response</li>
-                <li>• Quarantine new fish for 2-4 weeks</li>
+                <li>• Let op veranderingen in zwemgedrag</li>
+                <li>• Controleer op witte vlekken, rode strepen of vinbeschadiging</li>
+                <li>• Monitor eetlust en voedingsrespons</li>
+                <li>• Quarantaine nieuwe vissen gedurende 2-4 weken</li>
               </ul>
             </div>
           </div>
         </CardContent>
       </Card>
+
     </div>
   )
 }

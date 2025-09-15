@@ -122,4 +122,10 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Limit website width to 1920px */
+  html, body {
+    max-width: 1920px;
+    margin: 0 auto;
+  }
 }
