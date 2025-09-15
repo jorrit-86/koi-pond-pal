@@ -14,7 +14,6 @@ import {
   TrendingUp, 
   Bell, 
   BookOpen,
-  Save,
   RotateCcw
 } from 'lucide-react'
 
@@ -87,24 +86,36 @@ export function AISettings() {
     }
   }
 
-  const saveAIPreferences = async () => {
+  const resetToDefaults = async () => {
+    const defaultPreferences = {
+      ai_recommendations_enabled: true,
+      ai_risk_assessment_enabled: true,
+      ai_trend_analysis_enabled: true,
+      ai_notifications_enabled: true,
+      ai_learning_enabled: true
+    }
+
     if (!user) return
 
     try {
       setSaving(true)
 
+      // Update local state
+      setPreferences(defaultPreferences)
+
+      // Save all preferences to database
       const { error } = await supabase
         .from('user_preferences')
         .upsert({
           user_id: user.id,
-          ...preferences
+          ...defaultPreferences
         })
 
       if (error) {
-        console.error('Error saving AI preferences:', error)
+        console.error('Error resetting AI preferences:', error)
         toast({
           title: t('common.error'),
-          description: 'Kon AI instellingen niet opslaan',
+          description: 'Kon instellingen niet resetten',
           variant: 'destructive'
         })
         return
@@ -112,13 +123,13 @@ export function AISettings() {
 
       toast({
         title: t('common.success'),
-        description: 'AI instellingen succesvol opgeslagen'
+        description: 'Instellingen gereset naar standaardwaarden'
       })
     } catch (error) {
-      console.error('Error in saveAIPreferences:', error)
+      console.error('Error in resetToDefaults:', error)
       toast({
         title: t('common.error'),
-        description: 'Er is een fout opgetreden bij het opslaan van AI instellingen',
+        description: 'Er is een fout opgetreden bij het resetten',
         variant: 'destructive'
       })
     } finally {
@@ -126,21 +137,61 @@ export function AISettings() {
     }
   }
 
-  const resetToDefaults = () => {
-    setPreferences({
-      ai_recommendations_enabled: true,
-      ai_risk_assessment_enabled: true,
-      ai_trend_analysis_enabled: true,
-      ai_notifications_enabled: true,
-      ai_learning_enabled: true
-    })
-  }
 
-  const handleToggle = (key: keyof AIPreferences) => {
+  const handleToggle = async (key: keyof AIPreferences) => {
+    const newValue = !preferences[key]
+    
+    // Update local state immediately for responsive UI
     setPreferences(prev => ({
       ...prev,
-      [key]: !prev[key]
+      [key]: newValue
     }))
+
+    // Save to database immediately
+    if (!user) return
+
+    try {
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: user.id,
+          [key]: newValue
+        })
+
+      if (error) {
+        console.error('Error saving AI preference:', error)
+        // Revert local state on error
+        setPreferences(prev => ({
+          ...prev,
+          [key]: !newValue
+        }))
+        toast({
+          title: t('common.error'),
+          description: 'Kon instelling niet opslaan',
+          variant: 'destructive'
+        })
+        return
+      }
+
+      // Show success feedback
+      toast({
+        title: t('common.success'),
+        description: 'Instelling opgeslagen',
+        duration: 2000
+      })
+    } catch (error) {
+      console.error('Error in handleToggle:', error)
+      // Revert local state on error
+      setPreferences(prev => ({
+        ...prev,
+        [key]: !newValue
+      }))
+      toast({
+        title: t('common.error'),
+        description: 'Er is een fout opgetreden',
+        variant: 'destructive'
+      })
+    }
   }
 
   if (loading) {
@@ -308,22 +359,14 @@ export function AISettings() {
       <Separator />
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-center">
         <Button
           variant="outline"
           onClick={resetToDefaults}
           disabled={saving}
         >
           <RotateCcw className="h-4 w-4 mr-2" />
-          Standaardwaarden
-        </Button>
-        
-        <Button
-          onClick={saveAIPreferences}
-          disabled={saving}
-        >
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Opslaan...' : 'Instellingen Opslaan'}
+          {saving ? 'Resetten...' : 'Reset naar Standaardwaarden'}
         </Button>
       </div>
 
@@ -336,8 +379,8 @@ export function AISettings() {
               <h4 className="font-semibold text-blue-900">Over AI Instellingen</h4>
               <p className="text-sm text-blue-700 mt-1">
                 Deze instellingen bepalen welke AI-functionaliteiten actief zijn in je Koi Sensei account. 
-                Je kunt altijd terugkomen om deze aan te passen. Uitgeschakelde functies worden niet uitgevoerd 
-                en verbruiken geen verwerkingskracht.
+                Wijzigingen worden automatisch opgeslagen wanneer je een toggle aanpast. Uitgeschakelde functies 
+                worden niet uitgevoerd en verbruiken geen verwerkingskracht.
               </p>
             </div>
           </div>
