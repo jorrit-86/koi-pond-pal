@@ -115,10 +115,8 @@ export function AISettings() {
       // Save all preferences to database
       const { error } = await supabase
         .from('user_preferences')
-        .upsert({
-          user_id: user.id,
-          ...defaultPreferences
-        })
+        .update(defaultPreferences)
+        .eq('user_id', user.id)
 
       if (error) {
         console.error('Error resetting AI preferences:', error)
@@ -160,38 +158,59 @@ export function AISettings() {
     if (!user) return
 
     try {
-      const { error } = await supabase
+      // First try to update existing record
+      const { error: updateError } = await supabase
         .from('user_preferences')
-        .upsert({
-          user_id: user.id,
-          [key]: newValue
-        })
+        .update({ [key]: newValue })
+        .eq('user_id', user.id)
 
-      if (error) {
-        console.error('Error saving AI preference:', error)
-        // Revert local state on error
-        setPreferences(prev => ({
-          ...prev,
-          [key]: !newValue
-        }))
-        
-        // More specific error message
-        let errorMessage = 'Kon instelling niet opslaan'
-        if (error.message.includes('column') && error.message.includes('does not exist')) {
-          errorMessage = 'Database kolommen bestaan nog niet. Voer eerst het AI instellingen SQL script uit.'
-        } else if (error.message.includes('permission')) {
-          errorMessage = 'Geen toestemming om instellingen op te slaan'
-        } else if (error.message.includes('network') || error.message.includes('connection')) {
-          errorMessage = 'Netwerkfout. Controleer je internetverbinding'
+      // If update fails (no existing record), insert new record
+      if (updateError && updateError.code === 'PGRST116') {
+        const { error: insertError } = await supabase
+          .from('user_preferences')
+          .insert({
+            user_id: user.id,
+            [key]: newValue,
+            experience_level: 'beginner',
+            maintenance_frequency: 'weekly',
+            seasonal_awareness: true,
+            auto_recommendations: true
+          })
+
+        if (insertError) {
+          throw insertError
         }
-        
-        toast({
-          title: t('common.error'),
-          description: errorMessage,
-          variant: 'destructive'
-        })
-        return
+      } else if (updateError) {
+        throw updateError
       }
+
+    } catch (error: any) {
+      console.error('Error saving AI preference:', error)
+      // Revert local state on error
+      setPreferences(prev => ({
+        ...prev,
+        [key]: !newValue
+      }))
+      
+      // More specific error message
+      let errorMessage = 'Kon instelling niet opslaan'
+      if (error.message && error.message.includes('column') && error.message.includes('does not exist')) {
+        errorMessage = 'Database kolommen bestaan nog niet. Voer eerst het AI instellingen SQL script uit.'
+      } else if (error.message && error.message.includes('permission')) {
+        errorMessage = 'Geen toestemming om instellingen op te slaan'
+      } else if (error.message && (error.message.includes('network') || error.message.includes('connection'))) {
+        errorMessage = 'Netwerkfout. Controleer je internetverbinding'
+      } else if (error.code === '23505') {
+        errorMessage = 'Database conflict. Probeer de pagina te verversen.'
+      }
+      
+      toast({
+        title: t('common.error'),
+        description: errorMessage,
+        variant: 'destructive'
+      })
+      return
+    }
 
       // Show success feedback
       toast({
@@ -199,19 +218,6 @@ export function AISettings() {
         description: 'Instelling opgeslagen',
         duration: 2000
       })
-    } catch (error) {
-      console.error('Error in handleToggle:', error)
-      // Revert local state on error
-      setPreferences(prev => ({
-        ...prev,
-        [key]: !newValue
-      }))
-      toast({
-        title: t('common.error'),
-        description: 'Er is een fout opgetreden',
-        variant: 'destructive'
-      })
-    }
   }
 
   if (loading) {
