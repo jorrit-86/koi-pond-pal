@@ -112,6 +112,34 @@ export class RecommendationEngine {
     return texts[this.language]?.[key] || texts['en'][key] || key
   }
 
+  // Helper function for parameter names
+  private getParameterName(paramName: string): string {
+    const paramNames: Record<string, Record<string, string>> = {
+      nl: {
+        'ph': 'pH',
+        'temperature': 'Temperatuur',
+        'kh': 'KH',
+        'gh': 'GH',
+        'nitrite': 'Nitriet',
+        'nitrate': 'Nitraat',
+        'phosphate': 'Fosfaat'
+      },
+      en: {
+        'ph': 'pH',
+        'temperature': 'Temperature',
+        'kh': 'KH',
+        'gh': 'GH',
+        'nitrite': 'Nitrite',
+        'nitrate': 'Nitrate',
+        'phosphate': 'Phosphate'
+      }
+    }
+    
+    return paramNames[this.language]?.[paramName.toLowerCase()] || 
+           paramNames['en'][paramName.toLowerCase()] || 
+           paramName
+  }
+
   // Main analysis function
   public analyzeWaterParameters(currentParameters: WaterParameter[]): {
     recommendations: Recommendation[]
@@ -165,44 +193,99 @@ export class RecommendationEngine {
     switch (param.name.toLowerCase()) {
       case 'ph':
         if (param.value < 6.5) {
-          description = 'pH is too low, causing acidity stress'
-          impact = 'Can damage fish gills and reduce oxygen uptake'
+          description = this.language === 'nl' 
+            ? 'pH is te laag, veroorzaakt zuurstress'
+            : 'pH is too low, causing acidity stress'
+          impact = this.language === 'nl'
+            ? 'Kan kieuwen beschadigen en zuurstofopname verminderen'
+            : 'Can damage fish gills and reduce oxygen uptake'
         } else if (param.value > 8.5) {
-          description = 'pH is too high, causing alkalinity stress'
-          impact = 'Can cause ammonia toxicity and stress fish'
+          description = this.language === 'nl'
+            ? 'pH is te hoog, veroorzaakt alkalische stress'
+            : 'pH is too high, causing alkalinity stress'
+          impact = this.language === 'nl'
+            ? 'Kan ammoniak toxiciteit veroorzaken en vissen stressen'
+            : 'Can cause ammonia toxicity and stress fish'
         }
         break
       case 'temperature':
         if (param.value < 10) {
-          description = 'Water temperature is too cold'
-          impact = 'Slows metabolism, reduces immune system function'
+          description = this.language === 'nl'
+            ? 'Water temperatuur is te koud'
+            : 'Water temperature is too cold'
+          impact = this.language === 'nl'
+            ? 'Vertraagt metabolisme en verzwakt immuunsysteem'
+            : 'Slows metabolism, reduces immune system function'
         } else if (param.value > 30) {
-          description = 'Water temperature is too warm'
-          impact = 'Reduces oxygen levels, increases stress'
+          description = this.language === 'nl'
+            ? 'Water temperatuur is te warm'
+            : 'Water temperature is too warm'
+          impact = this.language === 'nl'
+            ? 'Vermindert zuurstofniveaus en verhoogt stress'
+            : 'Reduces oxygen levels, increases stress'
         }
         break
       case 'nitrite':
         if (param.value > 0.3) {
-          description = 'Nitrite levels are elevated'
-          impact = 'Blocks oxygen transport in fish blood'
+          description = this.language === 'nl'
+            ? 'Nitriet niveaus zijn verhoogd'
+            : 'Nitrite levels are elevated'
+          impact = this.language === 'nl'
+            ? 'Blokkeert zuurstoftransport in visbloed'
+            : 'Blocks oxygen transport in fish blood'
         }
         break
       case 'nitrate':
         if (param.value > 25) {
-          description = 'Nitrate levels are high'
-          impact = 'Can cause long-term health issues and algae blooms'
+          description = this.language === 'nl'
+            ? 'Nitraat niveaus zijn hoog'
+            : 'Nitrate levels are high'
+          impact = this.language === 'nl'
+            ? 'Kan langdurige gezondheidsproblemen en algengroei veroorzaken'
+            : 'Can cause long-term health issues and algae blooms'
         }
         break
       case 'phosphate':
         if (param.value > 0.5) {
-          description = 'Phosphate levels are elevated'
-          impact = 'Promotes excessive algae growth'
+          description = this.language === 'nl'
+            ? 'Fosfaat niveaus zijn verhoogd'
+            : 'Phosphate levels are elevated'
+          impact = this.language === 'nl'
+            ? 'Bevordert overmatige algengroei'
+            : 'Promotes excessive algae growth'
         }
         break
+      case 'kh':
+        if (param.value < 4) {
+          description = this.language === 'nl'
+            ? 'KH (carbonaathardheid) is te laag'
+            : 'KH (carbonate hardness) is too low'
+          impact = this.language === 'nl'
+            ? 'Kan pH instabiliteit veroorzaken'
+            : 'Can cause pH instability'
+        }
+        break
+      case 'gh':
+        if (param.value < 6) {
+          description = this.language === 'nl'
+            ? 'GH (algemene hardheid) is te laag'
+            : 'GH (general hardness) is too low'
+          impact = this.language === 'nl'
+            ? 'Kan vissen stressen en groei belemmeren'
+            : 'Can stress fish and hinder growth'
+        }
+        break
+      default:
+        description = this.language === 'nl'
+          ? `${param.name} is buiten het optimale bereik`
+          : `${param.name} is outside optimal range`
+        impact = this.language === 'nl'
+          ? 'Kan de algehele waterkwaliteit en visgezondheid beïnvloeden'
+          : 'May affect overall water quality and fish health'
     }
 
     return {
-      parameter: param.name,
+      parameter: this.getParameterName(param.name),
       risk_level: riskLevel,
       description,
       impact
