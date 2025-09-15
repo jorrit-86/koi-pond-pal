@@ -138,7 +138,7 @@ export function RecommendationsPanel({
     return t(`recommendations.riskLevels.${risk}`)
   }
 
-  if (recommendations.length === 0 && riskAssessment.overall_risk === 'low') {
+  if (recommendations.length === 0 && (!riskAssessment || riskAssessment.overall_risk === 'low')) {
     return (
       <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
         <CardContent className="p-6">
@@ -159,9 +159,10 @@ export function RecommendationsPanel({
   return (
     <div className="space-y-4">
       {/* Risk Assessment */}
-      <Card className={riskAssessment.overall_risk === 'critical' ? 'border-red-500' : 
-                      riskAssessment.overall_risk === 'high' ? 'border-orange-500' : 
-                      riskAssessment.overall_risk === 'medium' ? 'border-yellow-500' : 'border-green-500'}>
+      {riskAssessment && (
+        <Card className={riskAssessment.overall_risk === 'critical' ? 'border-red-500' : 
+                        riskAssessment.overall_risk === 'high' ? 'border-orange-500' : 
+                        riskAssessment.overall_risk === 'medium' ? 'border-yellow-500' : 'border-green-500'}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className={`h-5 w-5 ${getRiskColor(riskAssessment.overall_risk)}`} />
@@ -173,7 +174,7 @@ export function RecommendationsPanel({
             </span>
           </CardDescription>
         </CardHeader>
-        {riskAssessment.risk_factors.length > 0 && (
+        {riskAssessment.risk_factors && riskAssessment.risk_factors.length > 0 && (
           <CardContent>
             <div className="space-y-2">
               {riskAssessment.risk_factors.map((factor, index) => (
@@ -189,6 +190,7 @@ export function RecommendationsPanel({
           </CardContent>
         )}
       </Card>
+      )}
 
       {/* Recommendations */}
       {recommendations.length > 0 && (
