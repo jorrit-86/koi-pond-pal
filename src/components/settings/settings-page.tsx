@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { AdminPanel } from "@/components/admin/admin-panel"
 import { Settings, Home, Bell, Database, Wifi, Timer, Globe, Shield } from "lucide-react"
 import { RecommendationsTest } from "@/components/debug/RecommendationsTest"
+import { AISettings } from '@/components/settings/ai-settings'
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -50,6 +51,10 @@ export function SettingsPage() {
   }
 
   const renderContent = () => {
+    if (activeSubmenu === "ai-settings") {
+      return <AISettings />
+    }
+    
     if (activeSubmenu === "recommendations-test") {
       return <RecommendationsTest />
     }
@@ -336,6 +341,15 @@ export function SettingsPage() {
         >
           <Settings className="h-4 w-4" />
           General
+        </Button>
+        <Button
+          variant={activeSubmenu === "ai-settings" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveSubmenu("ai-settings")}
+          className="flex items-center gap-2"
+        >
+          <Database className="h-4 w-4" />
+          AI Instellingen
         </Button>
         <Button
           variant={activeSubmenu === "recommendations-test" ? "default" : "ghost"}

@@ -23,6 +23,15 @@ export function useRecommendations(): UseRecommendationsReturn {
   const [error, setError] = useState<string | null>(null)
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null)
   const [recommendationEngine, setRecommendationEngine] = useState<RecommendationEngine | null>(null)
+  const [aiPreferences, setAiPreferences] = useState<{
+    ai_recommendations_enabled: boolean
+    ai_risk_assessment_enabled: boolean
+    ai_trend_analysis_enabled: boolean
+  }>({
+    ai_recommendations_enabled: true,
+    ai_risk_assessment_enabled: true,
+    ai_trend_analysis_enabled: true
+  })
 
   const { user } = useAuth()
   const { i18n } = useTranslation()
@@ -83,7 +92,7 @@ export function useRecommendations(): UseRecommendationsReturn {
     try {
       const { data, error } = await supabase
         .from('user_preferences')
-        .select('*')
+        .select('*, ai_recommendations_enabled, ai_risk_assessment_enabled, ai_trend_analysis_enabled')
         .eq('user_id', user.id)
         .single()
 
@@ -109,6 +118,13 @@ export function useRecommendations(): UseRecommendationsReturn {
 
       setUserPreferences(preferences)
       setRecommendationEngine(new RecommendationEngine(preferences, i18n.language))
+      
+      // Set AI preferences
+      setAiPreferences({
+        ai_recommendations_enabled: data?.ai_recommendations_enabled ?? true,
+        ai_risk_assessment_enabled: data?.ai_risk_assessment_enabled ?? true,
+        ai_trend_analysis_enabled: data?.ai_trend_analysis_enabled ?? true
+      })
     } catch (error) {
       console.error('Error in loadUserPreferences:', error)
     }
@@ -161,15 +177,40 @@ export function useRecommendations(): UseRecommendationsReturn {
         range: getParameterRange(param.parameter_type)
       }))
 
-      // Generate recommendations using AI engine
-      const analysis = recommendationEngine.analyzeWaterParameters(currentParameters)
-      
-      setRecommendations(analysis.recommendations)
-      setRiskAssessment(analysis.riskAssessment)
-      setTrends(analysis.trends)
+      // Generate recommendations using AI engine (only if enabled)
+      let analysis = null
+      if (aiPreferences.ai_recommendations_enabled || aiPreferences.ai_risk_assessment_enabled || aiPreferences.ai_trend_analysis_enabled) {
+        analysis = recommendationEngine.analyzeWaterParameters(currentParameters)
+        
+        // Only set data for enabled features
+        if (aiPreferences.ai_recommendations_enabled) {
+          setRecommendations(analysis.recommendations)
+        } else {
+          setRecommendations([])
+        }
+        
+        if (aiPreferences.ai_risk_assessment_enabled) {
+          setRiskAssessment(analysis.riskAssessment)
+        } else {
+          setRiskAssessment(null)
+        }
+        
+        if (aiPreferences.ai_trend_analysis_enabled) {
+          setTrends(analysis.trends)
+        } else {
+          setTrends([])
+        }
+      } else {
+        // All AI features disabled
+        setRecommendations([])
+        setRiskAssessment(null)
+        setTrends([])
+      }
 
-      // Save recommendations to database
-      await saveRecommendationsToDatabase(analysis.recommendations)
+      // Save recommendations to database (only if recommendations are enabled)
+      if (aiPreferences.ai_recommendations_enabled && analysis) {
+        await saveRecommendationsToDatabase(analysis.recommendations)
+      }
 
     } catch (error) {
       console.error('Error in loadWaterParametersAndGenerateRecommendations:', error)
