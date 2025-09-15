@@ -27,6 +27,55 @@ export function useRecommendations(): UseRecommendationsReturn {
   const { user } = useAuth()
   const { i18n } = useTranslation()
 
+  // Helper functions for parameter status and ranges
+  const getParameterStatus = (type: string, value: number): 'good' | 'warning' | 'danger' => {
+    switch (type) {
+      case 'ph':
+        if (value < 6.5 || value > 8.5) return 'danger'
+        if (value < 6.8 || value > 8.2) return 'warning'
+        return 'good'
+      case 'temperature':
+        if (value < 10 || value > 30) return 'danger'
+        if (value < 15 || value > 25) return 'warning'
+        return 'good'
+      case 'nitrite':
+        if (value > 0.3) return 'danger'
+        if (value > 0.1) return 'warning'
+        return 'good'
+      case 'nitrate':
+        if (value > 50) return 'danger'
+        if (value > 25) return 'warning'
+        return 'good'
+      case 'phosphate':
+        if (value > 1.0) return 'danger'
+        if (value > 0.5) return 'warning'
+        return 'good'
+      case 'kh':
+        if (value < 3 || value > 12) return 'danger'
+        if (value < 4 || value > 10) return 'warning'
+        return 'good'
+      case 'gh':
+        if (value < 4 || value > 20) return 'danger'
+        if (value < 6 || value > 16) return 'warning'
+        return 'good'
+      default:
+        return 'good'
+    }
+  }
+
+  const getParameterRange = (type: string): string => {
+    switch (type) {
+      case 'ph': return '6.8-8.2'
+      case 'temperature': return '15-25°C'
+      case 'nitrite': return '0-0.3mg/l'
+      case 'nitrate': return '<25mg/l'
+      case 'phosphate': return '<0.5mg/l'
+      case 'kh': return '4-10°dH'
+      case 'gh': return '6-16°dH'
+      default: return 'N/A'
+    }
+  }
+
   // Load user preferences
   const loadUserPreferences = useCallback(async () => {
     if (!user) return
@@ -73,13 +122,13 @@ export function useRecommendations(): UseRecommendationsReturn {
       setLoading(true)
       setError(null)
 
-      // Get latest water parameters
+      // Get latest water parameters - use the same approach as dashboard
       const { data: waterData, error: waterError } = await supabase
         .from('water_parameters')
         .select('*')
         .eq('user_id', user.id)
-        .order('measured_at', { ascending: false })
-        .limit(50) // Get last 50 measurements
+        .order('created_at', { ascending: false })
+        .limit(100) // Get last 100 measurements
 
       if (waterError) {
         console.error('Error loading water parameters:', waterError)
@@ -94,37 +143,22 @@ export function useRecommendations(): UseRecommendationsReturn {
         return
       }
 
-      // Group parameters by measurement time
-      const parameterGroups: Record<string, any[]> = {}
-      waterData.forEach(param => {
-        const timeKey = param.measured_at?.split('T')[0] || 'unknown'
-        if (!parameterGroups[timeKey]) {
-          parameterGroups[timeKey] = []
+      // Group by parameter type and get the latest value for each (same as dashboard)
+      const latestReadings: Record<string, any> = {}
+      waterData.forEach(reading => {
+        if (!latestReadings[reading.parameter_type] || 
+            new Date(reading.created_at) > new Date(latestReadings[reading.parameter_type].created_at)) {
+          latestReadings[reading.parameter_type] = reading
         }
-        parameterGroups[timeKey].push(param)
       })
 
-      // Get the most recent complete set of parameters
-      const latestMeasurement = Object.keys(parameterGroups)
-        .sort()
-        .reverse()
-        .find(timeKey => parameterGroups[timeKey].length >= 3) // At least 3 parameters
-
-      if (!latestMeasurement) {
-        setRecommendations([])
-        setRiskAssessment(null)
-        setTrends([])
-        return
-      }
-
       // Transform to WaterParameter format
-      const currentParameters: WaterParameter[] = parameterGroups[latestMeasurement].map(param => ({
+      const currentParameters: WaterParameter[] = Object.values(latestReadings).map(param => ({
         name: param.parameter_type,
         value: param.value,
         unit: param.unit || '',
         status: getParameterStatus(param.parameter_type, param.value),
-        range: getParameterRange(param.parameter_type),
-        measured_at: param.measured_at
+        range: getParameterRange(param.parameter_type)
       }))
 
       // Generate recommendations using AI engine
