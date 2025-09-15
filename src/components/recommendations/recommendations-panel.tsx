@@ -25,14 +25,12 @@ import { useToast } from '@/hooks/use-toast'
 interface RecommendationsPanelProps {
   recommendations: Recommendation[]
   riskAssessment: RiskAssessment
-  trends: TrendAnalysis[]
   onRecommendationAction: (recommendationId: string, action: 'completed' | 'dismissed') => void
 }
 
 export function RecommendationsPanel({ 
   recommendations, 
   riskAssessment, 
-  trends, 
   onRecommendationAction 
 }: RecommendationsPanelProps) {
   const [expandedRecommendations, setExpandedRecommendations] = useState<Set<string>>(new Set())
@@ -309,37 +307,6 @@ export function RecommendationsPanel({
         </Card>
       )}
 
-      {/* Trends */}
-      {trends.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Trend Analyse</CardTitle>
-            <CardDescription>Ontwikkeling van water parameters over tijd</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {trends.map((trend, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <div>
-                    <p className="font-medium">{trend.parameter}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Trend: {trend.trend} ({trend.rate > 0 ? '+' : ''}{trend.rate.toFixed(2)} per dag)
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
-                      Voorspelling: {trend.prediction.value.toFixed(1)} in {trend.prediction.timeframe}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Vertrouwen: {Math.round(trend.confidence * 100)}%
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

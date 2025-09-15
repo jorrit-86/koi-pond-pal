@@ -9,6 +9,7 @@ import { KoiEditPage } from "@/components/koi/koi-edit-page"
 import { KoiLogbookOverview } from "@/components/koi/koi-logbook-overview"
 import { SettingsPage } from "@/components/settings/settings-page"
 import { UserProfilePage } from "@/components/user/user-profile-page"
+import { AnalyticsPage } from "@/components/analytics/analytics-page"
 import { PhPage } from "@/components/water-parameters/ph-page"
 import { TemperaturePage } from "@/components/water-parameters/temperature-page"
 import { KhPage, GhPage, NitritePage, NitratePage, PhosphatePage } from "@/components/water-parameters/all-parameters"
@@ -85,18 +86,7 @@ const Index = () => {
           }}
         />
       case "analytics":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">{t("analytics.title")}</h1>
-              <p className="text-muted-foreground">{t("analytics.subtitle")}</p>
-            </div>
-            <div className="p-8 text-center bg-gradient-water rounded-lg border border-border">
-              <h3 className="text-lg font-semibold mb-2">{t("analytics.chartsHistoricalData")}</h3>
-              <p className="text-muted-foreground">{t("analytics.description")}</p>
-            </div>
-          </div>
-        )
+        return <AnalyticsPage onNavigate={setActiveTab} />
       case "settings":
         return <SettingsPage />
       case "ph":

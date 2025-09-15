@@ -28,7 +28,6 @@ export function RecommendationsTest() {
   const [analysis, setAnalysis] = useState<{
     recommendations: any[]
     riskAssessment: any
-    trends: any[]
   } | null>(null)
 
   const [loading, setLoading] = useState(false)
@@ -40,7 +39,10 @@ export function RecommendationsTest() {
     setTimeout(() => {
       const engine = new RecommendationEngine(userPreferences)
       const result = engine.analyzeWaterParameters(testParameters)
-      setAnalysis(result)
+      setAnalysis({
+        recommendations: result.recommendations,
+        riskAssessment: result.riskAssessment
+      })
       setLoading(false)
     }, 1000)
   }
@@ -130,7 +132,6 @@ export function RecommendationsTest() {
             <RecommendationsPanel
               recommendations={analysis.recommendations}
               riskAssessment={analysis.riskAssessment}
-              trends={analysis.trends}
               onRecommendationAction={(recommendationId, action) => {
                 console.log('Recommendation action:', recommendationId, action)
               }}

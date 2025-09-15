@@ -34,7 +34,6 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
   const { 
     recommendations, 
     riskAssessment, 
-    trends, 
     loading: recommendationsLoading,
     refreshRecommendations 
   } = useRecommendations()
@@ -505,7 +504,6 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
             <RecommendationsPanel
               recommendations={recommendations}
               riskAssessment={riskAssessment!}
-              trends={trends}
               onRecommendationAction={(recommendationId, action) => {
                 // Refresh recommendations after action
                 setTimeout(() => {
