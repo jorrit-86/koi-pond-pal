@@ -82,12 +82,17 @@ const getMediaOptions = (type: string) => {
       ]
     case 'biological':
       return [
+        { value: 'japanese_mats', label: 'Japanse Matten', desc: 'Grote synthetische matten met ruwe structuur' },
+        { value: 'moving_bed_k1', label: 'Moving Bed (K1)', desc: 'Kunststof dragers in beweging door lucht' },
+        { value: 'moving_bed_k3', label: 'Moving Bed (K3)', desc: 'Grote kunststof dragers in beweging' },
+        { value: 'bead_filter', label: 'Beadfilter', desc: 'Gesloten drukvat met plastic bolletjes' },
+        { value: 'trickle_filter', label: 'Trickle Filter', desc: 'Water druppelt over filtermateriaal' },
+        { value: 'shower_filter', label: 'Druppeltoren/Shower', desc: 'Compacte verticale bakken met Bacteria House' },
         { value: 'ceramic_rings', label: 'Keramische Ring', desc: 'Bio ringen voor bacteriën' },
         { value: 'bio_balls', label: 'Bio Ballen', desc: 'Plastic ballen met groot oppervlak' },
         { value: 'lava_rock', label: 'Lava Steen', desc: 'Natuurlijke bio media' },
         { value: 'matrix', label: 'Matrix Media', desc: 'Geavanceerde bio media' },
-        { value: 'k1_media', label: 'K1 Media', desc: 'Bewegende bed bio media' },
-        { value: 'bio_blocks', label: 'Bio Blokken', desc: 'Grote bio blokken' }
+        { value: 'bacteria_house', label: 'Bacteria House', desc: 'Speciale media voor shower filters' }
       ]
     case 'chemical':
       return [
@@ -121,7 +126,7 @@ export function PondProperties() {
     filter_media: [],
     filter_segments: [
       { id: '1', type: 'mechanical', media: ['vortex_chamber'], description: 'Vortexkamer - grove filtering' },
-      { id: '2', type: 'biological', media: ['ceramic_rings'], description: 'Biologische filtering' }
+      { id: '2', type: 'biological', media: ['moving_bed_k1'], description: 'Moving Bed K1 - biologische filtering' }
     ],
     uv_sterilizer: false,
     protein_skimmer: false,
@@ -185,7 +190,7 @@ export function PondProperties() {
           filter_media: data.filter_media || [],
           filter_segments: data.filter_segments || [
             { id: '1', type: 'mechanical', media: ['vortex_chamber'], description: 'Vortexkamer - grove filtering' },
-            { id: '2', type: 'biological', media: ['ceramic_rings'], description: 'Biologische filtering' }
+            { id: '2', type: 'biological', media: ['moving_bed_k1'], description: 'Moving Bed K1 - biologische filtering' }
           ],
           uv_sterilizer: data.uv_sterilizer ?? false,
           protein_skimmer: data.protein_skimmer ?? false,

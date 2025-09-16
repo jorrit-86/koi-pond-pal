@@ -5,7 +5,7 @@
 ALTER TABLE public.user_preferences 
 ADD COLUMN IF NOT EXISTS filter_segments JSONB DEFAULT '[
   {"id": "1", "type": "mechanical", "media": ["vortex_chamber"], "description": "Vortexkamer - grove filtering"},
-  {"id": "2", "type": "biological", "media": ["ceramic_rings"], "description": "Biologische filtering"}
+  {"id": "2", "type": "biological", "media": ["moving_bed_k1"], "description": "Moving Bed K1 - biologische filtering"}
 ]'::jsonb;
 
 -- Add comment for documentation
