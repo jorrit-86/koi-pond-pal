@@ -12,7 +12,6 @@ import {
   MessageCircle, 
   X, 
   Send, 
-  Bot, 
   User, 
   Loader2,
   Sparkles,
@@ -20,6 +19,7 @@ import {
   Fish,
   Thermometer
 } from 'lucide-react'
+import koiSenseiLogo from '@/assets/koi-sensei-logo.svg'
 import { cn } from '@/lib/utils'
 
 
@@ -203,9 +203,15 @@ export function AIChatAssistant({ currentPage = 'dashboard' }: AIChatAssistantPr
           <Button
             onClick={() => setIsOpen(true)}
             size="lg"
-            className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+            className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-white border-2 border-gray-200 hover:border-gray-300 relative overflow-hidden"
           >
-            <MessageCircle className="h-6 w-6" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img 
+                src={koiSenseiLogo} 
+                alt="Koi Sensei" 
+                className="h-8 w-8 object-contain"
+              />
+            </div>
           </Button>
         </div>
       )}
@@ -217,8 +223,12 @@ export function AIChatAssistant({ currentPage = 'dashboard' }: AIChatAssistantPr
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                    <Bot className="h-4 w-4 text-white" />
+                  <div className="h-8 w-8 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center overflow-hidden">
+                    <img 
+                      src={koiSenseiLogo} 
+                      alt="Koi Sensei" 
+                      className="h-6 w-6 object-contain"
+                    />
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm">Koi Sensei AI</h3>
@@ -251,8 +261,12 @@ export function AIChatAssistant({ currentPage = 'dashboard' }: AIChatAssistantPr
                       )}
                     >
                       {message.type === 'assistant' && (
-                        <div className="h-6 w-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 mt-1">
-                          <Bot className="h-3 w-3 text-white" />
+                        <div className="h-6 w-6 rounded-full bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden">
+                          <img 
+                            src={koiSenseiLogo} 
+                            alt="Koi Sensei" 
+                            className="h-4 w-4 object-contain"
+                          />
                         </div>
                       )}
                       
@@ -286,8 +300,12 @@ export function AIChatAssistant({ currentPage = 'dashboard' }: AIChatAssistantPr
                   
                   {isLoading && (
                     <div className="flex gap-2 justify-start">
-                      <div className="h-6 w-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 mt-1">
-                        <Bot className="h-3 w-3 text-white" />
+                      <div className="h-6 w-6 rounded-full bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden">
+                        <img 
+                          src={koiSenseiLogo} 
+                          alt="Koi Sensei" 
+                          className="h-4 w-4 object-contain"
+                        />
                       </div>
                       <div className="bg-gray-100 rounded-lg px-3 py-2 text-sm">
                         <div className="flex items-center space-x-2">

@@ -89,6 +89,11 @@ export class AIChatService {
 
     const lowerMessage = userMessage.toLowerCase()
     
+    // Pond size/volume questions
+    if (lowerMessage.includes('inhoud') || lowerMessage.includes('volume') || lowerMessage.includes('grootte') || lowerMessage.includes('liter') || lowerMessage.includes('vijver grootte')) {
+      return this.generatePondSizeResponse(context)
+    }
+
     // Water quality related questions
     if (lowerMessage.includes('water') || lowerMessage.includes('waterkwaliteit') || lowerMessage.includes('ph') || lowerMessage.includes('nitriet') || lowerMessage.includes('nitraat')) {
       return this.generateWaterQualityResponse(context)
@@ -133,8 +138,67 @@ export class AIChatService {
     return this.generateDefaultResponse(context)
   }
 
+  private static generatePondSizeResponse(context: ChatContext): string {
+    const pondSize = context.pondSize || 0
+    const koiCount = context.koiCount || 0
+    const experience = context.userExperience || 'beginner'
+    
+    if (pondSize === 0) {
+      return `Ik zie dat je nog geen vijvergrootte hebt ingevoerd in je profiel. Om je beter te kunnen helpen, voeg je vijvergegevens toe via de 'Instellingen' pagina.
+
+Voor een gezonde koi-vijver is het belangrijk om te weten:
+• Vijverinhoud in liters
+• Aantal koi
+• Filtercapaciteit
+• Diepte van de vijver
+
+Met deze informatie kan ik je veel specifiekere adviezen geven over voeding, filtratie en onderhoud!`
+    }
+
+    const litersPerKoi = pondSize > 0 ? Math.round(pondSize / koiCount) : 0
+    const isOverstocked = litersPerKoi < 50 // Less than 50 liters per koi is overstocked
+    const isWellStocked = litersPerKoi >= 100 // More than 100 liters per koi is excellent
+    
+    let advice = `Je vijver heeft een inhoud van **${pondSize.toLocaleString('nl-NL')} liter** en je hebt **${koiCount} koi**.
+
+**Analyse van je vijver:**
+• Je hebt ${litersPerKoi} liter per koi
+• ${isWellStocked ? '✅ Uitstekende bezetting' : isOverstocked ? '⚠️ Mogelijk overbezetting' : '✅ Goede bezetting'}
+
+**Aanbevelingen voor je ${pondSize.toLocaleString('nl-NL')} liter vijver:**`
+
+    if (pondSize < 1000) {
+      advice += `
+• Kleine vijver: Extra aandacht voor waterkwaliteit
+• Regelmatige waterverversing (10-20% per week)
+• Krachtige filtratie essentieel`
+    } else if (pondSize < 5000) {
+      advice += `
+• Medium vijver: Goede balans tussen onderhoud en stabiliteit
+• Wekelijkse waterkwaliteit controles
+• Seizoensgebonden onderhoud`
+    } else {
+      advice += `
+• Grote vijver: Zeer stabiel ecosysteem
+• Maandelijkse controles voldoende
+• Minimale waterverversing nodig`
+    }
+
+    if (koiCount > 0) {
+      advice += `
+
+**Specifiek voor je ${koiCount} koi:**
+• Voeding: ${koiCount * 2}-${koiCount * 3} gram per dag in de zomer
+• Filter: Minimaal ${Math.ceil(pondSize / 1000)}x vijverinhoud per uur
+• Zuurstof: Extra beluchting bij warm weer`
+    }
+
+    return advice
+  }
+
   private static generateWaterQualityResponse(context: ChatContext): string {
     const params = context.waterParameters || []
+    const pondSize = context.pondSize || 0
     
     if (params.length === 0) {
       return `Ik zie dat je nog geen waterparameters hebt ingevoerd. Om je beter te kunnen helpen, voeg eerst wat metingen toe via de 'Waterparameters' pagina. 
@@ -150,18 +214,117 @@ Ideale waarden voor koi:
 Wat wil je specifiek weten over waterkwaliteit?`
     }
 
-    const paramSummary = params.map(p => `${p.name}: ${p.value} ${p.unit}`).join(', ')
-    return `Gebaseerd op je laatste metingen (${paramSummary}), kan ik je helpen met specifieke vragen over je waterkwaliteit. 
+    // Analyze each parameter and provide specific advice
+    let analysis = `**Analyse van je waterkwaliteit:**\n\n`
+    let hasIssues = false
+    let recommendations = []
 
-Wat wil je precies weten? Bijvoorbeeld:
-• Zijn je waarden goed?
-• Hoe verbeter je specifieke parameters?
-• Wat betekenen afwijkende waarden?
-• Onderhoudstips voor je filtersysteem?`
+    params.forEach(param => {
+      const { name, value, unit, status } = param
+      let statusIcon = '✅'
+      let advice = ''
+
+      switch (name.toLowerCase()) {
+        case 'ph':
+          if (value < 7.0) {
+            statusIcon = '⚠️'
+            hasIssues = true
+            advice = 'Te laag! Voeg KH+ toe of gebruik pH+ product.'
+          } else if (value > 8.5) {
+            statusIcon = '⚠️'
+            hasIssues = true
+            advice = 'Te hoog! Controleer KH waarde en overweeg pH- product.'
+          } else {
+            advice = 'Perfecte waarde!'
+          }
+          break
+        case 'nitriet':
+          if (value > 0) {
+            statusIcon = '🚨'
+            hasIssues = true
+            advice = 'Gevaarlijk! Voer 50% waterverversing uit en controleer filter.'
+            recommendations.push('Directe waterverversing nodig')
+          } else {
+            advice = 'Uitstekend! Geen nitriet gedetecteerd.'
+          }
+          break
+        case 'nitraat':
+          if (value > 50) {
+            statusIcon = '⚠️'
+            hasIssues = true
+            advice = 'Te hoog! Meer waterverversing of planten toevoegen.'
+            recommendations.push('Verhoog waterverversing naar 20% per week')
+          } else {
+            advice = 'Goede waarde!'
+          }
+          break
+        case 'ammoniak':
+          if (value > 0) {
+            statusIcon = '🚨'
+            hasIssues = true
+            advice = 'Gevaarlijk! Directe waterverversing en filter controle.'
+            recommendations.push('Urgente waterverversing')
+          } else {
+            advice = 'Perfect! Geen ammoniak.'
+          }
+          break
+        case 'kh':
+          if (value < 4) {
+            statusIcon = '⚠️'
+            hasIssues = true
+            advice = 'Te laag! Voeg KH+ toe voor pH stabiliteit.'
+            recommendations.push('KH+ toevoegen voor buffer capaciteit')
+          } else if (value > 8) {
+            statusIcon = '⚠️'
+            advice = 'Te hoog, maar niet gevaarlijk.'
+          } else {
+            advice = 'Ideale buffer capaciteit!'
+          }
+          break
+        case 'gh':
+          if (value < 6) {
+            statusIcon = '⚠️'
+            advice = 'Te laag! Voeg GH+ toe voor mineralen.'
+          } else if (value > 12) {
+            statusIcon = '⚠️'
+            advice = 'Te hoog, maar acceptabel.'
+          } else {
+            advice = 'Goede mineralen balans!'
+          }
+          break
+        default:
+          advice = status === 'normal' ? 'Normale waarde' : 'Controleer waarde'
+      }
+
+      analysis += `${statusIcon} **${name.toUpperCase()}**: ${value} ${unit} - ${advice}\n`
+    })
+
+    if (hasIssues) {
+      analysis += `\n**🚨 Actie vereist:**\n`
+      recommendations.forEach(rec => {
+        analysis += `• ${rec}\n`
+      })
+    } else {
+      analysis += `\n**✅ Uitstekend! Je waterkwaliteit is goed.**`
+    }
+
+    if (pondSize > 0) {
+      analysis += `\n\n**Specifiek voor je ${pondSize.toLocaleString('nl-NL')} liter vijver:**`
+      if (pondSize < 1000) {
+        analysis += `\n• Kleine vijver: Controleer waterkwaliteit 2x per week`
+      } else if (pondSize < 5000) {
+        analysis += `\n• Medium vijver: Wekelijkse controles voldoende`
+      } else {
+        analysis += `\n• Grote vijver: Maandelijkse controles voldoende`
+      }
+    }
+
+    return analysis
   }
 
   private static generateKoiCareResponse(context: ChatContext): string {
     const koiCount = context.koiCount || 0
+    const pondSize = context.pondSize || 0
     const experience = context.userExperience || 'beginner'
     
     if (koiCount === 0) {
@@ -177,19 +340,65 @@ Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} koi-houder kan ik je a
 Wat wil je specifiek weten over koi-verzorging?`
     }
 
-    return `Je hebt momenteel ${koiCount} koi in je vijver. Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} koi-houder kan ik je helpen met:
+    const litersPerKoi = pondSize > 0 ? Math.round(pondSize / koiCount) : 0
+    const isOverstocked = litersPerKoi < 50
+    const isWellStocked = litersPerKoi >= 100
 
+    let response = `**Je koi overzicht:**
+• Aantal koi: **${koiCount}**
+${pondSize > 0 ? `• Vijverinhoud: **${pondSize.toLocaleString('nl-NL')} liter**` : ''}
+${litersPerKoi > 0 ? `• Liter per koi: **${litersPerKoi} liter**` : ''}
+
+**Bezetting analyse:**
+${isWellStocked ? '✅ **Uitstekende bezetting** - Ruim voldoende ruimte per koi' : 
+  isOverstocked ? '⚠️ **Mogelijk overbezetting** - Overweeg minder koi of grotere vijver' : 
+  '✅ **Goede bezetting** - Voldoende ruimte per koi'}
+
+**Specifieke adviezen voor je ${koiCount} koi:**`
+
+    if (koiCount === 1) {
+      response += `
+• Solitaire koi: Zorg voor voldoende afleiding en schuilplaatsen
+• Extra aandacht voor gedrag en gezondheid
+• Overweeg een tweede koi voor gezelschap`
+    } else if (koiCount <= 5) {
+      response += `
+• Kleine groep: Goede sociale interactie
+• Houdt rekening met hiërarchie in de groep
+• Regelmatige observatie van alle koi`
+    } else {
+      response += `
+• Grote groep: Complexe sociale dynamiek
+• Extra aandacht voor waterkwaliteit
+• Mogelijk meer agressie - zorg voor voldoende ruimte`
+    }
+
+    if (pondSize > 0) {
+      response += `
+
+**Voeding voor je ${pondSize.toLocaleString('nl-NL')} liter vijver:**
+• Zomer: ${koiCount * 2}-${koiCount * 3} gram per dag
+• Lente/herfst: ${koiCount * 1}-${koiCount * 2} gram per dag
+• Winter: Geen voeding onder 10°C`
+    }
+
+    response += `
+
+**Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} koi-houder:**
 • Dagelijkse gezondheidscontrole
-• Groei en ontwikkeling
-• Gedrag en interactie
-• Voeding en verzorging
-• Probleemherkenning
+• Groei en ontwikkeling monitoren
+• Gedrag en interactie observeren
+• Probleemherkenning en preventie
 
 Wat wil je specifiek weten over je koi?`
+
+    return response
   }
 
   private static generateFeedingResponse(context: ChatContext): string {
     const season = context.season || 'spring'
+    const koiCount = context.koiCount || 0
+    const pondSize = context.pondSize || 0
     const experience = context.userExperience || 'beginner'
     
     const seasonalAdvice = {
@@ -199,15 +408,34 @@ Wat wil je specifiek weten over je koi?`
       winter: 'In de winter eten koi weinig tot niets. Voer alleen bij temperaturen boven 10°C.'
     }
 
-    return `Koi-voeding hangt sterk af van het seizoen en de temperatuur. ${seasonalAdvice[season as keyof typeof seasonalAdvice]}
+    let response = `**Voeding advies voor de ${season}:**\n${seasonalAdvice[season as keyof typeof seasonalAdvice]}`
 
-Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} koi-houder:
-• Voer alleen wat ze in 5 minuten opeten
+    if (koiCount > 0) {
+      const dailyAmount = season === 'summer' ? koiCount * 3 : 
+                         season === 'spring' || season === 'autumn' ? koiCount * 2 : 0
+      
+      response += `\n\n**Specifiek voor je ${koiCount} koi:**
+• ${season === 'winter' ? 'Geen voeding onder 10°C' : `Dagelijkse hoeveelheid: ${dailyAmount} gram`}
+• Voer ${season === 'summer' ? '2-3x per dag' : season === 'winter' ? 'niet' : '1-2x per dag'}
+• Voer alleen wat ze in 5 minuten opeten`
+    }
+
+    if (pondSize > 0) {
+      response += `\n\n**Voor je ${pondSize.toLocaleString('nl-NL')} liter vijver:**
+• ${pondSize < 1000 ? 'Kleine vijver: Extra aandacht voor waterkwaliteit na voeding' :
+    pondSize < 5000 ? 'Medium vijver: Normale voeding routine' :
+    'Grote vijver: Zeer stabiel, minder risico op problemen'}`
+    }
+
+    response += `\n\n**Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} koi-houder:**
 • Gebruik seizoensgebonden voer
-• Voer niet bij temperaturen onder 10°C
 • Varieer met verschillende soorten voer
+• Observeer eetgedrag dagelijks
+• Pas voeding aan op basis van activiteit
 
 Wat wil je specifiek weten over voeding?`
+
+    return response
   }
 
   private static generateFilterResponse(context: ChatContext): string {

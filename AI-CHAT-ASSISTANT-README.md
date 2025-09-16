@@ -14,15 +14,18 @@ De AI Chat Assistant is een intelligente chatbot die op elke pagina van de Koi P
 ### 🌊 **Waterkwaliteit Expertise**
 - Interpreteert je waterparameters (pH, nitriet, nitraat, etc.)
 - Geeft specifieke adviezen op basis van je metingen
+- Analyseert elke parameter en geeft concrete actiepunten
 - Helpt bij probleemoplossing en onderhoud
 
 ### 🐟 **Koi-Verzorging**
 - Advies over voeding, gezondheid en gedrag
-- Seizoensgebonden tips
+- Analyseert je koi-aantal en vijverbezetting
+- Geeft specifieke voeding adviezen per seizoen
 - Probleemherkenning en preventie
 
 ### 🔧 **Vijveronderhoud**
 - Filterbeheer en onderhoud
+- Vijverinhoud analyse en adviezen
 - Seizoensadviezen
 - Technische vragen en oplossingen
 
@@ -30,7 +33,8 @@ De AI Chat Assistant is een intelligente chatbot die op elke pagina van de Koi P
 
 ### Floating Chat Button
 - **Positie**: Rechter onderhoek van het scherm
-- **Design**: Gradient blauw-paars met chat icoon
+- **Design**: Witte achtergrond met grijze border en Koi Sensei logo
+- **Logo**: Gebruikt het wijze Koi Sensei logo in originele kleuren (wijze man met koi-vis)
 - **Altijd zichtbaar**: Op alle pagina's beschikbaar
 
 ### Chat Window
@@ -43,6 +47,7 @@ De AI Chat Assistant is een intelligente chatbot die op elke pagina van de Koi P
 - **Quick suggestions**: Snelle vraag-suggesties
 - **Typing indicator**: Toont wanneer de AI aan het "denken" is
 - **Context display**: Toont huidige pagina en status
+- **Koi Sensei branding**: Gebruikt het wijze Koi Sensei logo door de hele interface
 
 ## Technische Implementatie
 
@@ -107,22 +112,51 @@ De AI Chat Assistant is automatisch beschikbaar op alle pagina's. Gebruikers hoe
 
 ## Voorbeelden van Gebruik
 
+### Vijverinhoud Vragen
+```
+Gebruiker: "Hoeveel inhoud heeft mijn vijver?"
+AI: "Je vijver heeft een inhoud van 12.500 liter en je hebt 1 koi.
+Analyse van je vijver:
+• Je hebt 12.500 liter per koi
+• ✅ Uitstekende bezetting - Ruim voldoende ruimte per koi
+Aanbevelingen voor je 12.500 liter vijver:
+• Grote vijver: Zeer stabiel ecosysteem
+• Maandelijkse controles voldoende
+• Minimale waterverversing nodig..."
+```
+
 ### Waterkwaliteit Vragen
 ```
-Gebruiker: "Mijn pH is 6.5, is dat goed?"
-AI: "Een pH van 6.5 is te laag voor koi. De ideale pH ligt tussen 7.0-8.5..."
+Gebruiker: "Hoe is mijn waterkwaliteit?"
+AI: "Analyse van je waterkwaliteit:
+✅ PH: 7.2 - Perfecte waarde!
+🚨 NITRIET: 0.5 mg/l - Gevaarlijk! Voer 50% waterverversing uit
+⚠️ NITRAAT: 75 mg/l - Te hoog! Meer waterverversing nodig
+🚨 Actie vereist:
+• Directe waterverversing nodig
+• Verhoog waterverversing naar 20% per week"
 ```
 
 ### Koi-Verzorging
 ```
 Gebruiker: "Hoe vaak moet ik mijn koi voeren?"
-AI: "Koi-voeding hangt af van het seizoen. In de zomer 2-3x per dag..."
+AI: "Voeding advies voor de zomer:
+In de zomer zijn koi het meest actief. Voer 2-3x per dag met hoogwaardig voer.
+Specifiek voor je 8 koi:
+• Dagelijkse hoeveelheid: 24 gram
+• Voer 2-3x per dag
+• Voer alleen wat ze in 5 minuten opeten"
 ```
 
 ### Seizoensadvies
 ```
 Gebruiker: "Wat moet ik doen in de winter?"
-AI: "In de winter zijn er specifieke taken: minimale voeding, ijsvrij houden..."
+AI: "In de winter zijn er specifieke taken voor je vijver:
+Winter: Minimale voeding, ijsvrij houden, filter onderhoud, koi observeren
+Specifiek voor je 8 koi:
+• Geen voeding onder 10°C
+• Voer niet
+• Extra observatie voor gezondheid"
 ```
 
 ## Toekomstige Uitbreidingen
