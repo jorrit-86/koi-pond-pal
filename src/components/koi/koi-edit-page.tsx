@@ -32,6 +32,7 @@ interface Koi {
   purchase_date?: string
   age_at_purchase?: number
   length_at_purchase?: number
+  location?: string
 }
 
 interface KoiPhoto {
@@ -121,7 +122,8 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
         purchase_price: data.purchase_price || undefined,
         purchase_date: data.purchase_date || undefined,
         age_at_purchase: data.age_at_purchase || undefined,
-        length_at_purchase: data.length_at_purchase || undefined
+        length_at_purchase: data.length_at_purchase || undefined,
+        location: data.location || 'pond'
       }
 
       setKoi(transformedKoi)
@@ -387,7 +389,8 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
           photo_url: koi.photo_url || null,
           breeder: koi.breeder || null,
           dealer: koi.dealer || null,
-          purchase_price: koi.purchase_price ? parseFloat(koi.purchase_price.toString()) : null
+          purchase_price: koi.purchase_price ? parseFloat(koi.purchase_price.toString()) : null,
+          location: koi.location || 'pond'
         })
         .eq('id', koi.id)
 
@@ -736,6 +739,50 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
                             {currentLength || koi.length_at_purchase || koi.length} cm
                           </p>
                           <Button size="sm" variant="ghost" onClick={() => startEditing('length', currentLength || koi.length_at_purchase || koi.length)} className="h-8 w-8 p-0">
+                            <Pencil className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Locatie */}
+                <div className="bg-gray-50 rounded-lg p-1">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Locatie</p>
+                      {editingField === 'location' ? (
+                        <div className="flex items-center gap-2">
+                          <Select value={tempValue} onValueChange={setTempValue}>
+                            <SelectTrigger className="flex-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pond">Vijver</SelectItem>
+                              <SelectItem value="quarantine">Quarantaine</SelectItem>
+                              <SelectItem value="hospital">Ziekenboeg</SelectItem>
+                              <SelectItem value="breeding_tank">Kweekbak</SelectItem>
+                              <SelectItem value="other">Anders</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button size="sm" variant="ghost" onClick={() => saveField('location')} className="h-8 w-8 p-0">
+                            <Check className="h-4 w-4 text-green-600" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={cancelEditing} className="h-8 w-8 p-0">
+                            <X className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <p className="text-lg font-semibold text-gray-900">
+                            {koi.location === 'pond' ? 'Vijver' :
+                             koi.location === 'quarantine' ? 'Quarantaine' :
+                             koi.location === 'hospital' ? 'Ziekenboeg' :
+                             koi.location === 'breeding_tank' ? 'Kweekbak' :
+                             koi.location === 'other' ? 'Anders' : 'Vijver'}
+                          </p>
+                          <Button size="sm" variant="ghost" onClick={() => startEditing('location', koi.location || 'pond')} className="h-8 w-8 p-0">
                             <Pencil className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                           </Button>
                         </div>

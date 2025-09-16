@@ -37,6 +37,7 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
     purchase_price: '',
     purchase_date: '',
     age_at_purchase: '',
+    location: 'pond',
     length_at_purchase: ''
   })
 
@@ -92,7 +93,8 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
           dealer: newKoi.dealer || null,
           purchase_price: newKoi.purchase_price ? parseFloat(newKoi.purchase_price) : null,
           age_at_purchase: newKoi.age_at_purchase ? parseInt(newKoi.age_at_purchase) : null,
-          length_at_purchase: newKoi.length_at_purchase ? parseInt(newKoi.length_at_purchase) : null
+          length_at_purchase: newKoi.length_at_purchase ? parseInt(newKoi.length_at_purchase) : null,
+          location: newKoi.location || 'pond'
         })
         .select()
         .single()
@@ -215,6 +217,22 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
               onChange={(e) => setNewKoi(prev => ({ ...prev, weight: e.target.value }))}
               placeholder="0.0"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="location">Locatie</Label>
+            <Select value={newKoi.location} onValueChange={(value) => setNewKoi(prev => ({ ...prev, location: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecteer locatie" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pond">Vijver</SelectItem>
+                <SelectItem value="quarantine">Quarantaine</SelectItem>
+                <SelectItem value="hospital">Ziekenboeg</SelectItem>
+                <SelectItem value="breeding_tank">Kweekbak</SelectItem>
+                <SelectItem value="other">Anders</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
