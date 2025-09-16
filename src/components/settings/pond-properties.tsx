@@ -27,6 +27,25 @@ interface PondProperties {
   maintenance_frequency: string
   seasonal_awareness: boolean
   auto_recommendations: boolean
+  // Filtration system
+  filtration_type: string
+  filter_media: string[]
+  uv_sterilizer: boolean
+  protein_skimmer: boolean
+  // Water features
+  waterfall: boolean
+  fountain: boolean
+  aeration_system: boolean
+  // Equipment
+  heater: boolean
+  chiller: boolean
+  auto_feeder: boolean
+  // Water source
+  water_source: string
+  water_changes_manual: boolean
+  // Plant life
+  plants_present: boolean
+  plant_types: string[]
 }
 
 interface KoiCounts {
@@ -50,7 +69,26 @@ export function PondProperties() {
     climate_zone: 'temperate',
     maintenance_frequency: 'weekly',
     seasonal_awareness: true,
-    auto_recommendations: true
+    auto_recommendations: true,
+    // Filtration system
+    filtration_type: 'mechanical_biological',
+    filter_media: [],
+    uv_sterilizer: false,
+    protein_skimmer: false,
+    // Water features
+    waterfall: false,
+    fountain: false,
+    aeration_system: false,
+    // Equipment
+    heater: false,
+    chiller: false,
+    auto_feeder: false,
+    // Water source
+    water_source: 'tap_water',
+    water_changes_manual: true,
+    // Plant life
+    plants_present: false,
+    plant_types: []
   })
   const [koiCounts, setKoiCounts] = useState<KoiCounts>({
     total_koi: 0,
@@ -91,7 +129,26 @@ export function PondProperties() {
           climate_zone: data.climate_zone || 'temperate',
           maintenance_frequency: data.maintenance_frequency || 'weekly',
           seasonal_awareness: data.seasonal_awareness ?? true,
-          auto_recommendations: data.auto_recommendations ?? true
+          auto_recommendations: data.auto_recommendations ?? true,
+          // Filtration system
+          filtration_type: data.filtration_type || 'mechanical_biological',
+          filter_media: data.filter_media || [],
+          uv_sterilizer: data.uv_sterilizer ?? false,
+          protein_skimmer: data.protein_skimmer ?? false,
+          // Water features
+          waterfall: data.waterfall ?? false,
+          fountain: data.fountain ?? false,
+          aeration_system: data.aeration_system ?? false,
+          // Equipment
+          heater: data.heater ?? false,
+          chiller: data.chiller ?? false,
+          auto_feeder: data.auto_feeder ?? false,
+          // Water source
+          water_source: data.water_source || 'tap_water',
+          water_changes_manual: data.water_changes_manual ?? true,
+          // Plant life
+          plants_present: data.plants_present ?? false,
+          plant_types: data.plant_types || []
         })
       }
     } catch (error) {
@@ -146,7 +203,26 @@ export function PondProperties() {
           climate_zone: pondProperties.climate_zone,
           maintenance_frequency: pondProperties.maintenance_frequency,
           seasonal_awareness: pondProperties.seasonal_awareness,
-          auto_recommendations: pondProperties.auto_recommendations
+          auto_recommendations: pondProperties.auto_recommendations,
+          // Filtration system
+          filtration_type: pondProperties.filtration_type,
+          filter_media: pondProperties.filter_media,
+          uv_sterilizer: pondProperties.uv_sterilizer,
+          protein_skimmer: pondProperties.protein_skimmer,
+          // Water features
+          waterfall: pondProperties.waterfall,
+          fountain: pondProperties.fountain,
+          aeration_system: pondProperties.aeration_system,
+          // Equipment
+          heater: pondProperties.heater,
+          chiller: pondProperties.chiller,
+          auto_feeder: pondProperties.auto_feeder,
+          // Water source
+          water_source: pondProperties.water_source,
+          water_changes_manual: pondProperties.water_changes_manual,
+          // Plant life
+          plants_present: pondProperties.plants_present,
+          plant_types: pondProperties.plant_types
         })
         .eq('user_id', user.id)
 
@@ -165,6 +241,25 @@ export function PondProperties() {
             maintenance_frequency: pondProperties.maintenance_frequency,
             seasonal_awareness: pondProperties.seasonal_awareness,
             auto_recommendations: pondProperties.auto_recommendations,
+            // Filtration system
+            filtration_type: pondProperties.filtration_type,
+            filter_media: pondProperties.filter_media,
+            uv_sterilizer: pondProperties.uv_sterilizer,
+            protein_skimmer: pondProperties.protein_skimmer,
+            // Water features
+            waterfall: pondProperties.waterfall,
+            fountain: pondProperties.fountain,
+            aeration_system: pondProperties.aeration_system,
+            // Equipment
+            heater: pondProperties.heater,
+            chiller: pondProperties.chiller,
+            auto_feeder: pondProperties.auto_feeder,
+            // Water source
+            water_source: pondProperties.water_source,
+            water_changes_manual: pondProperties.water_changes_manual,
+            // Plant life
+            plants_present: pondProperties.plants_present,
+            plant_types: pondProperties.plant_types,
             experience_level: 'beginner',
             koi_count: 0,
             preferred_chemicals: []
@@ -381,6 +476,262 @@ export function PondProperties() {
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Filtration System */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Droplets className="h-5 w-5 text-primary" />
+            Filtering Systeem
+          </CardTitle>
+          <CardDescription>
+            Informatie over je filtering voor betere onderhoudsaanbevelingen
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="filtration-type">Filtering Type</Label>
+            <Select 
+              value={pondProperties.filtration_type} 
+              onValueChange={(value) => setPondProperties(prev => ({ ...prev, filtration_type: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecteer filtering type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mechanical_biological">Mechanisch + Biologisch</SelectItem>
+                <SelectItem value="mechanical_only">Alleen Mechanisch</SelectItem>
+                <SelectItem value="biological_only">Alleen Biologisch</SelectItem>
+                <SelectItem value="natural">Natuurlijke Filtering</SelectItem>
+                <SelectItem value="none">Geen Filtering</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Filter Media</Label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {['sponges', 'ceramic_rings', 'bio_balls', 'activated_carbon', 'zeolite', 'sand'].map((media) => (
+                <label key={media} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={pondProperties.filter_media.includes(media)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setPondProperties(prev => ({
+                          ...prev,
+                          filter_media: [...prev.filter_media, media]
+                        }))
+                      } else {
+                        setPondProperties(prev => ({
+                          ...prev,
+                          filter_media: prev.filter_media.filter(m => m !== media)
+                        }))
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm">
+                    {media === 'sponges' ? 'Sponzen' :
+                     media === 'ceramic_rings' ? 'Keramische Ring' :
+                     media === 'bio_balls' ? 'Bio Ballen' :
+                     media === 'activated_carbon' ? 'Actieve Kool' :
+                     media === 'zeolite' ? 'Zeoliet' :
+                     media === 'sand' ? 'Zand' : media}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={pondProperties.uv_sterilizer}
+                onChange={(e) => setPondProperties(prev => ({ ...prev, uv_sterilizer: e.target.checked }))}
+                className="rounded"
+              />
+              <span>UV Sterilisator</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={pondProperties.protein_skimmer}
+                onChange={(e) => setPondProperties(prev => ({ ...prev, protein_skimmer: e.target.checked }))}
+                className="rounded"
+              />
+              <span>Proteïne Skimmer</span>
+            </label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Water Features & Equipment */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Droplets className="h-5 w-5 text-primary" />
+            Water Features & Apparatuur
+          </CardTitle>
+          <CardDescription>
+            Extra apparatuur en water features in je vijver
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={pondProperties.waterfall}
+                onChange={(e) => setPondProperties(prev => ({ ...prev, waterfall: e.target.checked }))}
+                className="rounded"
+              />
+              <span>Waterval</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={pondProperties.fountain}
+                onChange={(e) => setPondProperties(prev => ({ ...prev, fountain: e.target.checked }))}
+                className="rounded"
+              />
+              <span>Fontein</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={pondProperties.aeration_system}
+                onChange={(e) => setPondProperties(prev => ({ ...prev, aeration_system: e.target.checked }))}
+                className="rounded"
+              />
+              <span>Beluchting Systeem</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={pondProperties.heater}
+                onChange={(e) => setPondProperties(prev => ({ ...prev, heater: e.target.checked }))}
+                className="rounded"
+              />
+              <span>Verwarming</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={pondProperties.chiller}
+                onChange={(e) => setPondProperties(prev => ({ ...prev, chiller: e.target.checked }))}
+                className="rounded"
+              />
+              <span>Koeling</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={pondProperties.auto_feeder}
+                onChange={(e) => setPondProperties(prev => ({ ...prev, auto_feeder: e.target.checked }))}
+                className="rounded"
+              />
+              <span>Automatische Voeder</span>
+            </label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Water Source & Plant Life */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Droplets className="h-5 w-5 text-primary" />
+            Water Bron & Planten
+          </CardTitle>
+          <CardDescription>
+            Informatie over water bron en plantenleven
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="water-source">Water Bron</Label>
+            <Select 
+              value={pondProperties.water_source} 
+              onValueChange={(value) => setPondProperties(prev => ({ ...prev, water_source: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecteer water bron" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tap_water">Kraanwater</SelectItem>
+                <SelectItem value="well_water">Putwater</SelectItem>
+                <SelectItem value="rain_water">Regenwater</SelectItem>
+                <SelectItem value="ro_water">RO Water</SelectItem>
+                <SelectItem value="mixed">Gemengd</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={pondProperties.water_changes_manual}
+                onChange={(e) => setPondProperties(prev => ({ ...prev, water_changes_manual: e.target.checked }))}
+                className="rounded"
+              />
+              <span>Handmatige Waterverversing</span>
+            </label>
+          </div>
+
+          <div className="space-y-2">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={pondProperties.plants_present}
+                onChange={(e) => setPondProperties(prev => ({ ...prev, plants_present: e.target.checked }))}
+                className="rounded"
+              />
+              <span>Planten Aanwezig</span>
+            </label>
+          </div>
+
+          {pondProperties.plants_present && (
+            <div className="space-y-2">
+              <Label>Plant Types</Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {['water_lilies', 'lotus', 'oxygen_plants', 'floating_plants', 'marginal_plants', 'submerged_plants'].map((plant) => (
+                  <label key={plant} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={pondProperties.plant_types.includes(plant)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setPondProperties(prev => ({
+                            ...prev,
+                            plant_types: [...prev.plant_types, plant]
+                          }))
+                        } else {
+                          setPondProperties(prev => ({
+                            ...prev,
+                            plant_types: prev.plant_types.filter(p => p !== plant)
+                          }))
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    <span className="text-sm">
+                      {plant === 'water_lilies' ? 'Waterlelies' :
+                       plant === 'lotus' ? 'Lotus' :
+                       plant === 'oxygen_plants' ? 'Zuurstofplanten' :
+                       plant === 'floating_plants' ? 'Drijfplanten' :
+                       plant === 'marginal_plants' ? 'Oeverplanten' :
+                       plant === 'submerged_plants' ? 'Onderwaterplanten' : plant}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
