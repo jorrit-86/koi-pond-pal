@@ -640,38 +640,65 @@ export function PondProperties() {
                         {segment.type !== 'empty' && segment.type !== 'uv' && segment.type !== 'skimmer' && (
                           <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground">Filter Media:</Label>
-                            <div className="space-y-1 max-h-32 overflow-y-auto">
-                              {getMediaOptions(segment.type).map((media) => (
-                                <label key={media.value} className="flex items-start space-x-2 p-1 rounded hover:bg-gray-50">
-                                  <input
-                                    type="checkbox"
-                                    checked={segment.media.includes(media.value)}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setPondProperties(prev => ({
-                                          ...prev,
-                                          filter_segments: prev.filter_segments.map(s => 
-                                            s.id === segment.id ? { ...s, media: [...s.media, media.value] } : s
-                                          )
-                                        }))
-                                      } else {
-                                        setPondProperties(prev => ({
-                                          ...prev,
-                                          filter_segments: prev.filter_segments.map(s => 
-                                            s.id === segment.id ? { ...s, media: s.media.filter(m => m !== media.value) } : s
-                                          )
-                                        }))
-                                      }
-                                    }}
-                                    className="mt-0.5 rounded text-xs"
-                                  />
-                                  <div className="flex-1">
-                                    <span className="text-xs font-medium">{media.label}</span>
-                                    <p className="text-xs text-muted-foreground">{media.desc}</p>
+                            
+                            {/* Selected Media Display */}
+                            {segment.media.length > 0 && (
+                              <div className="p-2 bg-green-50 border border-green-200 rounded-md">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <span className="text-xs font-medium text-green-800">
+                                      {getMediaOptions(segment.type).find(m => m.value === segment.media[0])?.label}
+                                    </span>
+                                    <p className="text-xs text-green-600">
+                                      {getMediaOptions(segment.type).find(m => m.value === segment.media[0])?.desc}
+                                    </p>
                                   </div>
-                                </label>
-                              ))}
-                            </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setPondProperties(prev => ({
+                                        ...prev,
+                                        filter_segments: prev.filter_segments.map(s => 
+                                          s.id === segment.id ? { ...s, media: [] } : s
+                                        )
+                                      }))
+                                    }}
+                                    className="h-4 w-4 p-0 text-red-500 hover:text-red-700"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Media Selection Options */}
+                            {segment.media.length === 0 && (
+                              <div className="space-y-1 max-h-32 overflow-y-auto">
+                                {getMediaOptions(segment.type).map((media) => (
+                                  <label key={media.value} className="flex items-start space-x-2 p-1 rounded hover:bg-gray-50">
+                                    <input
+                                      type="radio"
+                                      name={`media-${segment.id}`}
+                                      value={media.value}
+                                      onChange={(e) => {
+                                        setPondProperties(prev => ({
+                                          ...prev,
+                                          filter_segments: prev.filter_segments.map(s => 
+                                            s.id === segment.id ? { ...s, media: [media.value] } : s
+                                          )
+                                        }))
+                                      }}
+                                      className="mt-0.5 rounded text-xs"
+                                    />
+                                    <div className="flex-1">
+                                      <span className="text-xs font-medium">{media.label}</span>
+                                      <p className="text-xs text-muted-foreground">{media.desc}</p>
+                                    </div>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
 
