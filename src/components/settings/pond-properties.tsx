@@ -15,8 +15,18 @@ import {
   Calendar,
   MapPin,
   Save,
-  RefreshCw
+  RefreshCw,
+  Plus,
+  X,
+  ArrowRight
 } from 'lucide-react'
+
+interface FilterSegment {
+  id: string
+  type: 'mechanical' | 'biological' | 'chemical' | 'uv' | 'skimmer' | 'empty'
+  media: string[]
+  description: string
+}
 
 interface PondProperties {
   pond_size_liters: number | null
@@ -30,6 +40,7 @@ interface PondProperties {
   // Filtration system
   filtration_type: string
   filter_media: string[]
+  filter_segments: FilterSegment[]
   uv_sterilizer: boolean
   protein_skimmer: boolean
   // Water features
@@ -55,6 +66,33 @@ interface KoiCounts {
   hospital_koi: number
 }
 
+// Helper function to get media options based on segment type
+const getMediaOptions = (type: string) => {
+  switch (type) {
+    case 'mechanical':
+      return [
+        { value: 'sponges', label: 'Sponzen' },
+        { value: 'sand', label: 'Zand' },
+        { value: 'foam', label: 'Schuim' }
+      ]
+    case 'biological':
+      return [
+        { value: 'ceramic_rings', label: 'Keramische Ring' },
+        { value: 'bio_balls', label: 'Bio Ballen' },
+        { value: 'lava_rock', label: 'Lava Steen' },
+        { value: 'matrix', label: 'Matrix Media' }
+      ]
+    case 'chemical':
+      return [
+        { value: 'activated_carbon', label: 'Actieve Kool' },
+        { value: 'zeolite', label: 'Zeoliet' },
+        { value: 'phosphate_remover', label: 'Fosfaat Verwijderaar' }
+      ]
+    default:
+      return []
+  }
+}
+
 export function PondProperties() {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -73,6 +111,10 @@ export function PondProperties() {
     // Filtration system
     filtration_type: 'mechanical_biological',
     filter_media: [],
+    filter_segments: [
+      { id: '1', type: 'mechanical', media: ['sponges'], description: 'Grove filtering' },
+      { id: '2', type: 'biological', media: ['ceramic_rings'], description: 'Biologische filtering' }
+    ],
     uv_sterilizer: false,
     protein_skimmer: false,
     // Water features
@@ -133,6 +175,10 @@ export function PondProperties() {
           // Filtration system
           filtration_type: data.filtration_type || 'mechanical_biological',
           filter_media: data.filter_media || [],
+          filter_segments: data.filter_segments || [
+            { id: '1', type: 'mechanical', media: ['sponges'], description: 'Grove filtering' },
+            { id: '2', type: 'biological', media: ['ceramic_rings'], description: 'Biologische filtering' }
+          ],
           uv_sterilizer: data.uv_sterilizer ?? false,
           protein_skimmer: data.protein_skimmer ?? false,
           // Water features
@@ -207,6 +253,7 @@ export function PondProperties() {
           // Filtration system
           filtration_type: pondProperties.filtration_type,
           filter_media: pondProperties.filter_media,
+          filter_segments: pondProperties.filter_segments,
           uv_sterilizer: pondProperties.uv_sterilizer,
           protein_skimmer: pondProperties.protein_skimmer,
           // Water features
@@ -244,6 +291,7 @@ export function PondProperties() {
             // Filtration system
             filtration_type: pondProperties.filtration_type,
             filter_media: pondProperties.filter_media,
+            filter_segments: pondProperties.filter_segments,
             uv_sterilizer: pondProperties.uv_sterilizer,
             protein_skimmer: pondProperties.protein_skimmer,
             // Water features
@@ -479,207 +527,202 @@ export function PondProperties() {
         </CardContent>
       </Card>
 
-      {/* Filtration System */}
+      {/* Visual Filter Builder */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Droplets className="h-5 w-5 text-primary" />
-            Filtering Systeem
+            Filter Systeem Builder
           </CardTitle>
           <CardDescription>
-            Configureer je filtering systeem voor nauwkeurige onderhoudsaanbevelingen
+            Bouw je filter systeem visueel op - water stroomt van links naar rechts
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Filter Type Selection */}
-          <div className="space-y-3">
-            <Label htmlFor="filtration-type" className="text-base font-medium">Filtering Type</Label>
-            <Select 
-              value={pondProperties.filtration_type} 
-              onValueChange={(value) => setPondProperties(prev => ({ ...prev, filtration_type: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecteer je filtering type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="mechanical_biological">
-                  <div className="flex flex-col">
-                    <span className="font-medium">Mechanisch + Biologisch</span>
-                    <span className="text-xs text-muted-foreground">Volledig systeem met beide filtertypen</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="mechanical_only">
-                  <div className="flex flex-col">
-                    <span className="font-medium">Alleen Mechanisch</span>
-                    <span className="text-xs text-muted-foreground">Alleen fysieke filtering (sponzen, zand)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="biological_only">
-                  <div className="flex flex-col">
-                    <span className="font-medium">Alleen Biologisch</span>
-                    <span className="text-xs text-muted-foreground">Alleen bacteriële filtering (bio media)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="natural">
-                  <div className="flex flex-col">
-                    <span className="font-medium">Natuurlijke Filtering</span>
-                    <span className="text-xs text-muted-foreground">Planten en natuurlijke processen</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="none">
-                  <div className="flex flex-col">
-                    <span className="font-medium">Geen Filtering</span>
-                    <span className="text-xs text-muted-foreground">Alleen waterverversing</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Filter Flow Diagram */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Filter Stroom</h3>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const newSegment: FilterSegment = {
+                      id: Date.now().toString(),
+                      type: 'empty',
+                      media: [],
+                      description: 'Nieuw segment'
+                    }
+                    setPondProperties(prev => ({
+                      ...prev,
+                      filter_segments: [...prev.filter_segments, newSegment]
+                    }))
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Segment Toevoegen
+                </Button>
+              </div>
+            </div>
 
-          {/* Filter Media Selection */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium">Filter Media</Label>
-            <p className="text-sm text-muted-foreground">Selecteer alle filter media die je gebruikt:</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* Mechanical Media */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-primary">Mechanische Filtering</h4>
-                {[
-                  { value: 'sponges', label: 'Sponzen', desc: 'Grove en fijne sponzen' },
-                  { value: 'sand', label: 'Zand', desc: 'Zandfilter' },
-                  { value: 'foam', label: 'Schuim', desc: 'Filter schuim' }
-                ].map((media) => (
-                  <label key={media.value} className="flex items-start space-x-3 p-2 rounded-lg border hover:bg-muted/50">
-                    <input
-                      type="checkbox"
-                      checked={pondProperties.filter_media.includes(media.value)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setPondProperties(prev => ({
-                            ...prev,
-                            filter_media: [...prev.filter_media, media.value]
-                          }))
-                        } else {
-                          setPondProperties(prev => ({
-                            ...prev,
-                            filter_media: prev.filter_media.filter(m => m !== media.value)
-                          }))
-                        }
-                      }}
-                      className="mt-1 rounded"
-                    />
-                    <div className="flex-1">
-                      <span className="text-sm font-medium">{media.label}</span>
-                      <p className="text-xs text-muted-foreground">{media.desc}</p>
-                    </div>
-                  </label>
-                ))}
+            {/* Visual Filter Flow */}
+            <div className="relative">
+              {/* Water Flow Arrow */}
+              <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-blue-200 transform -translate-y-1/2 z-0">
+                <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-200 border-t-2 border-b-2 border-t-transparent border-b-transparent"></div>
               </div>
 
-              {/* Biological Media */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-primary">Biologische Filtering</h4>
-                {[
-                  { value: 'ceramic_rings', label: 'Keramische Ring', desc: 'Bio ringen voor bacteriën' },
-                  { value: 'bio_balls', label: 'Bio Ballen', desc: 'Plastic ballen met groot oppervlak' },
-                  { value: 'lava_rock', label: 'Lava Steen', desc: 'Natuurlijke bio media' },
-                  { value: 'matrix', label: 'Matrix Media', desc: 'Geavanceerde bio media' }
-                ].map((media) => (
-                  <label key={media.value} className="flex items-start space-x-3 p-2 rounded-lg border hover:bg-muted/50">
-                    <input
-                      type="checkbox"
-                      checked={pondProperties.filter_media.includes(media.value)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setPondProperties(prev => ({
-                            ...prev,
-                            filter_media: [...prev.filter_media, media.value]
-                          }))
-                        } else {
-                          setPondProperties(prev => ({
-                            ...prev,
-                            filter_media: prev.filter_media.filter(m => m !== media.value)
-                          }))
-                        }
-                      }}
-                      className="mt-1 rounded"
-                    />
-                    <div className="flex-1">
-                      <span className="text-sm font-medium">{media.label}</span>
-                      <p className="text-xs text-muted-foreground">{media.desc}</p>
+              {/* Filter Segments */}
+              <div className="flex gap-4 overflow-x-auto pb-4">
+                {pondProperties.filter_segments.map((segment, index) => (
+                  <div key={segment.id} className="flex items-center gap-2">
+                    {/* Segment */}
+                    <div className="relative bg-white border-2 border-gray-300 rounded-lg p-4 min-w-[200px] shadow-sm hover:shadow-md transition-shadow">
+                      {/* Segment Type Badge */}
+                      <div className={`absolute -top-2 left-2 px-2 py-1 rounded-full text-xs font-medium ${
+                        segment.type === 'mechanical' ? 'bg-blue-100 text-blue-800' :
+                        segment.type === 'biological' ? 'bg-green-100 text-green-800' :
+                        segment.type === 'chemical' ? 'bg-purple-100 text-purple-800' :
+                        segment.type === 'uv' ? 'bg-yellow-100 text-yellow-800' :
+                        segment.type === 'skimmer' ? 'bg-orange-100 text-orange-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {segment.type === 'mechanical' ? 'Mechanisch' :
+                         segment.type === 'biological' ? 'Biologisch' :
+                         segment.type === 'chemical' ? 'Chemisch' :
+                         segment.type === 'uv' ? 'UV' :
+                         segment.type === 'skimmer' ? 'Skimmer' :
+                         'Leeg'}
+                      </div>
+
+                      {/* Segment Content */}
+                      <div className="space-y-2 mt-2">
+                        <Select
+                          value={segment.type}
+                          onValueChange={(value: any) => {
+                            setPondProperties(prev => ({
+                              ...prev,
+                              filter_segments: prev.filter_segments.map(s => 
+                                s.id === segment.id ? { ...s, type: value, media: [] } : s
+                              )
+                            }))
+                          }}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="mechanical">Mechanisch</SelectItem>
+                            <SelectItem value="biological">Biologisch</SelectItem>
+                            <SelectItem value="chemical">Chemisch</SelectItem>
+                            <SelectItem value="uv">UV Sterilisator</SelectItem>
+                            <SelectItem value="skimmer">Proteïne Skimmer</SelectItem>
+                            <SelectItem value="empty">Leeg</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        {/* Media Selection */}
+                        {segment.type !== 'empty' && segment.type !== 'uv' && segment.type !== 'skimmer' && (
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Media:</Label>
+                            <div className="flex flex-wrap gap-1">
+                              {getMediaOptions(segment.type).map((media) => (
+                                <label key={media.value} className="flex items-center space-x-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={segment.media.includes(media.value)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setPondProperties(prev => ({
+                                          ...prev,
+                                          filter_segments: prev.filter_segments.map(s => 
+                                            s.id === segment.id ? { ...s, media: [...s.media, media.value] } : s
+                                          )
+                                        }))
+                                      } else {
+                                        setPondProperties(prev => ({
+                                          ...prev,
+                                          filter_segments: prev.filter_segments.map(s => 
+                                            s.id === segment.id ? { ...s, media: s.media.filter(m => m !== media.value) } : s
+                                          )
+                                        }))
+                                      }
+                                    }}
+                                    className="rounded text-xs"
+                                  />
+                                  <span className="text-xs">{media.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Description */}
+                        <Input
+                          placeholder="Beschrijving..."
+                          value={segment.description}
+                          onChange={(e) => {
+                            setPondProperties(prev => ({
+                              ...prev,
+                              filter_segments: prev.filter_segments.map(s => 
+                                s.id === segment.id ? { ...s, description: e.target.value } : s
+                              )
+                            }))
+                          }}
+                          className="h-6 text-xs"
+                        />
+
+                        {/* Delete Button */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setPondProperties(prev => ({
+                              ...prev,
+                              filter_segments: prev.filter_segments.filter(s => s.id !== segment.id)
+                            }))
+                          }}
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
-                  </label>
+
+                    {/* Arrow between segments */}
+                    {index < pondProperties.filter_segments.length - 1 && (
+                      <div className="flex-shrink-0">
+                        <ArrowRight className="h-5 w-5 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
 
-            {/* Chemical Media */}
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-primary">Chemische Filtering</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {[
-                  { value: 'activated_carbon', label: 'Actieve Kool', desc: 'Verwijdert chemicaliën en geuren' },
-                  { value: 'zeolite', label: 'Zeoliet', desc: 'Verwijdert ammoniak' },
-                  { value: 'phosphate_remover', label: 'Fosfaat Verwijderaar', desc: 'Verwijdert fosfaten' }
-                ].map((media) => (
-                  <label key={media.value} className="flex items-start space-x-3 p-2 rounded-lg border hover:bg-muted/50">
-                    <input
-                      type="checkbox"
-                      checked={pondProperties.filter_media.includes(media.value)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setPondProperties(prev => ({
-                            ...prev,
-                            filter_media: [...prev.filter_media, media.value]
-                          }))
-                        } else {
-                          setPondProperties(prev => ({
-                            ...prev,
-                            filter_media: prev.filter_media.filter(m => m !== media.value)
-                          }))
-                        }
-                      }}
-                      className="mt-1 rounded"
-                    />
-                    <div className="flex-1">
-                      <span className="text-sm font-medium">{media.label}</span>
-                      <p className="text-xs text-muted-foreground">{media.desc}</p>
-                    </div>
-                  </label>
-                ))}
+            {/* Legend */}
+            <div className="flex flex-wrap gap-4 text-xs">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-blue-100 rounded"></div>
+                <span>Mechanisch</span>
               </div>
-            </div>
-          </div>
-
-          {/* Additional Equipment */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium">Extra Apparatuur</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50">
-                <input
-                  type="checkbox"
-                  checked={pondProperties.uv_sterilizer}
-                  onChange={(e) => setPondProperties(prev => ({ ...prev, uv_sterilizer: e.target.checked }))}
-                  className="mt-1 rounded"
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium">UV Sterilisator</span>
-                  <p className="text-xs text-muted-foreground">Doodt algen en ziektekiemen</p>
-                </div>
-              </label>
-              <label className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50">
-                <input
-                  type="checkbox"
-                  checked={pondProperties.protein_skimmer}
-                  onChange={(e) => setPondProperties(prev => ({ ...prev, protein_skimmer: e.target.checked }))}
-                  className="mt-1 rounded"
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium">Proteïne Skimmer</span>
-                  <p className="text-xs text-muted-foreground">Verwijdert organische afvalstoffen</p>
-                </div>
-              </label>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-green-100 rounded"></div>
+                <span>Biologisch</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-purple-100 rounded"></div>
+                <span>Chemisch</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-yellow-100 rounded"></div>
+                <span>UV</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-orange-100 rounded"></div>
+                <span>Skimmer</span>
+              </div>
             </div>
           </div>
         </CardContent>
