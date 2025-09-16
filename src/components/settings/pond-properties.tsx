@@ -135,10 +135,10 @@ export function PondProperties() {
     try {
       setSaving(true)
 
-      const { error } = await supabase
+      // First try to update existing record
+      const { error: updateError } = await supabase
         .from('user_preferences')
-        .upsert({
-          user_id: user.id,
+        .update({
           pond_size_liters: pondProperties.pond_size_liters,
           pond_depth_cm: pondProperties.pond_depth_cm,
           pond_type: pondProperties.pond_type,
@@ -148,6 +148,29 @@ export function PondProperties() {
           seasonal_awareness: pondProperties.seasonal_awareness,
           auto_recommendations: pondProperties.auto_recommendations
         })
+        .eq('user_id', user.id)
+
+      // If update fails (no existing record), insert new record
+      let error = updateError
+      if (updateError && updateError.code === 'PGRST116') {
+        const { error: insertError } = await supabase
+          .from('user_preferences')
+          .insert({
+            user_id: user.id,
+            pond_size_liters: pondProperties.pond_size_liters,
+            pond_depth_cm: pondProperties.pond_depth_cm,
+            pond_type: pondProperties.pond_type,
+            location: pondProperties.location,
+            climate_zone: pondProperties.climate_zone,
+            maintenance_frequency: pondProperties.maintenance_frequency,
+            seasonal_awareness: pondProperties.seasonal_awareness,
+            auto_recommendations: pondProperties.auto_recommendations,
+            experience_level: 'beginner',
+            koi_count: 0,
+            preferred_chemicals: []
+          })
+        error = insertError
+      }
 
       if (error) {
         console.error('Error saving pond properties:', error)
