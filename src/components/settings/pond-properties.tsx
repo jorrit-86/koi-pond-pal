@@ -88,6 +88,7 @@ const getMediaOptions = (type: string) => {
         { value: 'bead_filter', label: 'Beadfilter', desc: 'Gesloten drukvat met plastic bolletjes' },
         { value: 'trickle_filter', label: 'Trickle Filter', desc: 'Water druppelt over filtermateriaal' },
         { value: 'shower_filter', label: 'Druppeltoren/Shower', desc: 'Compacte verticale bakken met Bacteria House' },
+        { value: 'glass_foam', label: 'Glasfoam', desc: 'Gerecycled glas met extreem hoog bio-oppervlak' },
         { value: 'ceramic_rings', label: 'Keramische Ring', desc: 'Bio ringen voor bacteriën' },
         { value: 'bio_balls', label: 'Bio Ballen', desc: 'Plastic ballen met groot oppervlak' },
         { value: 'lava_rock', label: 'Lava Steen', desc: 'Natuurlijke bio media' },
