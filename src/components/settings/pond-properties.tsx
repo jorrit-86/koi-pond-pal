@@ -181,10 +181,15 @@ export function PondProperties() {
         .from('user_preferences')
         .select('*')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error loading pond properties:', error)
+        toast({
+          title: "Fout",
+          description: "Kon vijver eigenschappen niet laden: " + error.message,
+          variant: "destructive"
+        })
         return
       }
 
@@ -311,9 +316,9 @@ export function PondProperties() {
 
       console.log('Update result:', { updateData, updateError })
 
-      // If update fails (no existing record), insert new record
-      if (updateError && updateError.code === 'PGRST116') {
-        console.log('No existing record found, inserting new record...')
+      // Check if update actually affected any rows
+      if (updateError) {
+        console.log('Update error, inserting new record...')
         const { data: insertData, error: insertError } = await supabase
           .from('user_preferences')
           .insert({
@@ -338,15 +343,34 @@ export function PondProperties() {
         } else {
           console.log('Filter segments saved successfully (insert)')
         }
-      } else if (updateError) {
-        console.error('Error auto-saving filter segments (update):', updateError)
-        toast({
-          title: "Fout",
-          description: "Kon filter segmenten niet opslaan: " + updateError.message,
-          variant: "destructive"
-        })
-      } else {
+      } else if (updateData && updateData.length > 0) {
         console.log('Filter segments saved successfully (update)')
+      } else {
+        console.log('No rows updated, trying insert...')
+        const { data: insertData, error: insertError } = await supabase
+          .from('user_preferences')
+          .insert({
+            user_id: user.id,
+            filter_segments: segments,
+            experience_level: 'beginner',
+            maintenance_frequency: 'weekly',
+            seasonal_awareness: true,
+            auto_recommendations: true
+          })
+          .select()
+
+        console.log('Insert result:', { insertData, insertError })
+
+        if (insertError) {
+          console.error('Error auto-saving filter segments (insert):', insertError)
+          toast({
+            title: "Fout",
+            description: "Kon filter segmenten niet opslaan: " + insertError.message,
+            variant: "destructive"
+          })
+        } else {
+          console.log('Filter segments saved successfully (insert)')
+        }
       }
     } catch (error) {
       console.error('Error in autoSaveFilterSegments:', error)
