@@ -29,7 +29,7 @@ export class AIChatService {
       // Get user preferences
       const { data: preferences } = await supabase
         .from('user_preferences')
-        .select('experience_level, pond_size')
+        .select('experience_level, pond_size_liters')
         .eq('user_id', userId)
         .single()
 
@@ -62,7 +62,7 @@ export class AIChatService {
           status: p.status || 'normal'
         })),
         koiCount: koiCount || 0,
-        pondSize: preferences?.pond_size || 0,
+        pondSize: preferences?.pond_size_liters || 0,
         userExperience: preferences?.experience_level || 'beginner',
         season
       }
