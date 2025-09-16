@@ -12,6 +12,28 @@ export interface ChatContext {
   pondSize?: number
   userExperience?: string
   season?: string
+  filterData?: {
+    filtration_type?: string
+    filter_media?: string[]
+    filter_segments?: Array<{
+      name: string
+      type: string
+      media: string[]
+      description: string
+    }>
+    uv_sterilizer?: boolean
+    protein_skimmer?: boolean
+    waterfall?: boolean
+    fountain?: boolean
+    aeration_system?: boolean
+    heater?: boolean
+    chiller?: boolean
+    auto_feeder?: boolean
+    water_source?: string
+    water_changes_manual?: boolean
+    plants_present?: boolean
+    plant_types?: string[]
+  }
 }
 
 export interface ChatMessage {
@@ -26,10 +48,28 @@ export class AIChatService {
   // Get user's pond context for personalized responses
   static async getPondContext(userId: string): Promise<ChatContext> {
     try {
-      // Get user preferences
+      // Get user preferences including filter data
       const { data: preferences } = await supabase
         .from('user_preferences')
-        .select('experience_level, pond_size_liters')
+        .select(`
+          experience_level, 
+          pond_size_liters,
+          filtration_type,
+          filter_media,
+          filter_segments,
+          uv_sterilizer,
+          protein_skimmer,
+          waterfall,
+          fountain,
+          aeration_system,
+          heater,
+          chiller,
+          auto_feeder,
+          water_source,
+          water_changes_manual,
+          plants_present,
+          plant_types
+        `)
         .eq('user_id', userId)
         .single()
 
@@ -64,7 +104,24 @@ export class AIChatService {
         koiCount: koiCount || 0,
         pondSize: preferences?.pond_size_liters || 0,
         userExperience: preferences?.experience_level || 'beginner',
-        season
+        season,
+        filterData: {
+          filtration_type: preferences?.filtration_type,
+          filter_media: preferences?.filter_media || [],
+          filter_segments: preferences?.filter_segments || [],
+          uv_sterilizer: preferences?.uv_sterilizer || false,
+          protein_skimmer: preferences?.protein_skimmer || false,
+          waterfall: preferences?.waterfall || false,
+          fountain: preferences?.fountain || false,
+          aeration_system: preferences?.aeration_system || false,
+          heater: preferences?.heater || false,
+          chiller: preferences?.chiller || false,
+          auto_feeder: preferences?.auto_feeder || false,
+          water_source: preferences?.water_source,
+          water_changes_manual: preferences?.water_changes_manual || true,
+          plants_present: preferences?.plants_present || false,
+          plant_types: preferences?.plant_types || []
+        }
       }
     } catch (error) {
       console.error('Error getting pond context:', error)
@@ -74,7 +131,24 @@ export class AIChatService {
         koiCount: 0,
         pondSize: 0,
         userExperience: 'beginner',
-        season: 'spring'
+        season: 'spring',
+        filterData: {
+          filtration_type: 'mechanical_biological',
+          filter_media: [],
+          filter_segments: [],
+          uv_sterilizer: false,
+          protein_skimmer: false,
+          waterfall: false,
+          fountain: false,
+          aeration_system: false,
+          heater: false,
+          chiller: false,
+          auto_feeder: false,
+          water_source: 'tap_water',
+          water_changes_manual: true,
+          plants_present: false,
+          plant_types: []
+        }
       }
     }
   }
@@ -440,36 +514,165 @@ Wat wil je specifiek weten over voeding?`
 
   private static generateFilterResponse(context: ChatContext): string {
     const pondSize = context.pondSize || 0
+    const koiCount = context.koiCount || 0
     const experience = context.userExperience || 'beginner'
+    const season = context.season || 'spring'
     
-    return `Goede filtratie is essentieel voor een gezonde vijver! Voor een vijver van ${pondSize > 0 ? `${pondSize} liter` : 'jouw grootte'} is het belangrijk om:
+    if (pondSize === 0) {
+      return `Ik zie dat je nog geen vijvergrootte hebt ingevoerd. Om je specifieke filteradviezen te kunnen geven, voeg je vijvergegevens toe via de 'Instellingen' pagina.
 
-• Mechanische filtratie (vuil verwijderen)
-• Biologische filtratie (bacteriën voor afbraak)
-• Voldoende doorstroming
-• Regelmatig onderhoud
+Voor goede filtratie is het belangrijk om te weten:
+• Vijverinhoud in liters
+• Aantal koi
+• Huidige filtercapaciteit
+• Doorstroming per uur
 
-Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} vijverhouder kan ik je helpen met:
-• Filterkeuze en opstelling
-• Onderhoudsschema
-• Probleemoplossing
-• Optimalisatie
+Met deze informatie kan ik je veel specifiekere filteradviezen geven!`
+    }
 
-Wat wil je weten over je filtersysteem?`
+    // Calculate recommended filter capacity
+    const recommendedFlow = Math.ceil(pondSize / 1000) // 1x pond volume per hour minimum
+    const optimalFlow = Math.ceil(pondSize / 500) // 2x pond volume per hour optimal
+    const filterSize = pondSize < 1000 ? 'klein' : pondSize < 5000 ? 'medium' : 'groot'
+
+    let response = `**Filter analyse voor je ${pondSize.toLocaleString('nl-NL')} liter vijver:**
+
+**Aanbevolen filtercapaciteit:**
+• Minimale doorstroming: **${recommendedFlow} liter per uur** (1x vijverinhoud)
+• Optimale doorstroming: **${optimalFlow} liter per uur** (2x vijverinhoud)
+• Filtergrootte: **${filterSize}** filtersysteem
+
+**Specifieke aanbevelingen voor je ${pondSize.toLocaleString('nl-NL')} liter vijver:**`
+
+    if (pondSize < 1000) {
+      response += `
+• **Kleine vijver**: Extra aandacht voor filtratie
+• Gebruik compacte, efficiënte filters
+• Overweeg skimmer + biologische filter
+• Regelmatig onderhoud (1x per week)`
+    } else if (pondSize < 5000) {
+      response += `
+• **Medium vijver**: Goede balans tussen capaciteit en onderhoud
+• Combinatie van mechanische en biologische filtratie
+• UV-filter aanbevolen voor helder water
+• Onderhoud 1x per 2 weken`
+    } else {
+      response += `
+• **Grote vijver**: Zeer stabiel, minder kritiek
+• Grote biologische filter met veel oppervlakte
+• Meerdere filterkamers voor optimale werking
+• Onderhoud 1x per maand voldoende`
+    }
+
+    if (koiCount > 0) {
+      const bioload = koiCount > 5 ? 'hoog' : koiCount > 2 ? 'medium' : 'laag'
+      response += `
+
+**Biologische belasting (${koiCount} koi):**
+• Belasting: **${bioload}**
+• ${bioload === 'hoog' ? 'Extra biologische filtratie nodig' : 
+    bioload === 'medium' ? 'Normale biologische filtratie voldoende' : 
+    'Minimale biologische filtratie nodig'}`
+    }
+
+    // Seasonal filter advice
+    const seasonalAdvice = {
+      spring: 'Lente: Filter opstarten, bacteriën activeren, eerste reiniging',
+      summer: 'Zomer: Maximale filtercapaciteit, regelmatig controleren, UV-filter actief',
+      autumn: 'Herfst: Bladeren verwijderen, filter beschermen, voorbereiden op winter',
+      winter: 'Winter: Filter beschermen tegen vorst, minimale doorstroming, bacteriën inactief'
+    }
+
+    response += `
+
+**Seizoensadvies (${season}):**
+${seasonalAdvice[season as keyof typeof seasonalAdvice]}
+
+**Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} vijverhouder:**
+• ${experience === 'beginner' ? 'Start met eenvoudig filtersysteem' : 'Overweeg geavanceerde filteropstelling'}
+• Regelmatige controle van doorstroming
+• Onderhoudsschema aanpassen aan seizoen
+• Probleemherkenning en oplossing
+
+Wat wil je specifiek weten over je filtersysteem?`
+
+    return response
   }
 
   private static generateTemperatureResponse(context: ChatContext): string {
     const season = context.season || 'spring'
+    const pondSize = context.pondSize || 0
+    const koiCount = context.koiCount || 0
+    const experience = context.userExperience || 'beginner'
     
-    return `Temperatuur is cruciaal voor koi! In de ${season} is het belangrijk om:
+    let response = `**Temperatuur beheer voor de ${season}:**
 
-• Onder 10°C: Koi eten weinig tot niets
-• 10-15°C: Lichte voeding, weinig activiteit
-• 15-20°C: Normale voeding, matige activiteit
-• 20-25°C: Optimale temperatuur, actieve koi
-• Boven 25°C: Extra zuurstof en schaduw nodig
+**Temperatuur zones:**
+• **Onder 10°C**: Koi eten weinig tot niets, minimale activiteit
+• **10-15°C**: Lichte voeding, weinig activiteit, voorzichtig voeren
+• **15-20°C**: Normale voeding, matige activiteit, regelmatig voeren
+• **20-25°C**: Optimale temperatuur, actieve koi, maximale groei
+• **Boven 25°C**: Extra zuurstof en schaduw nodig, stress gevaar`
 
-Wat wil je weten over temperatuurbeheer in je vijver?`
+    // Seasonal specific advice
+    const seasonalTempAdvice = {
+      spring: `
+**Lente temperatuur management:**
+• Temperatuur stijgt langzaam (10-18°C)
+• Start met voeding bij 12°C
+• Filter opstarten en bacteriën activeren
+• Voorzichtig met plotselinge temperatuurschommelingen`,
+      summer: `
+**Zomer temperatuur management:**
+• Optimale temperatuur (18-25°C)
+• Maximale activiteit en groei
+• Extra zuurstof bij warm weer
+• Schaduw voorzien bij temperaturen boven 25°C`,
+      autumn: `
+**Herfst temperatuur management:**
+• Temperatuur daalt (15-10°C)
+• Verminder voeding bij dalende temperatuur
+• Voorbereiden op winter
+• Filter beschermen tegen kou`,
+      winter: `
+**Winter temperatuur management:**
+• Lage temperatuur (onder 10°C)
+• Geen voeding onder 10°C
+• Filter beschermen tegen vorst
+• Minimale doorstroming, ijsvrij houden`
+    }
+
+    response += seasonalTempAdvice[season as keyof typeof seasonalTempAdvice]
+
+    if (pondSize > 0) {
+      response += `
+
+**Specifiek voor je ${pondSize.toLocaleString('nl-NL')} liter vijver:**
+• ${pondSize < 1000 ? 'Kleine vijver: Snellere temperatuurschommelingen, extra aandacht' :
+    pondSize < 5000 ? 'Medium vijver: Matige temperatuurschommelingen, normale aandacht' :
+    'Grote vijver: Langzame temperatuurschommelingen, zeer stabiel'}`
+    }
+
+    if (koiCount > 0) {
+      response += `
+
+**Voor je ${koiCount} koi:**
+• ${koiCount === 1 ? 'Solitaire koi: Extra aandacht voor gedrag bij temperatuurveranderingen' :
+    koiCount <= 5 ? 'Kleine groep: Normale temperatuurgevoeligheid' :
+    'Grote groep: Meer warmte productie, extra zuurstof bij warm weer'}`
+    }
+
+    response += `
+
+**Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} vijverhouder:**
+• ${experience === 'beginner' ? 'Investeer in een goede thermometer' : 'Overweeg geavanceerde temperatuur monitoring'}
+• Monitor temperatuur dagelijks
+• Pas voeding aan op temperatuur
+• Voorzie schaduw en zuurstof bij warm weer
+
+Wat wil je specifiek weten over temperatuurbeheer?`
+
+    return response
   }
 
   private static generateSeasonalResponse(context: ChatContext): string {

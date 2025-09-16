@@ -24,8 +24,9 @@ De AI Chat Assistant is een intelligente chatbot die op elke pagina van de Koi P
 - Probleemherkenning en preventie
 
 ### 🔧 **Vijveronderhoud**
-- Filterbeheer en onderhoud
+- Filterbeheer en onderhoud met specifieke capaciteitsberekeningen
 - Vijverinhoud analyse en adviezen
+- Temperatuurbeheer per seizoen
 - Seizoensadviezen
 - Technische vragen en oplossingen
 
@@ -146,6 +147,36 @@ Specifiek voor je 8 koi:
 • Dagelijkse hoeveelheid: 24 gram
 • Voer 2-3x per dag
 • Voer alleen wat ze in 5 minuten opeten"
+```
+
+### Filter Advies
+```
+Gebruiker: "Wat vind je van mijn filter?"
+AI: "Filter analyse voor je 12.500 liter vijver:
+Aanbevolen filtercapaciteit:
+• Minimale doorstroming: 13 liter per uur (1x vijverinhoud)
+• Optimale doorstroming: 25 liter per uur (2x vijverinhoud)
+• Filtergrootte: groot filtersysteem
+Specifieke aanbevelingen voor je 12.500 liter vijver:
+• Grote vijver: Zeer stabiel, minder kritiek
+• Grote biologische filter met veel oppervlakte
+• Meerdere filterkamers voor optimale werking
+• Onderhoud 1x per maand voldoende"
+```
+
+### Temperatuur Beheer
+```
+Gebruiker: "Hoe beheer ik de temperatuur?"
+AI: "Temperatuur beheer voor de zomer:
+Temperatuur zones:
+• Onder 10°C: Koi eten weinig tot niets
+• 20-25°C: Optimale temperatuur, actieve koi
+Zomer temperatuur management:
+• Optimale temperatuur (18-25°C)
+• Maximale activiteit en groei
+• Extra zuurstof bij warm weer
+Specifiek voor je 12.500 liter vijver:
+• Grote vijver: Langzame temperatuurschommelingen, zeer stabiel"
 ```
 
 ### Seizoensadvies
