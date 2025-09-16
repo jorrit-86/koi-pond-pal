@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/hooks/use-language"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "@/contexts/AuthContext"
+import { AIChatAssistant } from "@/components/ai/ai-chat-assistant"
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard")
@@ -121,6 +122,8 @@ const Index = () => {
         </main>
       </div>
       
+      {/* AI Chat Assistant - Available on all pages */}
+      <AIChatAssistant currentPage={activeTab} />
     </div>
   )
 }
