@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -153,12 +153,24 @@ export function PondProperties() {
     hospital_koi: 0
   })
 
+  // Debounce timer for auto-save
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   useEffect(() => {
     if (user) {
       loadPondProperties()
       loadKoiCounts()
     }
   }, [user])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const loadPondProperties = async () => {
     if (!user) return
@@ -269,6 +281,19 @@ export function PondProperties() {
     }
   }
 
+  // Debounced auto-save function for filter segments
+  const debouncedAutoSave = useCallback((segments: FilterSegment[]) => {
+    // Clear existing timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current)
+    }
+
+    // Set new timeout
+    autoSaveTimeoutRef.current = setTimeout(async () => {
+      await autoSaveFilterSegments(segments)
+    }, 1000) // Wait 1 second after last change
+  }, [])
+
   // Auto-save function for filter segments
   const autoSaveFilterSegments = async (segments: FilterSegment[]) => {
     if (!user) return
@@ -278,14 +303,18 @@ export function PondProperties() {
       console.log('Auto-saving filter_segments to database:', segments)
 
       // First try to update existing record
-      const { error: updateError } = await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('user_preferences')
         .update({ filter_segments: segments })
         .eq('user_id', user.id)
+        .select()
+
+      console.log('Update result:', { updateData, updateError })
 
       // If update fails (no existing record), insert new record
       if (updateError && updateError.code === 'PGRST116') {
-        const { error: insertError } = await supabase
+        console.log('No existing record found, inserting new record...')
+        const { data: insertData, error: insertError } = await supabase
           .from('user_preferences')
           .insert({
             user_id: user.id,
@@ -295,15 +324,37 @@ export function PondProperties() {
             seasonal_awareness: true,
             auto_recommendations: true
           })
+          .select()
+
+        console.log('Insert result:', { insertData, insertError })
 
         if (insertError) {
-          console.error('Error auto-saving filter segments:', insertError)
+          console.error('Error auto-saving filter segments (insert):', insertError)
+          toast({
+            title: "Fout",
+            description: "Kon filter segmenten niet opslaan: " + insertError.message,
+            variant: "destructive"
+          })
+        } else {
+          console.log('Filter segments saved successfully (insert)')
         }
       } else if (updateError) {
-        console.error('Error auto-saving filter segments:', updateError)
+        console.error('Error auto-saving filter segments (update):', updateError)
+        toast({
+          title: "Fout",
+          description: "Kon filter segmenten niet opslaan: " + updateError.message,
+          variant: "destructive"
+        })
+      } else {
+        console.log('Filter segments saved successfully (update)')
       }
     } catch (error) {
       console.error('Error in autoSaveFilterSegments:', error)
+      toast({
+        title: "Fout",
+        description: "Onverwachte fout bij opslaan filter segmenten",
+        variant: "destructive"
+      })
     }
   }
 
@@ -637,7 +688,7 @@ export function PondProperties() {
                       ...prev,
                       filter_segments: newSegments
                     }))
-                    // Auto-save the changes
+                    // Auto-save the changes (immediate for additions)
                     autoSaveFilterSegments(newSegments)
                   }}
                 >
@@ -689,8 +740,8 @@ export function PondProperties() {
                               ...prev,
                               filter_segments: newSegments
                             }))
-                            // Auto-save the changes
-                            autoSaveFilterSegments(newSegments)
+                            // Auto-save the changes (debounced)
+                            debouncedAutoSave(newSegments)
                           }}
                         >
                           <SelectTrigger className="h-8">
@@ -790,8 +841,8 @@ export function PondProperties() {
                               ...prev,
                               filter_segments: newSegments
                             }))
-                            // Auto-save the changes
-                            autoSaveFilterSegments(newSegments)
+                            // Auto-save the changes (debounced)
+                            debouncedAutoSave(newSegments)
                           }}
                           className="h-6 text-xs"
                         />
@@ -806,7 +857,7 @@ export function PondProperties() {
                               ...prev,
                               filter_segments: newSegments
                             }))
-                            // Auto-save the changes
+                            // Auto-save the changes (immediate for deletions)
                             autoSaveFilterSegments(newSegments)
                           }}
                           className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
