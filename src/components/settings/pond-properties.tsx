@@ -177,6 +177,32 @@ export function PondProperties() {
       }
 
       if (data) {
+        // Debug: log the filter_segments data
+        console.log('Loaded filter_segments from database:', data.filter_segments)
+        
+        // Ensure filter_segments is properly parsed
+        let filterSegments = data.filter_segments
+        if (typeof filterSegments === 'string') {
+          try {
+            filterSegments = JSON.parse(filterSegments)
+          } catch (e) {
+            console.error('Error parsing filter_segments:', e)
+            filterSegments = [
+              { id: '1', type: 'mechanical', media: ['vortex_chamber'], description: 'Vortexkamer - grove filtering' },
+              { id: '2', type: 'biological', media: ['moving_bed_k1'], description: 'Moving Bed K1 - biologische filtering' }
+            ]
+          }
+        }
+        
+        // Ensure filter_segments is an array
+        if (!Array.isArray(filterSegments)) {
+          console.warn('filter_segments is not an array, using defaults')
+          filterSegments = [
+            { id: '1', type: 'mechanical', media: ['vortex_chamber'], description: 'Vortexkamer - grove filtering' },
+            { id: '2', type: 'biological', media: ['moving_bed_k1'], description: 'Moving Bed K1 - biologische filtering' }
+          ]
+        }
+
         setPondProperties({
           pond_size_liters: data.pond_size_liters,
           pond_depth_cm: data.pond_depth_cm,
@@ -189,10 +215,7 @@ export function PondProperties() {
           // Filtration system
           filtration_type: data.filtration_type || 'mechanical_biological',
           filter_media: data.filter_media || [],
-          filter_segments: data.filter_segments || [
-            { id: '1', type: 'mechanical', media: ['vortex_chamber'], description: 'Vortexkamer - grove filtering' },
-            { id: '2', type: 'biological', media: ['moving_bed_k1'], description: 'Moving Bed K1 - biologische filtering' }
-          ],
+          filter_segments: filterSegments,
           uv_sterilizer: data.uv_sterilizer ?? false,
           protein_skimmer: data.protein_skimmer ?? false,
           // Water features
@@ -246,11 +269,52 @@ export function PondProperties() {
     }
   }
 
+  // Auto-save function for filter segments
+  const autoSaveFilterSegments = async (segments: FilterSegment[]) => {
+    if (!user) return
+
+    try {
+      // Debug: log the filter_segments data before saving
+      console.log('Auto-saving filter_segments to database:', segments)
+
+      // First try to update existing record
+      const { error: updateError } = await supabase
+        .from('user_preferences')
+        .update({ filter_segments: segments })
+        .eq('user_id', user.id)
+
+      // If update fails (no existing record), insert new record
+      if (updateError && updateError.code === 'PGRST116') {
+        const { error: insertError } = await supabase
+          .from('user_preferences')
+          .insert({
+            user_id: user.id,
+            filter_segments: segments,
+            experience_level: 'beginner',
+            maintenance_frequency: 'weekly',
+            seasonal_awareness: true,
+            auto_recommendations: true
+          })
+
+        if (insertError) {
+          console.error('Error auto-saving filter segments:', insertError)
+        }
+      } else if (updateError) {
+        console.error('Error auto-saving filter segments:', updateError)
+      }
+    } catch (error) {
+      console.error('Error in autoSaveFilterSegments:', error)
+    }
+  }
+
   const savePondProperties = async () => {
     if (!user) return
 
     try {
       setSaving(true)
+
+      // Debug: log the filter_segments data before saving
+      console.log('Saving filter_segments to database:', pondProperties.filter_segments)
 
       // First try to update existing record
       const { error: updateError } = await supabase
@@ -568,10 +632,13 @@ export function PondProperties() {
                       media: [],
                       description: 'Nieuw segment'
                     }
+                    const newSegments = [...pondProperties.filter_segments, newSegment]
                     setPondProperties(prev => ({
                       ...prev,
-                      filter_segments: [...prev.filter_segments, newSegment]
+                      filter_segments: newSegments
                     }))
+                    // Auto-save the changes
+                    autoSaveFilterSegments(newSegments)
                   }}
                 >
                   <Plus className="h-4 w-4 mr-1" />
@@ -615,12 +682,15 @@ export function PondProperties() {
                         <Select
                           value={segment.type}
                           onValueChange={(value: any) => {
+                            const newSegments = pondProperties.filter_segments.map(s => 
+                              s.id === segment.id ? { ...s, type: value, media: [] } : s
+                            )
                             setPondProperties(prev => ({
                               ...prev,
-                              filter_segments: prev.filter_segments.map(s => 
-                                s.id === segment.id ? { ...s, type: value, media: [] } : s
-                              )
+                              filter_segments: newSegments
                             }))
+                            // Auto-save the changes
+                            autoSaveFilterSegments(newSegments)
                           }}
                         >
                           <SelectTrigger className="h-8">
@@ -657,12 +727,15 @@ export function PondProperties() {
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => {
+                                      const newSegments = pondProperties.filter_segments.map(s => 
+                                        s.id === segment.id ? { ...s, media: [] } : s
+                                      )
                                       setPondProperties(prev => ({
                                         ...prev,
-                                        filter_segments: prev.filter_segments.map(s => 
-                                          s.id === segment.id ? { ...s, media: [] } : s
-                                        )
+                                        filter_segments: newSegments
                                       }))
+                                      // Auto-save the changes
+                                      autoSaveFilterSegments(newSegments)
                                     }}
                                     className="h-4 w-4 p-0 text-red-500 hover:text-red-700"
                                   >
@@ -682,12 +755,15 @@ export function PondProperties() {
                                       name={`media-${segment.id}`}
                                       value={media.value}
                                       onChange={(e) => {
+                                        const newSegments = pondProperties.filter_segments.map(s => 
+                                          s.id === segment.id ? { ...s, media: [media.value] } : s
+                                        )
                                         setPondProperties(prev => ({
                                           ...prev,
-                                          filter_segments: prev.filter_segments.map(s => 
-                                            s.id === segment.id ? { ...s, media: [media.value] } : s
-                                          )
+                                          filter_segments: newSegments
                                         }))
+                                        // Auto-save the changes
+                                        autoSaveFilterSegments(newSegments)
                                       }}
                                       className="mt-0.5 rounded text-xs"
                                     />
@@ -707,12 +783,15 @@ export function PondProperties() {
                           placeholder="Beschrijving..."
                           value={segment.description}
                           onChange={(e) => {
+                            const newSegments = pondProperties.filter_segments.map(s => 
+                              s.id === segment.id ? { ...s, description: e.target.value } : s
+                            )
                             setPondProperties(prev => ({
                               ...prev,
-                              filter_segments: prev.filter_segments.map(s => 
-                                s.id === segment.id ? { ...s, description: e.target.value } : s
-                              )
+                              filter_segments: newSegments
                             }))
+                            // Auto-save the changes
+                            autoSaveFilterSegments(newSegments)
                           }}
                           className="h-6 text-xs"
                         />
@@ -722,10 +801,13 @@ export function PondProperties() {
                           size="sm"
                           variant="ghost"
                           onClick={() => {
+                            const newSegments = pondProperties.filter_segments.filter(s => s.id !== segment.id)
                             setPondProperties(prev => ({
                               ...prev,
-                              filter_segments: prev.filter_segments.filter(s => s.id !== segment.id)
+                              filter_segments: newSegments
                             }))
+                            // Auto-save the changes
+                            autoSaveFilterSegments(newSegments)
                           }}
                           className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
                         >
