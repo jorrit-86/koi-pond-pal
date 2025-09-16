@@ -487,84 +487,200 @@ export function PondProperties() {
             Filtering Systeem
           </CardTitle>
           <CardDescription>
-            Informatie over je filtering voor betere onderhoudsaanbevelingen
+            Configureer je filtering systeem voor nauwkeurige onderhoudsaanbevelingen
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="filtration-type">Filtering Type</Label>
+        <CardContent className="space-y-6">
+          {/* Filter Type Selection */}
+          <div className="space-y-3">
+            <Label htmlFor="filtration-type" className="text-base font-medium">Filtering Type</Label>
             <Select 
               value={pondProperties.filtration_type} 
               onValueChange={(value) => setPondProperties(prev => ({ ...prev, filtration_type: value }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecteer filtering type" />
+                <SelectValue placeholder="Selecteer je filtering type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="mechanical_biological">Mechanisch + Biologisch</SelectItem>
-                <SelectItem value="mechanical_only">Alleen Mechanisch</SelectItem>
-                <SelectItem value="biological_only">Alleen Biologisch</SelectItem>
-                <SelectItem value="natural">Natuurlijke Filtering</SelectItem>
-                <SelectItem value="none">Geen Filtering</SelectItem>
+                <SelectItem value="mechanical_biological">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Mechanisch + Biologisch</span>
+                    <span className="text-xs text-muted-foreground">Volledig systeem met beide filtertypen</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="mechanical_only">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Alleen Mechanisch</span>
+                    <span className="text-xs text-muted-foreground">Alleen fysieke filtering (sponzen, zand)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="biological_only">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Alleen Biologisch</span>
+                    <span className="text-xs text-muted-foreground">Alleen bacteriële filtering (bio media)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="natural">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Natuurlijke Filtering</span>
+                    <span className="text-xs text-muted-foreground">Planten en natuurlijke processen</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="none">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Geen Filtering</span>
+                    <span className="text-xs text-muted-foreground">Alleen waterverversing</span>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Filter Media</Label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {['sponges', 'ceramic_rings', 'bio_balls', 'activated_carbon', 'zeolite', 'sand'].map((media) => (
-                <label key={media} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={pondProperties.filter_media.includes(media)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setPondProperties(prev => ({
-                          ...prev,
-                          filter_media: [...prev.filter_media, media]
-                        }))
-                      } else {
-                        setPondProperties(prev => ({
-                          ...prev,
-                          filter_media: prev.filter_media.filter(m => m !== media)
-                        }))
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  <span className="text-sm">
-                    {media === 'sponges' ? 'Sponzen' :
-                     media === 'ceramic_rings' ? 'Keramische Ring' :
-                     media === 'bio_balls' ? 'Bio Ballen' :
-                     media === 'activated_carbon' ? 'Actieve Kool' :
-                     media === 'zeolite' ? 'Zeoliet' :
-                     media === 'sand' ? 'Zand' : media}
-                  </span>
-                </label>
-              ))}
+          {/* Filter Media Selection */}
+          <div className="space-y-3">
+            <Label className="text-base font-medium">Filter Media</Label>
+            <p className="text-sm text-muted-foreground">Selecteer alle filter media die je gebruikt:</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Mechanical Media */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-primary">Mechanische Filtering</h4>
+                {[
+                  { value: 'sponges', label: 'Sponzen', desc: 'Grove en fijne sponzen' },
+                  { value: 'sand', label: 'Zand', desc: 'Zandfilter' },
+                  { value: 'foam', label: 'Schuim', desc: 'Filter schuim' }
+                ].map((media) => (
+                  <label key={media.value} className="flex items-start space-x-3 p-2 rounded-lg border hover:bg-muted/50">
+                    <input
+                      type="checkbox"
+                      checked={pondProperties.filter_media.includes(media.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setPondProperties(prev => ({
+                            ...prev,
+                            filter_media: [...prev.filter_media, media.value]
+                          }))
+                        } else {
+                          setPondProperties(prev => ({
+                            ...prev,
+                            filter_media: prev.filter_media.filter(m => m !== media.value)
+                          }))
+                        }
+                      }}
+                      className="mt-1 rounded"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">{media.label}</span>
+                      <p className="text-xs text-muted-foreground">{media.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              {/* Biological Media */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-primary">Biologische Filtering</h4>
+                {[
+                  { value: 'ceramic_rings', label: 'Keramische Ring', desc: 'Bio ringen voor bacteriën' },
+                  { value: 'bio_balls', label: 'Bio Ballen', desc: 'Plastic ballen met groot oppervlak' },
+                  { value: 'lava_rock', label: 'Lava Steen', desc: 'Natuurlijke bio media' },
+                  { value: 'matrix', label: 'Matrix Media', desc: 'Geavanceerde bio media' }
+                ].map((media) => (
+                  <label key={media.value} className="flex items-start space-x-3 p-2 rounded-lg border hover:bg-muted/50">
+                    <input
+                      type="checkbox"
+                      checked={pondProperties.filter_media.includes(media.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setPondProperties(prev => ({
+                            ...prev,
+                            filter_media: [...prev.filter_media, media.value]
+                          }))
+                        } else {
+                          setPondProperties(prev => ({
+                            ...prev,
+                            filter_media: prev.filter_media.filter(m => m !== media.value)
+                          }))
+                        }
+                      }}
+                      className="mt-1 rounded"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">{media.label}</span>
+                      <p className="text-xs text-muted-foreground">{media.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Chemical Media */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-primary">Chemische Filtering</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[
+                  { value: 'activated_carbon', label: 'Actieve Kool', desc: 'Verwijdert chemicaliën en geuren' },
+                  { value: 'zeolite', label: 'Zeoliet', desc: 'Verwijdert ammoniak' },
+                  { value: 'phosphate_remover', label: 'Fosfaat Verwijderaar', desc: 'Verwijdert fosfaten' }
+                ].map((media) => (
+                  <label key={media.value} className="flex items-start space-x-3 p-2 rounded-lg border hover:bg-muted/50">
+                    <input
+                      type="checkbox"
+                      checked={pondProperties.filter_media.includes(media.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setPondProperties(prev => ({
+                            ...prev,
+                            filter_media: [...prev.filter_media, media.value]
+                          }))
+                        } else {
+                          setPondProperties(prev => ({
+                            ...prev,
+                            filter_media: prev.filter_media.filter(m => m !== media.value)
+                          }))
+                        }
+                      }}
+                      className="mt-1 rounded"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">{media.label}</span>
+                      <p className="text-xs text-muted-foreground">{media.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={pondProperties.uv_sterilizer}
-                onChange={(e) => setPondProperties(prev => ({ ...prev, uv_sterilizer: e.target.checked }))}
-                className="rounded"
-              />
-              <span>UV Sterilisator</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={pondProperties.protein_skimmer}
-                onChange={(e) => setPondProperties(prev => ({ ...prev, protein_skimmer: e.target.checked }))}
-                className="rounded"
-              />
-              <span>Proteïne Skimmer</span>
-            </label>
+          {/* Additional Equipment */}
+          <div className="space-y-3">
+            <Label className="text-base font-medium">Extra Apparatuur</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50">
+                <input
+                  type="checkbox"
+                  checked={pondProperties.uv_sterilizer}
+                  onChange={(e) => setPondProperties(prev => ({ ...prev, uv_sterilizer: e.target.checked }))}
+                  className="mt-1 rounded"
+                />
+                <div className="flex-1">
+                  <span className="text-sm font-medium">UV Sterilisator</span>
+                  <p className="text-xs text-muted-foreground">Doodt algen en ziektekiemen</p>
+                </div>
+              </label>
+              <label className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50">
+                <input
+                  type="checkbox"
+                  checked={pondProperties.protein_skimmer}
+                  onChange={(e) => setPondProperties(prev => ({ ...prev, protein_skimmer: e.target.checked }))}
+                  className="mt-1 rounded"
+                />
+                <div className="flex-1">
+                  <span className="text-sm font-medium">Proteïne Skimmer</span>
+                  <p className="text-xs text-muted-foreground">Verwijdert organische afvalstoffen</p>
+                </div>
+              </label>
+            </div>
           </div>
         </CardContent>
       </Card>
