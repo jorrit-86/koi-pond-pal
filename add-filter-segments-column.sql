@@ -4,7 +4,7 @@
 -- Add filter_segments column as JSONB to store the visual filter configuration
 ALTER TABLE public.user_preferences 
 ADD COLUMN IF NOT EXISTS filter_segments JSONB DEFAULT '[
-  {"id": "1", "type": "mechanical", "media": ["sponges"], "description": "Grove filtering"},
+  {"id": "1", "type": "mechanical", "media": ["vortex_chamber"], "description": "Vortexkamer - grove filtering"},
   {"id": "2", "type": "biological", "media": ["ceramic_rings"], "description": "Biologische filtering"}
 ]'::jsonb;
 

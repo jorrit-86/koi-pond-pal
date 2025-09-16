@@ -71,22 +71,30 @@ const getMediaOptions = (type: string) => {
   switch (type) {
     case 'mechanical':
       return [
-        { value: 'sponges', label: 'Sponzen' },
-        { value: 'sand', label: 'Zand' },
-        { value: 'foam', label: 'Schuim' }
+        { value: 'vortex_chamber', label: 'Vortexkamer', desc: 'Ronde kamer met langzame watercirculatie' },
+        { value: 'brush_filter', label: 'Borstelfilter', desc: 'Kamer met speciale filterborstels' },
+        { value: 'mat_filter', label: 'Mattenfilter', desc: 'Japanse matten of filtermatten' },
+        { value: 'sieve_filter', label: 'Zeefbochtfilter', desc: 'Roestvrijstalen zeef (200-300 micron)' },
+        { value: 'drum_filter', label: 'Trommelfilter', desc: 'Geautomatiseerde roestvrijstalen trommel' },
+        { value: 'bead_filter', label: 'Beadfilter', desc: 'Kunststof bolletjes (mechanisch + biologisch)' },
+        { value: 'sponges', label: 'Sponzen', desc: 'Traditionele sponzen' },
+        { value: 'foam', label: 'Schuim', desc: 'Filter schuim' }
       ]
     case 'biological':
       return [
-        { value: 'ceramic_rings', label: 'Keramische Ring' },
-        { value: 'bio_balls', label: 'Bio Ballen' },
-        { value: 'lava_rock', label: 'Lava Steen' },
-        { value: 'matrix', label: 'Matrix Media' }
+        { value: 'ceramic_rings', label: 'Keramische Ring', desc: 'Bio ringen voor bacteriën' },
+        { value: 'bio_balls', label: 'Bio Ballen', desc: 'Plastic ballen met groot oppervlak' },
+        { value: 'lava_rock', label: 'Lava Steen', desc: 'Natuurlijke bio media' },
+        { value: 'matrix', label: 'Matrix Media', desc: 'Geavanceerde bio media' },
+        { value: 'k1_media', label: 'K1 Media', desc: 'Bewegende bed bio media' },
+        { value: 'bio_blocks', label: 'Bio Blokken', desc: 'Grote bio blokken' }
       ]
     case 'chemical':
       return [
-        { value: 'activated_carbon', label: 'Actieve Kool' },
-        { value: 'zeolite', label: 'Zeoliet' },
-        { value: 'phosphate_remover', label: 'Fosfaat Verwijderaar' }
+        { value: 'activated_carbon', label: 'Actieve Kool', desc: 'Verwijdert chemicaliën en geuren' },
+        { value: 'zeolite', label: 'Zeoliet', desc: 'Verwijdert ammoniak' },
+        { value: 'phosphate_remover', label: 'Fosfaat Verwijderaar', desc: 'Verwijdert fosfaten' },
+        { value: 'ozone', label: 'Ozon', desc: 'Sterke oxidatie en desinfectie' }
       ]
     default:
       return []
@@ -112,7 +120,7 @@ export function PondProperties() {
     filtration_type: 'mechanical_biological',
     filter_media: [],
     filter_segments: [
-      { id: '1', type: 'mechanical', media: ['sponges'], description: 'Grove filtering' },
+      { id: '1', type: 'mechanical', media: ['vortex_chamber'], description: 'Vortexkamer - grove filtering' },
       { id: '2', type: 'biological', media: ['ceramic_rings'], description: 'Biologische filtering' }
     ],
     uv_sterilizer: false,
@@ -176,7 +184,7 @@ export function PondProperties() {
           filtration_type: data.filtration_type || 'mechanical_biological',
           filter_media: data.filter_media || [],
           filter_segments: data.filter_segments || [
-            { id: '1', type: 'mechanical', media: ['sponges'], description: 'Grove filtering' },
+            { id: '1', type: 'mechanical', media: ['vortex_chamber'], description: 'Vortexkamer - grove filtering' },
             { id: '2', type: 'biological', media: ['ceramic_rings'], description: 'Biologische filtering' }
           ],
           uv_sterilizer: data.uv_sterilizer ?? false,
@@ -624,11 +632,11 @@ export function PondProperties() {
 
                         {/* Media Selection */}
                         {segment.type !== 'empty' && segment.type !== 'uv' && segment.type !== 'skimmer' && (
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Media:</Label>
-                            <div className="flex flex-wrap gap-1">
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Filter Media:</Label>
+                            <div className="space-y-1 max-h-32 overflow-y-auto">
                               {getMediaOptions(segment.type).map((media) => (
-                                <label key={media.value} className="flex items-center space-x-1">
+                                <label key={media.value} className="flex items-start space-x-2 p-1 rounded hover:bg-gray-50">
                                   <input
                                     type="checkbox"
                                     checked={segment.media.includes(media.value)}
@@ -649,9 +657,12 @@ export function PondProperties() {
                                         }))
                                       }
                                     }}
-                                    className="rounded text-xs"
+                                    className="mt-0.5 rounded text-xs"
                                   />
-                                  <span className="text-xs">{media.label}</span>
+                                  <div className="flex-1">
+                                    <span className="text-xs font-medium">{media.label}</span>
+                                    <p className="text-xs text-muted-foreground">{media.desc}</p>
+                                  </div>
                                 </label>
                               ))}
                             </div>
