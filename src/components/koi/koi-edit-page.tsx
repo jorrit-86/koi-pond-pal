@@ -763,6 +763,8 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
                               <SelectItem value="quarantine">Quarantaine</SelectItem>
                               <SelectItem value="hospital">Ziekenboeg</SelectItem>
                               <SelectItem value="breeding_tank">Kweekbak</SelectItem>
+                              <SelectItem value="breeder">Kweker</SelectItem>
+                              <SelectItem value="dealer">Dealer</SelectItem>
                               <SelectItem value="other">Anders</SelectItem>
                             </SelectContent>
                           </Select>
@@ -780,6 +782,8 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
                              koi.location === 'quarantine' ? 'Quarantaine' :
                              koi.location === 'hospital' ? 'Ziekenboeg' :
                              koi.location === 'breeding_tank' ? 'Kweekbak' :
+                             koi.location === 'breeder' ? 'Kweker' :
+                             koi.location === 'dealer' ? 'Dealer' :
                              koi.location === 'other' ? 'Anders' : 'Vijver'}
                           </p>
                           <Button size="sm" variant="ghost" onClick={() => startEditing('location', koi.location || 'pond')} className="h-8 w-8 p-0">

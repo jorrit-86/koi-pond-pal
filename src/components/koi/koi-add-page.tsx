@@ -230,6 +230,8 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
                 <SelectItem value="quarantine">Quarantaine</SelectItem>
                 <SelectItem value="hospital">Ziekenboeg</SelectItem>
                 <SelectItem value="breeding_tank">Kweekbak</SelectItem>
+                <SelectItem value="breeder">Kweker</SelectItem>
+                <SelectItem value="dealer">Dealer</SelectItem>
                 <SelectItem value="other">Anders</SelectItem>
               </SelectContent>
             </Select>
