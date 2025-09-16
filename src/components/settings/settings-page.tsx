@@ -13,6 +13,7 @@ import { Settings, Home, Bell, Database, Wifi, Timer, Globe, Shield } from "luci
 import { RecommendationsTest } from "@/components/debug/RecommendationsTest"
 import { AISettings } from '@/components/settings/ai-settings'
 import { AILearningDashboard } from '@/components/ai/ai-learning-dashboard'
+import { PondProperties } from '@/components/settings/pond-properties'
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -52,6 +53,10 @@ export function SettingsPage() {
   }
 
   const renderContent = () => {
+    if (activeSubmenu === "pond-properties") {
+      return <PondProperties />
+    }
+    
     if (activeSubmenu === "ai-settings") {
       return <AISettings />
     }
@@ -346,6 +351,15 @@ export function SettingsPage() {
         >
           <Settings className="h-4 w-4" />
           General
+        </Button>
+        <Button
+          variant={activeSubmenu === "pond-properties" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveSubmenu("pond-properties")}
+          className="flex items-center gap-2"
+        >
+          <Database className="h-4 w-4" />
+          Vijver Eigenschappen
         </Button>
         <Button
           variant={activeSubmenu === "ai-settings" ? "default" : "ghost"}

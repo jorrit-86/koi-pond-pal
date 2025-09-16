@@ -25,6 +25,13 @@ interface AIPreferences {
   ai_learning_enabled: boolean
 }
 
+interface KoiCounts {
+  total_koi: number
+  pond_koi: number
+  quarantine_koi: number
+  hospital_koi: number
+}
+
 export function AISettings() {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -38,10 +45,17 @@ export function AISettings() {
     ai_notifications_enabled: true,
     ai_learning_enabled: true
   })
+  const [koiCounts, setKoiCounts] = useState<KoiCounts>({
+    total_koi: 0,
+    pond_koi: 0,
+    quarantine_koi: 0,
+    hospital_koi: 0
+  })
 
   useEffect(() => {
     if (user) {
       loadAIPreferences()
+      loadKoiCounts()
     }
   }, [user])
 
@@ -92,6 +106,34 @@ export function AISettings() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadKoiCounts = async () => {
+    if (!user) return
+
+    try {
+      const { data, error } = await supabase
+        .from('pond_koi_count')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading koi counts:', error)
+        return
+      }
+
+      if (data) {
+        setKoiCounts({
+          total_koi: data.koi_count || 0,
+          pond_koi: data.pond_koi_count || 0,
+          quarantine_koi: data.quarantine_koi_count || 0,
+          hospital_koi: data.hospital_koi_count || 0
+        })
+      }
+    } catch (error) {
+      console.error('Error in loadKoiCounts:', error)
     }
   }
 
@@ -409,6 +451,45 @@ export function AISettings() {
                 worden niet uitgevoerd en verbruiken geen verwerkingskracht.
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Koi Count Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-primary" />
+            AI Personalisatie Data
+          </CardTitle>
+          <CardDescription>
+            Informatie die de AI gebruikt voor gepersonaliseerde aanbevelingen
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 border rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{koiCounts.total_koi}</div>
+              <div className="text-sm text-muted-foreground">Totaal Koi</div>
+            </div>
+            <div className="text-center p-4 border rounded-lg bg-green-50">
+              <div className="text-2xl font-bold text-green-600">{koiCounts.pond_koi}</div>
+              <div className="text-sm text-muted-foreground">In Vijver</div>
+            </div>
+            <div className="text-center p-4 border rounded-lg bg-yellow-50">
+              <div className="text-2xl font-bold text-yellow-600">{koiCounts.quarantine_koi}</div>
+              <div className="text-sm text-muted-foreground">Quarantaine</div>
+            </div>
+            <div className="text-center p-4 border rounded-lg bg-red-50">
+              <div className="text-2xl font-bold text-red-600">{koiCounts.hospital_koi}</div>
+              <div className="text-sm text-muted-foreground">Ziekenboeg</div>
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <strong>AI gebruikt deze data voor:</strong> Dosering berekeningen, biologische belasting bepaling, 
+              en gepersonaliseerde aanbevelingen. Ga naar "Vijver Eigenschappen" om meer details in te stellen.
+            </p>
           </div>
         </CardContent>
       </Card>
