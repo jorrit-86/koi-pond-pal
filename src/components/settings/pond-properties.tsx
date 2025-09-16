@@ -14,7 +14,6 @@ import {
   Thermometer, 
   Calendar,
   MapPin,
-  Save,
   RefreshCw,
   Plus,
   X,
@@ -112,7 +111,6 @@ export function PondProperties() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [pondProperties, setPondProperties] = useState<PondProperties>({
     pond_size_liters: null,
     pond_depth_cm: null,
@@ -286,8 +284,21 @@ export function PondProperties() {
     }
   }
 
-  // Debounced auto-save function for filter segments
-  const debouncedAutoSave = useCallback((segments: FilterSegment[]) => {
+  // Debounced auto-save function for all pond properties
+  const debouncedAutoSave = useCallback((properties: Partial<PondProperties>) => {
+    // Clear existing timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current)
+    }
+
+    // Set new timeout
+    autoSaveTimeoutRef.current = setTimeout(async () => {
+      await autoSavePondProperties(properties)
+    }, 1000) // Wait 1 second after last change
+  }, [])
+
+  // Debounced auto-save function for filter segments (legacy)
+  const debouncedAutoSaveSegments = useCallback((segments: FilterSegment[]) => {
     // Clear existing timeout
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
@@ -298,6 +309,89 @@ export function PondProperties() {
       await autoSaveFilterSegments(segments)
     }, 1000) // Wait 1 second after last change
   }, [])
+
+  // Auto-save function for all pond properties
+  const autoSavePondProperties = async (properties: Partial<PondProperties>) => {
+    if (!user) return
+
+    try {
+      // Debug: log the properties data before saving
+      console.log('Auto-saving pond properties to database:', properties)
+
+      // First try to update existing record
+      const { data: updateData, error: updateError } = await supabase
+        .from('user_preferences')
+        .update(properties)
+        .eq('user_id', user.id)
+        .select()
+
+      console.log('Update result:', { updateData, updateError })
+
+      // Check if update actually affected any rows
+      if (updateError) {
+        console.log('Update error, inserting new record...')
+        const { data: insertData, error: insertError } = await supabase
+          .from('user_preferences')
+          .insert({
+            user_id: user.id,
+            ...properties,
+            experience_level: 'beginner',
+            maintenance_frequency: 'weekly',
+            seasonal_awareness: true,
+            auto_recommendations: true
+          })
+          .select()
+
+        console.log('Insert result:', { insertData, insertError })
+
+        if (insertError) {
+          console.error('Error auto-saving pond properties (insert):', insertError)
+          toast({
+            title: "Fout",
+            description: "Kon vijver eigenschappen niet opslaan: " + insertError.message,
+            variant: "destructive"
+          })
+        } else {
+          console.log('Pond properties saved successfully (insert)')
+        }
+      } else if (updateData && updateData.length > 0) {
+        console.log('Pond properties saved successfully (update)')
+      } else {
+        console.log('No rows updated, trying insert...')
+        const { data: insertData, error: insertError } = await supabase
+          .from('user_preferences')
+          .insert({
+            user_id: user.id,
+            ...properties,
+            experience_level: 'beginner',
+            maintenance_frequency: 'weekly',
+            seasonal_awareness: true,
+            auto_recommendations: true
+          })
+          .select()
+
+        console.log('Insert result:', { insertData, insertError })
+
+        if (insertError) {
+          console.error('Error auto-saving pond properties (insert):', insertError)
+          toast({
+            title: "Fout",
+            description: "Kon vijver eigenschappen niet opslaan: " + insertError.message,
+            variant: "destructive"
+          })
+        } else {
+          console.log('Pond properties saved successfully (insert)')
+        }
+      }
+    } catch (error) {
+      console.error('Error in autoSavePondProperties:', error)
+      toast({
+        title: "Fout",
+        description: "Onverwachte fout bij opslaan vijver eigenschappen",
+        variant: "destructive"
+      })
+    }
+  }
 
   // Auto-save function for filter segments
   const autoSaveFilterSegments = async (segments: FilterSegment[]) => {
@@ -382,117 +476,6 @@ export function PondProperties() {
     }
   }
 
-  const savePondProperties = async () => {
-    if (!user) return
-
-    try {
-      setSaving(true)
-
-      // Debug: log the filter_segments data before saving
-      console.log('Saving filter_segments to database:', pondProperties.filter_segments)
-
-      // First try to update existing record
-      const { error: updateError } = await supabase
-        .from('user_preferences')
-        .update({
-          pond_size_liters: pondProperties.pond_size_liters,
-          pond_depth_cm: pondProperties.pond_depth_cm,
-          pond_type: pondProperties.pond_type,
-          location: pondProperties.location,
-          climate_zone: pondProperties.climate_zone,
-          maintenance_frequency: pondProperties.maintenance_frequency,
-          seasonal_awareness: pondProperties.seasonal_awareness,
-          auto_recommendations: pondProperties.auto_recommendations,
-          // Filtration system
-          filtration_type: pondProperties.filtration_type,
-          filter_media: pondProperties.filter_media,
-          filter_segments: pondProperties.filter_segments,
-          uv_sterilizer: pondProperties.uv_sterilizer,
-          protein_skimmer: pondProperties.protein_skimmer,
-          // Water features
-          waterfall: pondProperties.waterfall,
-          fountain: pondProperties.fountain,
-          aeration_system: pondProperties.aeration_system,
-          // Equipment
-          heater: pondProperties.heater,
-          chiller: pondProperties.chiller,
-          auto_feeder: pondProperties.auto_feeder,
-          // Water source
-          water_source: pondProperties.water_source,
-          water_changes_manual: pondProperties.water_changes_manual,
-          // Plant life
-          plants_present: pondProperties.plants_present,
-          plant_types: pondProperties.plant_types
-        })
-        .eq('user_id', user.id)
-
-      // If update fails (no existing record), insert new record
-      let error = updateError
-      if (updateError && updateError.code === 'PGRST116') {
-        const { error: insertError } = await supabase
-          .from('user_preferences')
-          .insert({
-            user_id: user.id,
-            pond_size_liters: pondProperties.pond_size_liters,
-            pond_depth_cm: pondProperties.pond_depth_cm,
-            pond_type: pondProperties.pond_type,
-            location: pondProperties.location,
-            climate_zone: pondProperties.climate_zone,
-            maintenance_frequency: pondProperties.maintenance_frequency,
-            seasonal_awareness: pondProperties.seasonal_awareness,
-            auto_recommendations: pondProperties.auto_recommendations,
-            // Filtration system
-            filtration_type: pondProperties.filtration_type,
-            filter_media: pondProperties.filter_media,
-            filter_segments: pondProperties.filter_segments,
-            uv_sterilizer: pondProperties.uv_sterilizer,
-            protein_skimmer: pondProperties.protein_skimmer,
-            // Water features
-            waterfall: pondProperties.waterfall,
-            fountain: pondProperties.fountain,
-            aeration_system: pondProperties.aeration_system,
-            // Equipment
-            heater: pondProperties.heater,
-            chiller: pondProperties.chiller,
-            auto_feeder: pondProperties.auto_feeder,
-            // Water source
-            water_source: pondProperties.water_source,
-            water_changes_manual: pondProperties.water_changes_manual,
-            // Plant life
-            plants_present: pondProperties.plants_present,
-            plant_types: pondProperties.plant_types,
-            experience_level: 'beginner',
-            koi_count: 0,
-            preferred_chemicals: []
-          })
-        error = insertError
-      }
-
-      if (error) {
-        console.error('Error saving pond properties:', error)
-        toast({
-          title: t('common.error'),
-          description: 'Kon vijver eigenschappen niet opslaan',
-          variant: 'destructive'
-        })
-        return
-      }
-
-      toast({
-        title: t('common.success'),
-        description: 'Vijver eigenschappen opgeslagen!'
-      })
-    } catch (error) {
-      console.error('Error in savePondProperties:', error)
-      toast({
-        title: t('common.error'),
-        description: 'Er is een fout opgetreden',
-        variant: 'destructive'
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
 
   if (loading) {
     return (
@@ -576,10 +559,14 @@ export function PondProperties() {
                 type="number"
                 placeholder="5000"
                 value={pondProperties.pond_size_liters || ''}
-                onChange={(e) => setPondProperties(prev => ({
-                  ...prev,
-                  pond_size_liters: e.target.value ? parseInt(e.target.value) : null
-                }))}
+                onChange={(e) => {
+                  const newValue = e.target.value ? parseInt(e.target.value) : null
+                  setPondProperties(prev => ({
+                    ...prev,
+                    pond_size_liters: newValue
+                  }))
+                  debouncedAutoSave({ pond_size_liters: newValue })
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -589,10 +576,14 @@ export function PondProperties() {
                 type="number"
                 placeholder="120"
                 value={pondProperties.pond_depth_cm || ''}
-                onChange={(e) => setPondProperties(prev => ({
-                  ...prev,
-                  pond_depth_cm: e.target.value ? parseInt(e.target.value) : null
-                }))}
+                onChange={(e) => {
+                  const newValue = e.target.value ? parseInt(e.target.value) : null
+                  setPondProperties(prev => ({
+                    ...prev,
+                    pond_depth_cm: newValue
+                  }))
+                  debouncedAutoSave({ pond_depth_cm: newValue })
+                }}
               />
             </div>
           </div>
@@ -602,7 +593,10 @@ export function PondProperties() {
               <Label htmlFor="pond-type">Vijver Type</Label>
               <Select 
                 value={pondProperties.pond_type} 
-                onValueChange={(value) => setPondProperties(prev => ({ ...prev, pond_type: value }))}
+                onValueChange={(value) => {
+                  setPondProperties(prev => ({ ...prev, pond_type: value }))
+                  debouncedAutoSave({ pond_type: value })
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecteer vijver type" />
@@ -619,7 +613,10 @@ export function PondProperties() {
               <Label htmlFor="climate-zone">Klimaat Zone</Label>
               <Select 
                 value={pondProperties.climate_zone} 
-                onValueChange={(value) => setPondProperties(prev => ({ ...prev, climate_zone: value }))}
+                onValueChange={(value) => {
+                  setPondProperties(prev => ({ ...prev, climate_zone: value }))
+                  debouncedAutoSave({ climate_zone: value })
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecteer klimaat zone" />
@@ -641,7 +638,10 @@ export function PondProperties() {
               id="location"
               placeholder="Amsterdam, Nederland"
               value={pondProperties.location}
-              onChange={(e) => setPondProperties(prev => ({ ...prev, location: e.target.value }))}
+              onChange={(e) => {
+                setPondProperties(prev => ({ ...prev, location: e.target.value }))
+                debouncedAutoSave({ location: e.target.value })
+              }}
             />
           </div>
         </CardContent>
@@ -663,7 +663,10 @@ export function PondProperties() {
             <Label htmlFor="maintenance-frequency">Onderhoud Frequentie</Label>
             <Select 
               value={pondProperties.maintenance_frequency} 
-              onValueChange={(value) => setPondProperties(prev => ({ ...prev, maintenance_frequency: value }))}
+              onValueChange={(value) => {
+                setPondProperties(prev => ({ ...prev, maintenance_frequency: value }))
+                debouncedAutoSave({ maintenance_frequency: value })
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecteer frequentie" />
@@ -713,7 +716,7 @@ export function PondProperties() {
                       filter_segments: newSegments
                     }))
                     // Auto-save the changes (immediate for additions)
-                    autoSaveFilterSegments(newSegments)
+                    autoSavePondProperties({ filter_segments: newSegments })
                   }}
                 >
                   <Plus className="h-4 w-4 mr-1" />
@@ -765,7 +768,7 @@ export function PondProperties() {
                               filter_segments: newSegments
                             }))
                             // Auto-save the changes (debounced)
-                            debouncedAutoSave(newSegments)
+                            debouncedAutoSave({ filter_segments: newSegments })
                           }}
                         >
                           <SelectTrigger className="h-8">
@@ -866,7 +869,7 @@ export function PondProperties() {
                               filter_segments: newSegments
                             }))
                             // Auto-save the changes (debounced)
-                            debouncedAutoSave(newSegments)
+                            debouncedAutoSave({ filter_segments: newSegments })
                           }}
                           className="h-6 text-xs"
                         />
@@ -882,7 +885,7 @@ export function PondProperties() {
                               filter_segments: newSegments
                             }))
                             // Auto-save the changes (immediate for deletions)
-                            autoSaveFilterSegments(newSegments)
+                            autoSavePondProperties({ filter_segments: newSegments })
                           }}
                           className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
                         >
@@ -946,7 +949,10 @@ export function PondProperties() {
               <input
                 type="checkbox"
                 checked={pondProperties.waterfall}
-                onChange={(e) => setPondProperties(prev => ({ ...prev, waterfall: e.target.checked }))}
+                onChange={(e) => {
+                  setPondProperties(prev => ({ ...prev, waterfall: e.target.checked }))
+                  debouncedAutoSave({ waterfall: e.target.checked })
+                }}
                 className="rounded"
               />
               <span>Waterval</span>
@@ -955,7 +961,10 @@ export function PondProperties() {
               <input
                 type="checkbox"
                 checked={pondProperties.fountain}
-                onChange={(e) => setPondProperties(prev => ({ ...prev, fountain: e.target.checked }))}
+                onChange={(e) => {
+                  setPondProperties(prev => ({ ...prev, fountain: e.target.checked }))
+                  debouncedAutoSave({ fountain: e.target.checked })
+                }}
                 className="rounded"
               />
               <span>Fontein</span>
@@ -964,7 +973,10 @@ export function PondProperties() {
               <input
                 type="checkbox"
                 checked={pondProperties.aeration_system}
-                onChange={(e) => setPondProperties(prev => ({ ...prev, aeration_system: e.target.checked }))}
+                onChange={(e) => {
+                  setPondProperties(prev => ({ ...prev, aeration_system: e.target.checked }))
+                  debouncedAutoSave({ aeration_system: e.target.checked })
+                }}
                 className="rounded"
               />
               <span>Beluchting Systeem</span>
@@ -973,7 +985,10 @@ export function PondProperties() {
               <input
                 type="checkbox"
                 checked={pondProperties.heater}
-                onChange={(e) => setPondProperties(prev => ({ ...prev, heater: e.target.checked }))}
+                onChange={(e) => {
+                  setPondProperties(prev => ({ ...prev, heater: e.target.checked }))
+                  debouncedAutoSave({ heater: e.target.checked })
+                }}
                 className="rounded"
               />
               <span>Verwarming</span>
@@ -982,7 +997,10 @@ export function PondProperties() {
               <input
                 type="checkbox"
                 checked={pondProperties.chiller}
-                onChange={(e) => setPondProperties(prev => ({ ...prev, chiller: e.target.checked }))}
+                onChange={(e) => {
+                  setPondProperties(prev => ({ ...prev, chiller: e.target.checked }))
+                  debouncedAutoSave({ chiller: e.target.checked })
+                }}
                 className="rounded"
               />
               <span>Koeling</span>
@@ -991,7 +1009,10 @@ export function PondProperties() {
               <input
                 type="checkbox"
                 checked={pondProperties.auto_feeder}
-                onChange={(e) => setPondProperties(prev => ({ ...prev, auto_feeder: e.target.checked }))}
+                onChange={(e) => {
+                  setPondProperties(prev => ({ ...prev, auto_feeder: e.target.checked }))
+                  debouncedAutoSave({ auto_feeder: e.target.checked })
+                }}
                 className="rounded"
               />
               <span>Automatische Voeder</span>
@@ -1016,7 +1037,10 @@ export function PondProperties() {
             <Label htmlFor="water-source">Water Bron</Label>
             <Select 
               value={pondProperties.water_source} 
-              onValueChange={(value) => setPondProperties(prev => ({ ...prev, water_source: value }))}
+              onValueChange={(value) => {
+                setPondProperties(prev => ({ ...prev, water_source: value }))
+                debouncedAutoSave({ water_source: value })
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecteer water bron" />
@@ -1036,7 +1060,10 @@ export function PondProperties() {
               <input
                 type="checkbox"
                 checked={pondProperties.water_changes_manual}
-                onChange={(e) => setPondProperties(prev => ({ ...prev, water_changes_manual: e.target.checked }))}
+                onChange={(e) => {
+                  setPondProperties(prev => ({ ...prev, water_changes_manual: e.target.checked }))
+                  debouncedAutoSave({ water_changes_manual: e.target.checked })
+                }}
                 className="rounded"
               />
               <span>Handmatige Waterverversing</span>
@@ -1048,7 +1075,10 @@ export function PondProperties() {
               <input
                 type="checkbox"
                 checked={pondProperties.plants_present}
-                onChange={(e) => setPondProperties(prev => ({ ...prev, plants_present: e.target.checked }))}
+                onChange={(e) => {
+                  setPondProperties(prev => ({ ...prev, plants_present: e.target.checked }))
+                  debouncedAutoSave({ plants_present: e.target.checked })
+                }}
                 className="rounded"
               />
               <span>Planten Aanwezig</span>
@@ -1095,17 +1125,6 @@ export function PondProperties() {
         </CardContent>
       </Card>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button 
-          onClick={savePondProperties} 
-          disabled={saving}
-          className="flex items-center gap-2"
-        >
-          <Save className="h-4 w-4" />
-          {saving ? 'Opslaan...' : 'Vijver Eigenschappen Opslaan'}
-        </Button>
-      </div>
     </div>
   )
 }
