@@ -41,20 +41,35 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
   const NavContent = () => (
     <nav className="flex flex-col h-full p-4">
       {/* Header */}
-      <Button 
-        variant="ghost"
-        className="flex items-center space-x-3 mb-6 w-full text-left hover:opacity-80 transition-opacity h-auto p-0 justify-start"
+      <div 
+        className="flex items-center space-x-3 mb-6 cursor-pointer hover:opacity-80 transition-opacity"
         onClick={() => onTabChange("dashboard")}
+        onMouseDown={() => onTabChange("dashboard")}
+        onTouchStart={(e) => {
+          e.preventDefault();
+          onTabChange("dashboard");
+        }}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          onTabChange("dashboard");
+        }}
+        style={{ 
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+          touchAction: 'manipulation'
+        }}
       >
         <img 
           src={koiSenseiLogo} 
           alt="Koi Sensei Logo" 
           className="h-10 w-10"
+          draggable="false"
         />
         <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
           Koi Sensei
         </h1>
-      </Button>
+      </div>
 
       {/* Main Navigation Items */}
       <div className="flex-1 space-y-2">
