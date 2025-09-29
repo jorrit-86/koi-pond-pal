@@ -47,10 +47,18 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
           alt="Koi Sensei Logo" 
           className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => onTabChange("dashboard")}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            onTabChange("dashboard");
+          }}
         />
         <h1 
           className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => onTabChange("dashboard")}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            onTabChange("dashboard");
+          }}
         >
           Koi Sensei
         </h1>
