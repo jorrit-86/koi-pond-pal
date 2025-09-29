@@ -54,7 +54,7 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
   }
 
   const handleAddKoi = async () => {
-    if (!newKoi.name || !newKoi.variety || !newKoi.age || !newKoi.length) {
+    if (!newKoi.variety || !newKoi.age || !newKoi.length) {
       toast({
         title: "Ontbrekende informatie",
         description: "Vul alle verplichte velden in.",
@@ -80,7 +80,7 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
         .from('koi')
         .insert({
           user_id: user.id,
-          name: newKoi.name,
+          name: newKoi.name || newKoi.variety, // Use variety as name if no name provided
           species: newKoi.variety,
           age_years: parseInt(newKoi.age),
           size_cm: parseInt(newKoi.length),
@@ -133,14 +133,15 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Nieuwe Koi Toevoegen</h1>
-          <p className="text-muted-foreground">Voeg een nieuwe koi toe aan je collectie</p>
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="icon" onClick={() => onNavigate("koi")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Nieuwe Koi Toevoegen</h1>
+            <p className="text-muted-foreground">Voeg een nieuwe koi toe aan je collectie</p>
+          </div>
         </div>
-        <Button variant="outline" onClick={() => onNavigate("koi")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Terug naar Collectie
-        </Button>
       </div>
 
       <Card>
@@ -170,6 +171,7 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
               <SelectContent>
                 <SelectItem value="Asagi">Asagi</SelectItem>
                 <SelectItem value="Bekko">Bekko</SelectItem>
+                <SelectItem value="Benigoi">Benigoi</SelectItem>
                 <SelectItem value="Goshiki">Goshiki</SelectItem>
                 <SelectItem value="Kohaku">Kohaku</SelectItem>
                 <SelectItem value="Other">Other</SelectItem>

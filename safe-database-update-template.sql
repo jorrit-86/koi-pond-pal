@@ -49,3 +49,5 @@ SELECT 'User Preferences (New)' as table_name, COUNT(*) as count FROM user_prefe
 -- DROP TABLE backup_ai_chat_history_$(date);
 
 SELECT 'Veilige database update voltooid' as status;
+
+

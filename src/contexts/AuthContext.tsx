@@ -24,13 +24,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true
 
-    // Set a timeout to stop loading after 3 seconds
+    // Set a timeout to stop loading after 30 seconds
     const timeout = setTimeout(() => {
       if (mounted && loading) {
         console.warn('Authentication timeout - stopping loading')
         setLoading(false)
       }
-    }, 3000)
+    }, 30000)
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {

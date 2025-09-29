@@ -49,7 +49,7 @@ export class AIChatService {
   static async getPondContext(userId: string): Promise<ChatContext> {
     try {
       // Get user preferences including filter data
-      const { data: preferences } = await supabase
+      const { data: preferences, error: preferencesError } = await supabase
         .from('user_preferences')
         .select(`
           experience_level, 
@@ -71,7 +71,8 @@ export class AIChatService {
           plant_types
         `)
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
+
 
       // Get latest water parameters
       const { data: parameters } = await supabase
@@ -106,20 +107,20 @@ export class AIChatService {
         userExperience: preferences?.experience_level || 'beginner',
         season,
         filterData: {
-          filtration_type: preferences?.filtration_type,
+          filtration_type: preferences?.filtration_type || 'mechanical_biological',
           filter_media: preferences?.filter_media || [],
           filter_segments: preferences?.filter_segments || [],
-          uv_sterilizer: preferences?.uv_sterilizer || false,
-          protein_skimmer: preferences?.protein_skimmer || false,
-          waterfall: preferences?.waterfall || false,
-          fountain: preferences?.fountain || false,
-          aeration_system: preferences?.aeration_system || false,
-          heater: preferences?.heater || false,
-          chiller: preferences?.chiller || false,
-          auto_feeder: preferences?.auto_feeder || false,
-          water_source: preferences?.water_source,
-          water_changes_manual: preferences?.water_changes_manual || true,
-          plants_present: preferences?.plants_present || false,
+          uv_sterilizer: preferences?.uv_sterilizer ?? false,
+          protein_skimmer: preferences?.protein_skimmer ?? false,
+          waterfall: preferences?.waterfall ?? false,
+          fountain: preferences?.fountain ?? false,
+          aeration_system: preferences?.aeration_system ?? false,
+          heater: preferences?.heater ?? false,
+          chiller: preferences?.chiller ?? false,
+          auto_feeder: preferences?.auto_feeder ?? false,
+          water_source: preferences?.water_source || 'tap_water',
+          water_changes_manual: preferences?.water_changes_manual ?? true,
+          plants_present: preferences?.plants_present ?? false,
           plant_types: preferences?.plant_types || []
         }
       }
@@ -275,21 +276,36 @@ Met deze informatie kan ik je veel specifiekere adviezen geven over voeding, fil
     const pondSize = context.pondSize || 0
     
     if (params.length === 0) {
-      return `Ik zie dat je nog geen waterparameters hebt ingevoerd. Om je beter te kunnen helpen, voeg eerst wat metingen toe via de 'Waterparameters' pagina. 
+      return `🔍 **Waterkwaliteit Analyse**
 
-Ideale waarden voor koi:
-• pH: 7.0-8.5
-• Ammoniak: 0 mg/l
-• Nitriet: 0 mg/l  
-• Nitraat: <50 mg/l
-• KH: 4-8 dH
-• GH: 6-12 dH
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Wat wil je specifiek weten over waterkwaliteit?`
+❌ **Geen Recente Metingen**
+Ik zie dat je nog geen waterparameters hebt ingevoerd. Om je beter te kunnen helpen, voeg eerst wat metingen toe via de 'Waterparameters' pagina.
+
+📋 **Ideale Waarden voor Koi**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧪 **pH**: 7.0-8.5
+☠️ **Ammoniak**: 0 mg/l
+⚠️ **Nitriet**: 0 mg/l  
+📈 **Nitraat**: <50 mg/l
+🛡️ **KH**: 4-8 dH
+💎 **GH**: 6-12 dH
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 **Wat wil je specifiek weten over waterkwaliteit?**`
     }
 
     // Analyze each parameter and provide specific advice
-    let analysis = `**Analyse van je waterkwaliteit:**\n\n`
+    let analysis = `🔍 **Waterkwaliteit Analyse**
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 **Je Vijver**: ${pondSize}L
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🧪 **Parameter Analyse**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
     let hasIssues = false
     let recommendations = []
 
@@ -303,67 +319,95 @@ Wat wil je specifiek weten over waterkwaliteit?`
           if (value < 7.0) {
             statusIcon = '⚠️'
             hasIssues = true
-            advice = 'Te laag! Voeg KH+ toe of gebruik pH+ product.'
+            advice = 'Te laag! Streefwaarde: 7.0-8.5. Voeg KH+ toe voor pH stabiliteit.'
           } else if (value > 8.5) {
             statusIcon = '⚠️'
             hasIssues = true
-            advice = 'Te hoog! Controleer KH waarde en overweeg pH- product.'
+            advice = 'Te hoog! Streefwaarde: 7.0-8.5. Controleer KH waarde (≥6°dH voor buffer).'
           } else {
-            advice = 'Perfecte waarde!'
+            advice = 'Perfecte waarde! Binnen streefwaarde 7.0-8.5.'
           }
           break
         case 'nitriet':
-          if (value > 0) {
+          if (value > 0.1) {
             statusIcon = '🚨'
             hasIssues = true
-            advice = 'Gevaarlijk! Voer 50% waterverversing uit en controleer filter.'
-            recommendations.push('Directe waterverversing nodig')
+            advice = 'Gevaarlijk! Streefwaarde: <0.1 mg/l. Acuut giftig voor koi! Direct 50% waterverversing en controleer biologische filter.'
+            recommendations.push('Directe waterverversing en filter controle')
+          } else if (value > 0) {
+            statusIcon = '⚠️'
+            hasIssues = true
+            advice = 'Te hoog! Streefwaarde: <0.1 mg/l. Giftig voor koi, controleer filter.'
+            recommendations.push('Filter controle en waterverversing')
           } else {
-            advice = 'Uitstekend! Geen nitriet gedetecteerd.'
+            advice = 'Uitstekend! Geen nitriet gedetecteerd (streefwaarde: <0.1 mg/l).'
           }
           break
         case 'nitraat':
           if (value > 50) {
             statusIcon = '⚠️'
             hasIssues = true
-            advice = 'Te hoog! Meer waterverversing of planten toevoegen.'
+            advice = 'Te hoog! Streefwaarde: <50 mg/l. Stimuleert algen. Verhoog waterverversing of voeg planten toe.'
             recommendations.push('Verhoog waterverversing naar 20% per week')
           } else {
-            advice = 'Goede waarde!'
+            advice = 'Goede waarde! Binnen streefwaarde <50 mg/l.'
           }
           break
         case 'ammoniak':
           if (value > 0) {
             statusIcon = '🚨'
             hasIssues = true
-            advice = 'Gevaarlijk! Directe waterverversing en filter controle.'
-            recommendations.push('Urgente waterverversing')
+            advice = 'Gevaarlijk! Streefwaarde: 0 mg/l. Acuut giftig voor koi! Direct 50% waterverversing en controleer biologische filter.'
+            recommendations.push('Urgente waterverversing en filter controle')
           } else {
-            advice = 'Perfect! Geen ammoniak.'
+            advice = 'Perfect! Geen ammoniak gedetecteerd (streefwaarde: 0 mg/l).'
           }
           break
         case 'kh':
-          if (value < 4) {
+          if (value < 6) {
             statusIcon = '⚠️'
             hasIssues = true
-            advice = 'Te laag! Voeg KH+ toe voor pH stabiliteit.'
+            advice = 'Te laag! Streefwaarde: ≥6°dH. Essentieel voor pH stabiliteit en buffer voor bacteriën. Voeg KH+ toe.'
             recommendations.push('KH+ toevoegen voor buffer capaciteit')
-          } else if (value > 8) {
+          } else if (value > 12) {
             statusIcon = '⚠️'
-            advice = 'Te hoog, maar niet gevaarlijk.'
+            advice = 'Te hoog! Streefwaarde: ≥6°dH. Niet gevaarlijk, maar kan pH te stabiel maken.'
           } else {
-            advice = 'Ideale buffer capaciteit!'
+            advice = 'Ideale buffer capaciteit! Binnen streefwaarde ≥6°dH.'
           }
           break
         case 'gh':
           if (value < 6) {
             statusIcon = '⚠️'
-            advice = 'Te laag! Voeg GH+ toe voor mineralen.'
+            advice = 'Te laag! Streefwaarde: 6-12°dH. Voeg GH+ toe voor essentiële mineralen.'
           } else if (value > 12) {
             statusIcon = '⚠️'
-            advice = 'Te hoog, maar acceptabel.'
+            advice = 'Te hoog! Streefwaarde: 6-12°dH. Niet gevaarlijk, maar kan hardheid problemen geven.'
           } else {
-            advice = 'Goede mineralen balans!'
+            advice = 'Goede mineralen balans! Binnen streefwaarde 6-12°dH.'
+          }
+          break
+        case 'fosfaat':
+          if (value > 1) {
+            statusIcon = '⚠️'
+            hasIssues = true
+            advice = 'Te hoog! Streefwaarde: <0.5-1 mg/l. Voedt algenexplosie en veroorzaakt indirect stress. Beperk voer en verhoog waterverversing.'
+            recommendations.push('Voer beperken en waterverversing verhogen')
+          } else if (value > 0.5) {
+            statusIcon = '⚠️'
+            advice = 'Aan de hoge kant! Streefwaarde: <0.5-1 mg/l. Houd in de gaten voor algen.'
+          } else {
+            advice = 'Goede waarde! Binnen streefwaarde <0.5-1 mg/l.'
+          }
+          break
+        case 'zuurstof':
+          if (value < 6) {
+            statusIcon = '🚨'
+            hasIssues = true
+            advice = 'Te laag! Streefwaarde: >6 mg/l. Tekort veroorzaakt stress en sterfte. Voeg beluchting toe!'
+            recommendations.push('Beluchtingssysteem toevoegen')
+          } else {
+            advice = 'Goede zuurstofwaarde! Binnen streefwaarde >6 mg/l.'
           }
           break
         default:
@@ -374,24 +418,38 @@ Wat wil je specifiek weten over waterkwaliteit?`
     })
 
     if (hasIssues) {
-      analysis += `\n**🚨 Actie vereist:**\n`
+      analysis += `
+
+🚨 **Actie Vereist**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
       recommendations.forEach(rec => {
-        analysis += `• ${rec}\n`
+        analysis += `\n⚠️ ${rec}`
       })
     } else {
-      analysis += `\n**✅ Uitstekend! Je waterkwaliteit is goed.**`
+      analysis += `
+
+✅ **Uitstekend! Je waterkwaliteit is goed.**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
     }
 
     if (pondSize > 0) {
-      analysis += `\n\n**Specifiek voor je ${pondSize.toLocaleString('nl-NL')} liter vijver:**`
+      analysis += `
+
+📊 **Specifiek voor je ${pondSize.toLocaleString('nl-NL')} liter vijver**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
       if (pondSize < 1000) {
-        analysis += `\n• Kleine vijver: Controleer waterkwaliteit 2x per week`
+        analysis += `\n🔍 Kleine vijver: Controleer waterkwaliteit 2x per week`
       } else if (pondSize < 5000) {
-        analysis += `\n• Medium vijver: Wekelijkse controles voldoende`
+        analysis += `\n📅 Medium vijver: Wekelijkse controles voldoende`
       } else {
-        analysis += `\n• Grote vijver: Maandelijkse controles voldoende`
+        analysis += `\n📆 Grote vijver: Maandelijkse controles voldoende`
       }
     }
+
+    analysis += `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 **Wat wil je specifiek weten over waterkwaliteit?**`
 
     return analysis
   }
@@ -474,40 +532,126 @@ Wat wil je specifiek weten over je koi?`
     const koiCount = context.koiCount || 0
     const pondSize = context.pondSize || 0
     const experience = context.userExperience || 'beginner'
+    const waterParameters = context.waterParameters || []
     
-    const seasonalAdvice = {
-      spring: 'In de lente beginnen koi weer actief te worden. Start met lichte voeding en bouw langzaam op.',
-      summer: 'In de zomer zijn koi het meest actief. Voer 2-3x per dag met hoogwaardig voer.',
-      autumn: 'In de herfst bereid je koi voor op de winter. Verminder voeding en gebruik wintervoer.',
-      winter: 'In de winter eten koi weinig tot niets. Voer alleen bij temperaturen boven 10°C.'
+    // Check for water quality issues that limit feeding
+    const hasAmmonia = waterParameters.some(p => p.name.toLowerCase() === 'ammoniak' && p.value > 0)
+    const hasNitrite = waterParameters.some(p => p.name.toLowerCase() === 'nitriet' && p.value > 0.1)
+    const hasHighNitrate = waterParameters.some(p => p.name.toLowerCase() === 'nitraat' && p.value > 50)
+    const hasHighPhosphate = waterParameters.some(p => p.name.toLowerCase() === 'fosfaat' && p.value > 1)
+    const hasLowOxygen = waterParameters.some(p => p.name.toLowerCase() === 'zuurstof' && p.value < 6)
+    
+    let response = `🍽️ **Voeding Advies**
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌡️ **Temperatuur & Voeding**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+
+    // Temperature-based feeding advice
+    if (season === 'winter') {
+      response += `
+❄️ **Winter (< 8°C)**: Niet voeren
+🌡️ **8-12°C**: Licht voeren (tarwekiemen)
+🌡️ **12-18°C**: Matig voeren, groeivoer beperkt
+🌡️ **18-24°C**: Optimale temperatuur (1-2% lichaamsgewicht/dag)
+🌡️ **> 24°C**: Voer beperken, zuurstofstress`
+    } else if (season === 'spring') {
+      response += `
+🌸 **Lente**: Start met lichte voeding en bouw langzaam op
+🌡️ **12-18°C**: Matig voeren, groeivoer beperkt
+🌡️ **18-24°C**: Optimale temperatuur (1-2% lichaamsgewicht/dag)`
+    } else if (season === 'summer') {
+      response += `
+☀️ **Zomer**: Koi zijn het meest actief
+🌡️ **18-24°C**: Optimale temperatuur (1-2% lichaamsgewicht/dag)
+🌡️ **> 24°C**: Voer beperken, zuurstofstress`
+    } else if (season === 'autumn') {
+      response += `
+🍂 **Herfst**: Bereid koi voor op winter, verminder voeding
+🌡️ **12-18°C**: Matig voeren, groeivoer beperkt
+🌡️ **8-12°C**: Licht voeren (tarwekiemen)`
     }
 
-    let response = `**Voeding advies voor de ${season}:**\n${seasonalAdvice[season as keyof typeof seasonalAdvice]}`
+    // Water quality limitations
+    if (hasAmmonia || hasNitrite || hasHighNitrate || hasHighPhosphate || hasLowOxygen) {
+      response += `
 
-    if (koiCount > 0) {
-      const dailyAmount = season === 'summer' ? koiCount * 3 : 
-                         season === 'spring' || season === 'autumn' ? koiCount * 2 : 0
+🚨 **Waterkwaliteit Beperkingen**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ **Belangrijk**: Waterkwaliteit is leidend - voer nooit meer dan de filter aankan!`
       
-      response += `\n\n**Specifiek voor je ${koiCount} koi:**
-• ${season === 'winter' ? 'Geen voeding onder 10°C' : `Dagelijkse hoeveelheid: ${dailyAmount} gram`}
-• Voer ${season === 'summer' ? '2-3x per dag' : season === 'winter' ? 'niet' : '1-2x per dag'}
-• Voer alleen wat ze in 5 minuten opeten`
+      if (hasAmmonia || hasNitrite) {
+        response += `
+☠️ **Ammoniak/Nitriet aanwezig**: Direct minder voeren!`
+      }
+      if (hasHighNitrate || hasHighPhosphate) {
+        response += `
+📈 **Nitraat >50 mg/l of Fosfaat >1 mg/l**: Voer beperken + water verversen`
+      }
+      if (hasLowOxygen) {
+        response += `
+💨 **Zuurstof laag**: Voergift verminderen, extra beluchten`
+      }
     }
 
+    // Specific feeding amounts based on koi count and size
+    if (koiCount > 0) {
+      response += `
+
+🐟 **Specifiek voor je ${koiCount} koi**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+      
+      // Estimate koi sizes and feeding amounts
+      const avgKoiSize = 50 // cm, estimate
+      const avgKoiWeight = 2 // kg, estimate
+      const totalWeight = koiCount * avgKoiWeight
+      const dailyAmount = Math.round(totalWeight * 0.02 * 1000) // 2% of body weight in grams
+      
+      response += `
+📏 **Geschatte lichaamslengte**: ${avgKoiSize} cm per koi
+⚖️ **Geschat gewicht**: ${avgKoiWeight} kg per koi
+🍽️ **Dagelijkse hoeveelheid**: ${dailyAmount} gram (1-2% lichaamsgewicht)
+📅 **Voermomenten**: ${season === 'summer' ? '4-6x per dag' : season === 'winter' ? 'Niet voeren' : '2-3x per dag'}`
+      
+      if (season === 'summer') {
+        response += `
+🤖 **Automatische voeder**: Tot 6-8x per dag mogelijk`
+      }
+    }
+
+    // Pond size considerations
     if (pondSize > 0) {
-      response += `\n\n**Voor je ${pondSize.toLocaleString('nl-NL')} liter vijver:**
-• ${pondSize < 1000 ? 'Kleine vijver: Extra aandacht voor waterkwaliteit na voeding' :
-    pondSize < 5000 ? 'Medium vijver: Normale voeding routine' :
-    'Grote vijver: Zeer stabiel, minder risico op problemen'}`
+      response += `
+
+🏊 **Voor je ${pondSize.toLocaleString('nl-NL')} liter vijver**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+      
+      if (pondSize < 1000) {
+        response += `
+🔍 **Kleine vijver**: Extra aandacht voor waterkwaliteit na voeding
+⚠️ **Risico**: Snelle waterkwaliteit verslechtering`
+      } else if (pondSize < 5000) {
+        response += `
+📊 **Medium vijver**: Normale voeding routine
+✅ **Stabiel**: Goede buffer capaciteit`
+      } else {
+        response += `
+🌊 **Grote vijver**: Zeer stabiel, minder risico op problemen
+✅ **Veilig**: Ruime buffer voor voeding`
+      }
     }
 
-    response += `\n\n**Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} koi-houder:**
-• Gebruik seizoensgebonden voer
-• Varieer met verschillende soorten voer
-• Observeer eetgedrag dagelijks
-• Pas voeding aan op basis van activiteit
+    response += `
 
-Wat wil je specifiek weten over voeding?`
+💡 **Kernboodschap**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 **Meerdere kleine porties** = gezonder voor koi én minder piekbelasting voor filter
+🌡️ **Temperatuur + lichaamslengte** geven voerbehoefte aan, maar **waterwaarden begrenzen** maximale voergift
+📊 **Fosfaat is belangrijk** omdat het algengroei voedt → voer beperken en water verversen bij te hoge waarden
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 **Wat wil je specifiek weten over voeding?**`
 
     return response
   }
@@ -517,86 +661,365 @@ Wat wil je specifiek weten over voeding?`
     const koiCount = context.koiCount || 0
     const experience = context.userExperience || 'beginner'
     const season = context.season || 'spring'
+    const filterData = context.filterData
     
-    if (pondSize === 0) {
-      return `Ik zie dat je nog geen vijvergrootte hebt ingevoerd. Om je specifieke filteradviezen te kunnen geven, voeg je vijvergegevens toe via de 'Instellingen' pagina.
+    
+    if (!filterData || !filterData.filtration_type) {
+      return `Ik zie dat je nog geen filtergegevens hebt ingevoerd. Om je specifieke feedback te kunnen geven over je filtersysteem, voeg je filtergegevens toe via de 'Instellingen' pagina.
 
-Voor goede filtratie is het belangrijk om te weten:
-• Vijverinhoud in liters
-• Aantal koi
-• Huidige filtercapaciteit
-• Doorstroming per uur
+Voor een complete filteranalyse heb ik nodig:
+• Type filtratie (mechanisch/biologisch/natuurlijk)
+• Filter media (sponsen, keramiek, bio-ballen, etc.)
+• UV-sterilisator, protein skimmer, etc.
+• Water features (waterval, fontein, beluchting)
 
-Met deze informatie kan ik je veel specifiekere filteradviezen geven!`
+Met deze informatie kan ik je concrete feedback geven over je huidige opstelling!`
     }
 
-    // Calculate recommended filter capacity
-    const recommendedFlow = Math.ceil(pondSize / 1000) // 1x pond volume per hour minimum
-    const optimalFlow = Math.ceil(pondSize / 500) // 2x pond volume per hour optimal
-    const filterSize = pondSize < 1000 ? 'klein' : pondSize < 5000 ? 'medium' : 'groot'
+    // Extract media and equipment from filter segments
+    const allMedia: string[] = []
+    let hasUVFromSegments = false
+    let hasProteinSkimmerFromSegments = false
+    
+    if (filterData.filter_segments && filterData.filter_segments.length > 0) {
+      filterData.filter_segments.forEach(segment => {
+        if (segment.media && segment.media.length > 0) {
+          allMedia.push(...segment.media)
+        }
+        if (segment.type === 'uv') {
+          hasUVFromSegments = true
+        }
+        if (segment.type === 'skimmer') {
+          hasProteinSkimmerFromSegments = true
+        }
+      })
+    }
+    
+    // Combine with direct boolean flags
+    const hasUV = hasUVFromSegments || filterData.uv_sterilizer
+    const hasProteinSkimmer = hasProteinSkimmerFromSegments || filterData.protein_skimmer
+    const displayMedia = allMedia.length > 0 ? allMedia.join(', ') : (filterData.filter_media?.length > 0 ? filterData.filter_media.join(', ') : 'Geen media opgegeven')
 
-    let response = `**Filter analyse voor je ${pondSize.toLocaleString('nl-NL')} liter vijver:**
+    let response = `🔍 **Filter Systeem Analyse**
 
-**Aanbevolen filtercapaciteit:**
-• Minimale doorstroming: **${recommendedFlow} liter per uur** (1x vijverinhoud)
-• Optimale doorstroming: **${optimalFlow} liter per uur** (2x vijverinhoud)
-• Filtergrootte: **${filterSize}** filtersysteem
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-**Specifieke aanbevelingen voor je ${pondSize.toLocaleString('nl-NL')} liter vijver:**`
+📋 **Je Huidige Opstelling**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    if (pondSize < 1000) {
+🔧 **Filtratie Type**: ${this.getFiltrationTypeName(filterData.filtration_type)}
+🧽 **Filter Media**: ${displayMedia}
+💡 **UV-Sterilisator**: ${hasUV ? '✅ Aanwezig' : '❌ Niet aanwezig'}
+🫧 **Protein Skimmer**: ${hasProteinSkimmer ? '✅ Aanwezig' : '❌ Niet aanwezig'}
+🌊 **Waterval**: ${filterData.waterfall ? '✅ Aanwezig' : '❌ Niet aanwezig'}
+⛲ **Fontein**: ${filterData.fountain ? '✅ Aanwezig' : '❌ Niet aanwezig'}
+💨 **Beluchtingssysteem**: ${filterData.aeration_system ? '✅ Aanwezig' : '❌ Niet aanwezig'}`
+
+    if (filterData.filter_segments && filterData.filter_segments.length > 0) {
       response += `
-• **Kleine vijver**: Extra aandacht voor filtratie
-• Gebruik compacte, efficiënte filters
-• Overweeg skimmer + biologische filter
-• Regelmatig onderhoud (1x per week)`
-    } else if (pondSize < 5000) {
-      response += `
-• **Medium vijver**: Goede balans tussen capaciteit en onderhoud
-• Combinatie van mechanische en biologische filtratie
-• UV-filter aanbevolen voor helder water
-• Onderhoud 1x per 2 weken`
+
+🔗 **Filter Segmenten**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${filterData.filter_segments.map((segment, index) => {
+  const typeEmoji = segment.type === 'mechanical' ? '🔧' : 
+                   segment.type === 'biological' ? '🧬' : 
+                   segment.type === 'chemical' ? '🧪' : 
+                   segment.type === 'uv' ? '💡' : 
+                   segment.type === 'skimmer' ? '🫧' : '📦'
+  return `${typeEmoji} **Segment ${index + 1}** (${segment.type}): ${segment.media?.join(', ') || 'Geen media'}`
+}).join('\n')}`
+    }
+
+    // Analyze the current setup
+    response += `
+
+📊 **Mijn Analyse**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+
+    // Filtration type analysis
+    const filtrationScore = this.analyzeFiltrationType(filterData.filtration_type, pondSize, koiCount)
+    const filtrationEmoji = filtrationScore.score >= 8 ? '🌟' : filtrationScore.score >= 6 ? '👍' : '⚠️'
+    response += `
+
+${filtrationEmoji} **Filtratie Type**: ${filtrationScore.score}/10
+   ${filtrationScore.feedback}`
+
+    // Filter media analysis
+    const mediaScore = this.analyzeFilterMedia(allMedia.length > 0 ? allMedia : (filterData.filter_media || []), pondSize, koiCount)
+    const mediaEmoji = mediaScore.score >= 8 ? '🌟' : mediaScore.score >= 6 ? '👍' : '⚠️'
+    response += `
+
+${mediaEmoji} **Filter Media**: ${mediaScore.score}/10
+   ${mediaScore.feedback}`
+
+    // Equipment analysis (use updated UV and protein skimmer detection)
+    const updatedFilterData = {
+      ...filterData,
+      uv_sterilizer: hasUV,
+      protein_skimmer: hasProteinSkimmer
+    }
+    const equipmentScore = this.analyzeEquipment(updatedFilterData, pondSize, koiCount)
+    const equipmentEmoji = equipmentScore.score >= 8 ? '🌟' : equipmentScore.score >= 6 ? '👍' : '⚠️'
+    response += `
+
+${equipmentEmoji} **Uitrusting**: ${equipmentScore.score}/10
+   ${equipmentScore.feedback}`
+
+    // Overall assessment
+    const overallScore = Math.round((filtrationScore.score + mediaScore.score + equipmentScore.score) / 3)
+    let overallFeedback = ''
+    let overallEmoji = ''
+    if (overallScore >= 8) {
+      overallFeedback = 'Uitstekend filtersysteem! Je hebt een professionele opstelling.'
+      overallEmoji = '🏆'
+    } else if (overallScore >= 6) {
+      overallFeedback = 'Goed filtersysteem met enkele verbeterpunten.'
+      overallEmoji = '👍'
+    } else if (overallScore >= 4) {
+      overallFeedback = 'Basis filtersysteem, maar er zijn belangrijke verbeteringen mogelijk.'
+      overallEmoji = '⚠️'
     } else {
-      response += `
-• **Grote vijver**: Zeer stabiel, minder kritiek
-• Grote biologische filter met veel oppervlakte
-• Meerdere filterkamers voor optimale werking
-• Onderhoud 1x per maand voldoende`
-    }
-
-    if (koiCount > 0) {
-      const bioload = koiCount > 5 ? 'hoog' : koiCount > 2 ? 'medium' : 'laag'
-      response += `
-
-**Biologische belasting (${koiCount} koi):**
-• Belasting: **${bioload}**
-• ${bioload === 'hoog' ? 'Extra biologische filtratie nodig' : 
-    bioload === 'medium' ? 'Normale biologische filtratie voldoende' : 
-    'Minimale biologische filtratie nodig'}`
-    }
-
-    // Seasonal filter advice
-    const seasonalAdvice = {
-      spring: 'Lente: Filter opstarten, bacteriën activeren, eerste reiniging',
-      summer: 'Zomer: Maximale filtercapaciteit, regelmatig controleren, UV-filter actief',
-      autumn: 'Herfst: Bladeren verwijderen, filter beschermen, voorbereiden op winter',
-      winter: 'Winter: Filter beschermen tegen vorst, minimale doorstroming, bacteriën inactief'
+      overallFeedback = 'Je filtersysteem heeft significante verbeteringen nodig.'
+      overallEmoji = '🚨'
     }
 
     response += `
 
-**Seizoensadvies (${season}):**
-${seasonalAdvice[season as keyof typeof seasonalAdvice]}
+${overallEmoji} **Algemene Beoordeling**: ${overallScore}/10
+   ${overallFeedback}
 
-**Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} vijverhouder:**
-• ${experience === 'beginner' ? 'Start met eenvoudig filtersysteem' : 'Overweeg geavanceerde filteropstelling'}
-• Regelmatige controle van doorstroming
-• Onderhoudsschema aanpassen aan seizoen
-• Probleemherkenning en oplossing
+💡 **Specifieke Aanbevelingen**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
 
-Wat wil je specifiek weten over je filtersysteem?`
+    // Specific recommendations based on current setup
+    const recommendations: string[] = []
+    
+    if (!hasUV && pondSize > 1000) {
+      recommendations.push('💡 Overweeg een UV-sterilisator voor kristalhelder water')
+    }
+
+    if (!filterData.aeration_system && koiCount > 3) {
+      recommendations.push('💨 Beluchtingssysteem aanbevolen voor optimale zuurstof')
+    }
+
+    if (filterData.filtration_type === 'mechanical_only' && koiCount > 0) {
+      recommendations.push('🧬 Voeg biologische filtratie toe voor betere waterkwaliteit')
+    }
+
+    if (allMedia.length === 0 && (!filterData.filter_media || filterData.filter_media.length === 0)) {
+      recommendations.push('🧽 Voeg filter media toe (sponsen, keramiek, bio-ballen)')
+    }
+
+    if (pondSize > 0 && koiCount > 0) {
+      const litersPerKoi = Math.round(pondSize / koiCount)
+      if (litersPerKoi < 100 && !hasProteinSkimmer) {
+        recommendations.push('🫧 Protein skimmer aanbevolen voor hoge bezetting')
+      }
+    }
+
+    if (recommendations.length > 0) {
+      response += `\n${recommendations.join('\n')}`
+    } else {
+      response += `\n🎉 Je filtersysteem is al goed geoptimaliseerd!`
+    }
+
+    response += `
+
+🔧 **Onderhoudstips**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛠️ ${this.getMaintenanceAdvice(filterData, season)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 **Wat wil je specifiek weten over je filtersysteem?**`
 
     return response
+  }
+
+  private static getFiltrationTypeName(type: string): string {
+    const types: Record<string, string> = {
+      'mechanical_biological': 'Mechanisch + Biologisch',
+      'mechanical_only': 'Alleen Mechanisch',
+      'biological_only': 'Alleen Biologisch',
+      'natural': 'Natuurlijk',
+      'none': 'Geen filtratie'
+    }
+    return types[type] || type
+  }
+
+  private static analyzeFiltrationType(type: string, pondSize: number, koiCount: number): { score: number, feedback: string } {
+    switch (type) {
+      case 'mechanical_biological':
+        return { 
+          score: 9, 
+          feedback: 'Uitstekende combinatie! Mechanische filtering verwijdert vuil, biologische filtering breekt afvalstoffen af (ammoniak → nitriet → nitraat). Dit is de gouden standaard voor koi-vijvers.' 
+        }
+      case 'biological_only':
+        return { 
+          score: 6, 
+          feedback: 'Biologische filtratie is essentieel, maar mechanische voorfiltratie voorkomt dat het biofilter dichtslibt. Overweeg een vortexkamer, borstelfilter of trommelfilter toe te voegen.' 
+        }
+      case 'mechanical_only':
+        return { 
+          score: 3, 
+          feedback: 'Alleen mechanische filtratie is onvoldoende! Koi produceren ammoniak dat giftig is. Je hebt biologische filtratie nodig (Japanse matten, Moving Bed, of trickle filter) om ammoniak af te breken.' 
+        }
+      case 'natural':
+        return { 
+          score: 5, 
+          feedback: 'Natuurlijke filtratie kan werken in grote vijvers met weinig koi, maar is minder betrouwbaar. Voor koi is een mechanisch-biologisch systeem aanbevolen.' 
+        }
+      case 'none':
+        return { 
+          score: 1, 
+          feedback: 'Geen filtratie is levensgevaarlijk voor koi! Ammoniak en nitriet zijn acuut giftig. Installeer direct een filtersysteem.' 
+        }
+      default:
+        return { 
+          score: 5, 
+          feedback: 'Onbekend type, controleer je instellingen.' 
+        }
+    }
+  }
+
+  private static analyzeFilterMedia(media: string[], pondSize: number, koiCount: number): { score: number, feedback: string } {
+    if (media.length === 0) {
+      return { 
+        score: 3, 
+        feedback: 'Geen filter media opgegeven! Voor koi heb je zowel mechanische als biologische media nodig. Overweeg: Japanse matten, Moving Bed (K1), keramiek, of glasfoam.' 
+      }
+    }
+
+    let score = 5
+    let feedback = ''
+    let hasMechanical = false
+    let hasBiological = false
+
+    // Mechanische filter media
+    if (media.some(m => m.toLowerCase().includes('borstelfilter') || m.toLowerCase().includes('brush'))) {
+      score += 1
+      hasMechanical = true
+      feedback += 'Borstelfilter: goedkoop, vangt grove delen, maar veel schoonmaak. '
+    }
+    if (media.some(m => m.toLowerCase().includes('vortex') || m.toLowerCase().includes('vortexkamer'))) {
+      score += 1
+      hasMechanical = true
+      feedback += 'Vortexkamer: goedkoop en eenvoudig, maar weinig effectief bij fijn vuil. '
+    }
+    if (media.some(m => m.toLowerCase().includes('trommel') || m.toLowerCase().includes('drum'))) {
+      score += 3
+      hasMechanical = true
+      feedback += 'Trommelfilter: zeer effectief, automatisch, onderhoudsarm! '
+    }
+    if (media.some(m => m.toLowerCase().includes('zeef') || m.toLowerCase().includes('sieve'))) {
+      score += 2
+      hasMechanical = true
+      feedback += 'Zeefbochtfilter: effectief, weinig onderhoud, handmatig afspoelen. '
+    }
+
+    // Biologische filter media
+    if (media.some(m => m.toLowerCase().includes('japanse') || m.toLowerCase().includes('matten'))) {
+      score += 3
+      hasBiological = true
+      feedback += 'Japanse matten: veel oppervlak, bewezen techniek, maar arbeidsintensief schoonmaken. '
+    }
+    if (media.some(m => m.toLowerCase().includes('moving') || m.toLowerCase().includes('k1') || m.toLowerCase().includes('k3'))) {
+      score += 3
+      hasBiological = true
+      feedback += 'Moving Bed (K1/K3): belucht, zelfreinigend, zeer effectief! Vraagt wel luchtpomp. '
+    }
+    if (media.some(m => m.toLowerCase().includes('glasfoam') || m.toLowerCase().includes('glas'))) {
+      score += 2
+      hasBiological = true
+      feedback += 'Glasfoam: zeer hoog oppervlak, duurzaam, ideaal voor trickle/shower filters. '
+    }
+    if (media.some(m => m.toLowerCase().includes('keramiek') || m.toLowerCase().includes('ceramic'))) {
+      score += 2
+      hasBiological = true
+      feedback += 'Keramiek: stabiel biologisch medium met goed oppervlak. '
+    }
+    if (media.some(m => m.toLowerCase().includes('bead') || m.toLowerCase().includes('kralen'))) {
+      score += 2
+      hasBiological = true
+      feedback += 'Beadfilter: combineert mechanisch en biologisch, compact, maar kans op verstopping. '
+    }
+
+    // Chemische filter media
+    if (media.some(m => m.toLowerCase().includes('actieve') || m.toLowerCase().includes('carbon'))) {
+      score += 1
+      feedback += 'Actieve kool: goed voor tijdelijke correcties, niet permanent gebruiken. '
+    }
+    if (media.some(m => m.toLowerCase().includes('zeoliet') || m.toLowerCase().includes('zeolite'))) {
+      score += 1
+      feedback += 'Zeoliet: kan ammoniak binden, maar vervangt geen biologische filtratie. '
+    }
+
+    // Overall assessment
+    if (hasMechanical && hasBiological) {
+      feedback = 'Uitstekende combinatie van mechanische en biologische media! ' + feedback
+    } else if (hasBiological) {
+      feedback = 'Goede biologische media, overweeg mechanische voorfiltratie. ' + feedback
+    } else if (hasMechanical) {
+      feedback = 'Alleen mechanische media is onvoldoende voor koi! Voeg biologische media toe. ' + feedback
+    } else {
+      feedback = 'Basis filter media. ' + feedback
+    }
+
+    return { score: Math.min(score, 10), feedback: feedback.trim() }
+  }
+
+  private static analyzeEquipment(filterData: any, pondSize: number, koiCount: number): { score: number, feedback: string } {
+    let score = 5
+    let feedback = ''
+
+    if (filterData.uv_sterilizer) {
+      score += 2
+      feedback += 'UV-sterilisator voor helder water. '
+    }
+    if (filterData.protein_skimmer) {
+      score += 1
+      feedback += 'Protein skimmer voor organische afval. '
+    }
+    if (filterData.aeration_system) {
+      score += 2
+      feedback += 'Beluchtingssysteem voor zuurstof. '
+    }
+    if (filterData.waterfall || filterData.fountain) {
+      score += 1
+      feedback += 'Water circulatie via waterval/fontein. '
+    }
+
+    if (score >= 8) {
+      feedback = 'Uitstekende uitrusting! ' + feedback
+    } else if (score >= 6) {
+      feedback = 'Goede uitrusting. ' + feedback
+    } else {
+      feedback = 'Basis uitrusting. ' + feedback
+    }
+
+    return { score: Math.min(score, 10), feedback: feedback.trim() }
+  }
+
+  private static getMaintenanceAdvice(filterData: any, season: string): string {
+    const advice = []
+    
+    if (filterData.filter_media?.includes('sponges') || filterData.filter_media?.includes('sponsen')) {
+      advice.push('Reinig sponsen wekelijks')
+    }
+    if (filterData.uv_sterilizer) {
+      advice.push('Vervang UV-lamp jaarlijks')
+    }
+    if (filterData.protein_skimmer) {
+      advice.push('Leeg skimmer dagelijks')
+    }
+    if (filterData.aeration_system) {
+      advice.push('Controleer beluchting regelmatig')
+    }
+
+    if (advice.length === 0) {
+      return 'Controleer je filtersysteem regelmatig op verstoppingen en vervuiling.'
+    }
+
+    return advice.join(', ')
   }
 
   private static generateTemperatureResponse(context: ChatContext): string {

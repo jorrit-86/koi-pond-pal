@@ -1,21 +1,23 @@
+import { useState } from "react"
 import { ParameterPageTemplate } from "./parameter-page-template"
-import { useParameterData } from "@/hooks/use-parameter-data"
+import { useCombinedTemperatureData } from "@/hooks/use-combined-temperature-data"
+import { Card, CardContent } from "@/components/ui/card"
 
 interface TemperaturePageProps {
   onNavigate: (tab: string) => void
 }
 
 export const TemperaturePage = ({ onNavigate }: TemperaturePageProps) => {
-  const getTemperatureStatus = (value: number): "optimal" | "warning" | "critical" => {
-    if (value >= 15 && value <= 25) return "optimal"
-    if (value >= 10 && value <= 30) return "warning"
-    return "critical"
-  }
-
-  const { historicData, currentValue, status, loading } = useParameterData({
-    parameterType: 'temperature',
-    getStatus: getTemperatureStatus
-  })
+  const [timeRange, setTimeRange] = useState("24h")
+  const { 
+    combinedData, 
+    currentValue, 
+    status, 
+    loading, 
+    error, 
+    sensorTemp, 
+    sensorLastUpdate 
+  } = useCombinedTemperatureData(timeRange)
 
   if (loading) {
     return (
@@ -29,31 +31,52 @@ export const TemperaturePage = ({ onNavigate }: TemperaturePageProps) => {
   }
 
   return (
-    <ParameterPageTemplate
-      onNavigate={onNavigate}
-      parameterName="Water Temperature"
-      parameterKey="temperature"
-      currentValue={currentValue}
-      unit="°C"
-      idealRange="15 - 25°C"
-      status={status}
-      historicData={historicData}
-      infoContent={{
-        description: "Pond temperature monitoring",
-        importance: "Understanding temperature effects on koi health",
-        effects: [
-          "Metabolism: Warmer water increases koi activity and appetite",
-          "Oxygen levels: Warmer water holds less dissolved oxygen",
-          "Disease risk: Rapid temperature changes stress fish",
-          "Beneficial bacteria: Activity decreases in cold water"
-        ],
-        management: [
-          "Provide shade in summer to prevent overheating",
-          "Use pond heaters in extreme cold climates",
-          "Ensure proper aeration, especially in warm weather",
-          "Monitor daily during seasonal transitions"
-        ]
-      }}
-    />
+    <div className="space-y-6">
+
+      {/* Error State */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-red-800">
+              <span className="text-sm">⚠️ Error loading temperature data: {error}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Combined Data Chart */}
+      <ParameterPageTemplate
+        onNavigate={onNavigate}
+        parameterName="Water Temperatuur"
+        parameterKey="temperature"
+        currentValue={currentValue || 0}
+        unit="°C"
+        idealRange="15 - 25°C"
+        status={status}
+        historicData={combinedData}
+        timeRange={timeRange}
+        onTimeRangeChange={setTimeRange}
+        sensorData={{
+          value: sensorTemp,
+          lastUpdate: sensorLastUpdate
+        }}
+        infoContent={{
+          description: "Vijver temperatuur monitoring",
+          importance: "Begrijp de effecten van temperatuur op koi gezondheid",
+          effects: [
+            "Metabolisme: Warmer water verhoogt koi activiteit en eetlust",
+            "Zuurstofniveau: Warmer water bevat minder opgeloste zuurstof",
+            "Ziekterisico: Snelle temperatuurveranderingen stressen vissen",
+            "Gunstige bacteriën: Activiteit neemt af in koud water"
+          ],
+          management: [
+            "Zorg voor schaduw in de zomer om oververhitting te voorkomen",
+            "Gebruik vijververwarmers in extreme koude klimaten",
+            "Zorg voor goede beluchting, vooral bij warm weer",
+            "Monitor dagelijks tijdens seizoensovergangen"
+          ]
+        }}
+      />
+    </div>
   )
 }

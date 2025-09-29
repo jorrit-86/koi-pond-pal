@@ -1,21 +1,24 @@
+import { useState } from "react"
 import { ParameterPageTemplate } from "./parameter-page-template"
-import { useParameterData } from "@/hooks/use-parameter-data"
+import { useParameterDataWithTimeRange } from "@/hooks/use-parameter-data-with-time-range"
 
 interface PhPageProps {
   onNavigate: (tab: string) => void
 }
 
 export const PhPage = ({ onNavigate }: PhPageProps) => {
+  const [timeRange, setTimeRange] = useState("7d")
+  
   const getPhStatus = (value: number): "optimal" | "warning" | "critical" => {
     if (value >= 6.8 && value <= 8.2) return "optimal"
     if (value >= 6.5 && value <= 8.5) return "warning"
     return "critical"
   }
 
-  const { historicData, currentValue, status, loading } = useParameterData({
+  const { historicData, currentValue, status, loading, hasDataInTimeRange, timeRangeInfo } = useParameterDataWithTimeRange({
     parameterType: 'ph',
     getStatus: getPhStatus
-  })
+  }, timeRange)
 
   if (loading) {
     return (
@@ -38,6 +41,10 @@ export const PhPage = ({ onNavigate }: PhPageProps) => {
       idealRange="6.8 - 8.2"
       status={status}
       historicData={historicData}
+      timeRange={timeRange}
+      onTimeRangeChange={setTimeRange}
+      hasDataInTimeRange={hasDataInTimeRange}
+      timeRangeInfo={timeRangeInfo}
       infoContent={{
         description: "Water acidity/alkalinity measurement",
         importance: "Understanding water acidity and alkalinity",

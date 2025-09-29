@@ -300,40 +300,22 @@ export class RecommendationEngine {
     }
   }
 
-  // Trend detection
+  // Trend detection - DISABLED for dashboard analysis
+  // Dashboard analysis should only use current values, not historical trends
   private detectTrends(parameters: WaterParameter[]): TrendAnalysis[] {
-    // For now, we'll use a simple trend detection
-    // In a real implementation, this would analyze historical data
-    return parameters.map(param => {
-      const trend = this.calculateSimpleTrend(param)
-      return {
-        parameter: param.name,
-        trend: trend.direction,
-        rate: trend.rate,
-        confidence: trend.confidence,
-        prediction: {
-          value: param.value + (trend.rate * 7), // 7-day prediction
-          timeframe: '7 days'
-        }
-      }
-    })
+    // Return empty trends array - dashboard analysis should be based on current state only
+    // Trend analysis disabled for dashboard (using current values only)
+    return []
   }
 
-  // Simple trend calculation (placeholder for more complex analysis)
+  // Simple trend calculation - DISABLED for dashboard analysis
   private calculateSimpleTrend(param: WaterParameter): {
     direction: 'increasing' | 'decreasing' | 'stable'
     rate: number
     confidence: number
   } {
-    // This is a simplified version - in reality, you'd analyze historical data
-    const status = param.status
-    if (status === 'danger') {
-      return { direction: 'increasing', rate: 0.1, confidence: 0.8 }
-    } else if (status === 'warning') {
-      return { direction: 'increasing', rate: 0.05, confidence: 0.6 }
-    } else {
-      return { direction: 'stable', rate: 0, confidence: 0.9 }
-    }
+    // Dashboard analysis should not use trend calculations - only current values matter
+    return { direction: 'stable', rate: 0, confidence: 1.0 }
   }
 
   // Generate recommendations based on analysis
@@ -342,6 +324,15 @@ export class RecommendationEngine {
     riskAssessment: RiskAssessment,
     trends: TrendAnalysis[]
   ): Recommendation[] {
+    // Parameters and risk assessment received
+    
+    // Check if ALL parameters are "good" - if so, return NO recommendations
+    const allParametersGood = parameters.every(p => p.status === 'good')
+    if (allParametersGood) {
+      // All parameters are good - returning no recommendations
+      return []
+    }
+    
     const recommendations: Recommendation[] = []
 
     // Water change recommendation
@@ -355,13 +346,13 @@ export class RecommendationEngine {
     }
 
     // pH adjustment recommendation
-    const phParam = parameters.find(p => p.name.toLowerCase().includes('ph'))
+    const phParam = parameters.find(p => p.name.toLowerCase() === 'ph')
     if (phParam && phParam.status !== 'good') {
       recommendations.push(this.createPhAdjustmentRecommendation(phParam))
     }
 
     // Temperature control recommendation
-    const tempParam = parameters.find(p => p.name.toLowerCase().includes('temperature'))
+    const tempParam = parameters.find(p => p.name.toLowerCase() === 'temperature')
     if (tempParam && tempParam.status !== 'good') {
       recommendations.push(this.createTemperatureControlRecommendation(tempParam))
     }
@@ -378,6 +369,8 @@ export class RecommendationEngine {
   private shouldRecommendWaterChange(parameters: WaterParameter[], riskAssessment: RiskAssessment): boolean {
     const criticalParams = parameters.filter(p => p.status === 'danger')
     const warningParams = parameters.filter(p => p.status === 'warning')
+    
+    // Water change recommendation logic
     
     return criticalParams.length > 0 || warningParams.length >= 3
   }
@@ -406,9 +399,13 @@ export class RecommendationEngine {
   }
 
   private shouldRecommendFilterMaintenance(parameters: WaterParameter[], trends: TrendAnalysis[]): boolean {
-    const nitriteParam = parameters.find(p => p.name.toLowerCase().includes('nitrite'))
-    const nitrateParam = parameters.find(p => p.name.toLowerCase().includes('nitrate'))
+    // Only check current values - no historical trend analysis for dashboard
+    const nitriteParam = parameters.find(p => p.name.toLowerCase() === 'nitrite')
+    const nitrateParam = parameters.find(p => p.name.toLowerCase() === 'nitrate')
     
+    // Filter maintenance recommendation logic
+    
+    // Only recommend filter maintenance based on current parameter status
     return (nitriteParam && nitriteParam.status === 'warning') ||
            (nitrateParam && nitrateParam.status === 'warning')
   }

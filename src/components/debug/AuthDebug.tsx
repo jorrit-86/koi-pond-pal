@@ -20,7 +20,7 @@ export function AuthDebug() {
           .single()
         
         if (error) {
-          console.log('Debug - DB User error:', error)
+          // DB User error occurred
         }
         setDbUser(dbUser)
       }

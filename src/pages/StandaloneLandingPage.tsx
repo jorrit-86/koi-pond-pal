@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '@/contexts/AuthContext'
+import { AuthModal } from '@/components/auth/AuthModal'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,12 +15,17 @@ import {
   Smartphone, 
   Globe, 
   Users,
-  CheckCircle
+  CheckCircle,
+  LogIn,
+  Settings
 } from 'lucide-react'
 import koiSenseiLogo from '@/assets/koi-sensei-logo.svg'
 
 export function StandaloneLandingPage() {
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showHiddenLogin, setShowHiddenLogin] = useState(false)
 
   const features = [
     {
@@ -62,6 +69,32 @@ export function StandaloneLandingPage() {
     t("landing.benefits.analytics")
   ]
 
+  const handleAuthClick = () => {
+    setShowAuthModal(true)
+  }
+
+  const handleHiddenLoginClick = () => {
+    setShowHiddenLogin(true)
+  }
+
+  const handleLogoClick = () => {
+    // Verborgen login: klik 5 keer op het logo
+    const clickCount = parseInt(sessionStorage.getItem('logoClickCount') || '0')
+    const newCount = clickCount + 1
+    sessionStorage.setItem('logoClickCount', newCount.toString())
+    
+    if (newCount >= 5) {
+      setShowHiddenLogin(true)
+      sessionStorage.removeItem('logoClickCount')
+    }
+  }
+
+  if (user) {
+    // Redirect to dashboard if user is logged in
+    window.location.href = '/dashboard'
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
       {/* Header */}
@@ -72,12 +105,24 @@ export function StandaloneLandingPage() {
               <img 
                 src={koiSenseiLogo} 
                 alt="Koi Sensei Logo" 
-                className="h-10 w-10"
+                className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={handleLogoClick}
+                title="Klik 5 keer voor verborgen login"
               />
               <h1 className="text-2xl font-bold text-gray-900">Koi Sensei</h1>
             </div>
             <div className="flex items-center space-x-3">
               <LanguageSwitcher />
+              {showHiddenLogin && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleAuthClick}
+                  className="flex items-center space-x-2"
+                >
+                  <LogIn className="h-4 w-4" />
+                  <span>Test Login</span>
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -208,6 +253,14 @@ export function StandaloneLandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)}
+        initialTab="login"
+      />
     </div>
   )
 }
+

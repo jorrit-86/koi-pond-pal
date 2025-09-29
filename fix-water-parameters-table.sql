@@ -49,3 +49,5 @@ CREATE INDEX idx_water_parameters_measured_at ON public.water_parameters(measure
 SELECT 'water_parameters table recreated successfully' as status;
 SELECT column_name, data_type FROM information_schema.columns 
 WHERE table_name = 'water_parameters' AND table_schema = 'public';
+
+

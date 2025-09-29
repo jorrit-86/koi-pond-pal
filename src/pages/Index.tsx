@@ -12,6 +12,7 @@ import { UserProfilePage } from "@/components/user/user-profile-page"
 import { AnalyticsPage } from "@/components/analytics/analytics-page"
 import { PhPage } from "@/components/water-parameters/ph-page"
 import { TemperaturePage } from "@/components/water-parameters/temperature-page"
+import { TemperatureSensorPage } from "@/components/water-parameters/temperature-sensor-page"
 import { KhPage, GhPage, NitritePage, NitratePage, PhosphatePage } from "@/components/water-parameters/all-parameters"
 import { AuthModal } from "@/components/auth/AuthModal"
 import { LandingPage } from "@/pages/LandingPage"
@@ -20,6 +21,9 @@ import { useLanguage } from "@/hooks/use-language"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "@/contexts/AuthContext"
 import { AIChatAssistant } from "@/components/ai/ai-chat-assistant"
+import { SensorTransferNotification } from "@/components/settings/sensor-transfer-notification"
+import { WaterChangeForm } from "@/components/water-changes/water-change-form"
+import { WaterChangeHistory } from "@/components/water-changes/water-change-history"
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard")
@@ -27,12 +31,18 @@ const Index = () => {
   const [dashboardRefreshTrigger, setDashboardRefreshTrigger] = useState(0)
   const [editingKoiId, setEditingKoiId] = useState<string | null>(null)
   const [editingKoiName, setEditingKoiName] = useState<string>('')
+  const [selectedSensorId, setSelectedSensorId] = useState<string | null>(null)
   const { t } = useTranslation()
   const { user, loading } = useAuth()
   useLanguage() // Initialize language hook
 
   const handleDataSaved = () => {
     setDashboardRefreshTrigger(prev => prev + 1)
+  }
+
+  const navigateToTemperatureSensor = (sensorId: string) => {
+    setSelectedSensorId(sensorId)
+    setActiveTab("temperature-sensor")
   }
 
   // Show loading spinner while checking authentication
@@ -55,7 +65,7 @@ const Index = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard onNavigate={setActiveTab} refreshTrigger={dashboardRefreshTrigger} />
+        return <Dashboard onNavigate={setActiveTab} refreshTrigger={dashboardRefreshTrigger} onNavigateToTemperatureSensor={navigateToTemperatureSensor} />
       case "parameters":
         return <ParameterForm onNavigate={setActiveTab} onDataSaved={handleDataSaved} />
       case "water-history":
@@ -94,6 +104,8 @@ const Index = () => {
         return <PhPage onNavigate={setActiveTab} />
       case "temperature":
         return <TemperaturePage onNavigate={setActiveTab} />
+      case "temperature-sensor":
+        return <TemperatureSensorPage onNavigate={setActiveTab} sensorId={selectedSensorId || ""} />
       case "kh":
         return <KhPage onNavigate={setActiveTab} />
       case "gh":
@@ -104,6 +116,10 @@ const Index = () => {
         return <NitratePage onNavigate={setActiveTab} />
       case "phosphate":
         return <PhosphatePage onNavigate={setActiveTab} />
+      case "water-change":
+        return <WaterChangeForm onNavigate={setActiveTab} onDataSaved={handleDataSaved} />
+      case "water-change-history":
+        return <WaterChangeHistory onNavigate={setActiveTab} />
       case "user-profile":
         return <UserProfilePage onNavigate={setActiveTab} />
       default:
@@ -124,6 +140,9 @@ const Index = () => {
       
       {/* AI Chat Assistant - Available on all pages */}
       <AIChatAssistant currentPage={activeTab} />
+      
+      {/* Sensor Transfer Notifications - Only for authenticated users */}
+      {user && <SensorTransferNotification />}
     </div>
   )
 }

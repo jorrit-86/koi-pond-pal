@@ -1,13 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Thermometer, Activity, Droplets, AlertTriangle, TrendingUp, Plus, History, Lightbulb } from "lucide-react"
+import { Thermometer, Activity, Droplets, AlertTriangle, TrendingUp, Plus, History, Lightbulb, Waves } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
 import { RecommendationsPanel } from "@/components/recommendations/recommendations-panel"
 import { useRecommendations } from "@/hooks/use-recommendations"
+import { useUserPreferences } from "@/hooks/use-user-preferences"
 
 interface WaterParameter {
   name: string
@@ -20,15 +21,25 @@ interface WaterParameter {
 interface DashboardProps {
   onNavigate: (tab: string) => void
   refreshTrigger?: number // Add this to trigger refresh from parent
+  onNavigateToTemperatureSensor?: (sensorId: string) => void
 }
 
-export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
+export function Dashboard({ onNavigate, refreshTrigger, onNavigateToTemperatureSensor }: DashboardProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [waterParameters, setWaterParameters] = useState<WaterParameter[]>([])
   const [loading, setLoading] = useState(true)
   const [koiCount, setKoiCount] = useState(0)
   const [lastUpdate, setLastUpdate] = useState("No data")
+  const [sensorTemperature, setSensorTemperature] = useState<number | null>(null)
+  const [sensorLastUpdate, setSensorLastUpdate] = useState<string>("No data")
+  const [sensorDisplayName, setSensorDisplayName] = useState<string>("Water Temperatuur")
+  const [sensorDataLoading, setSensorDataLoading] = useState(false)
+  const [selectedSensorId, setSelectedSensorId] = useState<string | null>(null)
+  const [pondTemperature, setPondTemperature] = useState<number | null>(null)
+  const [pondSensorId, setPondSensorId] = useState<string | null>(null)
+  const [lastWaterChange, setLastWaterChange] = useState<any>(null)
+  const [pondSize, setPondSize] = useState<number | null>(null)
   
   // Smart recommendations
   const { 
@@ -38,13 +49,86 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
     refreshRecommendations 
   } = useRecommendations()
 
+  // User preferences
+  const { preferences } = useUserPreferences()
+
+  // Format time difference for display
+  const formatTimeDifference = (timestamp: string | Date) => {
+    const updateTime = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - updateTime.getTime()
+    const diffSeconds = Math.floor(diffMs / 1000)
+    const diffMinutes = Math.floor(diffSeconds / 60)
+    const diffHours = Math.floor(diffMinutes / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    
+    // If less than 1 minute
+    if (diffSeconds < 60) {
+      return t("dashboard.justNow")
+    }
+    
+    // If less than 1 hour, show minutes
+    if (diffMinutes < 60) {
+      return `${diffMinutes} min geleden`
+    }
+    
+    // If less than 24 hours, show hours
+    if (diffHours < 24) {
+      return `${diffHours} uur geleden`
+    }
+    
+    // If 24 hours or more, show days
+    return `${diffDays} dag${diffDays > 1 ? 'en' : ''} geleden`
+  }
+
   // Load water parameters from database
   useEffect(() => {
     if (user) {
       loadWaterParameters()
       loadKoiCount()
+      loadLastWaterChange()
+      loadPondSize()
     }
   }, [user, refreshTrigger])
+
+  // Load pond temperature and reload water parameters when it's available
+  useEffect(() => {
+    if (user) {
+      loadPondTemperature()
+    }
+  }, [user, refreshTrigger])
+
+  // Reload water parameters when pond temperature changes
+  useEffect(() => {
+    if (pondTemperature !== null) {
+      loadWaterParameters()
+    }
+  }, [pondTemperature])
+
+  // Load sensor data only after preferences are fully loaded
+  useEffect(() => {
+    if (user && !loading && preferences.dashboard_sensor_selection) {
+      loadSensorData()
+    }
+  }, [user, refreshTrigger, preferences.dashboard_sensor_selection, loading])
+
+  // Ensure sensor data is loaded when component mounts (for navigation back to dashboard)
+  useEffect(() => {
+    if (user && !loading && preferences.dashboard_sensor_selection && !sensorDataLoading) {
+      loadSensorData()
+    }
+  }, [user, loading, preferences.dashboard_sensor_selection])
+
+  // Auto-refresh sensor data disabled - data will only load on initial mount or manual refresh
+  // useEffect(() => {
+  //   if (user) {
+  //     const interval = setInterval(() => {
+  //       loadSensorData()
+  //     }, 30000) // 30 seconds
+
+  //     return () => clearInterval(interval)
+  //   }
+  // }, [user])
 
   const loadWaterParameters = async () => {
     try {
@@ -56,6 +140,10 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
         .select('*')
         .eq('user_id', user?.id)
         .order('measured_at', { ascending: false })
+
+
+
+
 
       if (error) {
         console.error('Error loading water parameters:', error)
@@ -71,6 +159,8 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
         }
       })
 
+
+
       // Transform to WaterParameter format
       const parameters: WaterParameter[] = [
         { 
@@ -79,13 +169,6 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
           unit: latestReadings.ph?.unit || "", 
           status: getParameterStatus('ph', latestReadings.ph?.value), 
           range: "6.8-8.2" 
-        },
-        { 
-          name: t("waterParameters.temperature"), 
-          value: latestReadings.temperature?.value || 0, 
-          unit: latestReadings.temperature?.unit || "°C", 
-          status: getParameterStatus('temperature', latestReadings.temperature?.value), 
-          range: "15-25°C" 
         },
         { 
           name: t("waterParameters.kh"), 
@@ -122,6 +205,13 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
           status: getParameterStatus('phosphate', latestReadings.phosphate?.value), 
           range: "<0.5mg/l" 
         },
+        { 
+          name: t("waterParameters.temperature"), 
+          value: pondTemperature || 0, 
+          unit: "°C", 
+          status: getParameterStatus('temperature', pondTemperature || 0), 
+          range: "15-25°C" 
+        },
       ]
 
       setWaterParameters(parameters)
@@ -129,10 +219,7 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
       // Set last update time
       const latestReading = data?.[0]
       if (latestReading) {
-        const updateTime = new Date(latestReading.measured_at)
-        const now = new Date()
-        const diffHours = Math.floor((now.getTime() - updateTime.getTime()) / (1000 * 60 * 60))
-        setLastUpdate(diffHours === 0 ? t("dashboard.justNow") : `${diffHours} ${t("dashboard.hoursAgo")}`)
+        setLastUpdate(formatTimeDifference(latestReading.measured_at))
       }
 
     } catch (error) {
@@ -156,6 +243,145 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
       console.error('Error loading koi count:', error)
     }
   }
+
+  const loadLastWaterChange = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('water_changes')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('changed_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (!error && data) {
+        setLastWaterChange(data)
+      } else {
+        setLastWaterChange(null)
+      }
+    } catch (error) {
+      console.error('Error loading last water change:', error)
+      setLastWaterChange(null)
+    }
+  }
+
+  const loadPondSize = async () => {
+    if (!user?.id) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .select('pond_size_liters')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!error && data && data.pond_size_liters) {
+        setPondSize(data.pond_size_liters)
+      } else {
+        setPondSize(null)
+      }
+    } catch (error) {
+      console.error('Error loading pond size:', error)
+      setPondSize(null)
+    }
+  }
+
+  const loadPondTemperature = async () => {
+    try {
+      // Always load sensor 1 (pond water temperature) for water parameters
+      const { data, error } = await supabase
+        .from('sensor_data')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('sensor_type', 'temperatuurmeter')
+        .like('sensor_id', '%-01')
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      if (error) {
+        console.error('Error loading pond temperature:', error)
+        return
+      }
+
+      if (data && data.length > 0) {
+        setPondTemperature(data[0].temperature)
+        setPondSensorId(data[0].sensor_id)
+      } else {
+        setPondTemperature(null)
+        setPondSensorId(null)
+      }
+    } catch (error) {
+      console.error('Error in loadPondTemperature:', error)
+    }
+  }
+
+  const loadSensorData = async () => {
+    if (sensorDataLoading) return // Prevent multiple simultaneous calls
+    try {
+      setSensorDataLoading(true)
+      let sensorPattern = '%-01' // Default to sensor 1
+      
+      // Use user preference to determine which sensor to show
+      if (preferences.dashboard_sensor_selection === 'sensor_2') {
+        sensorPattern = '%-02'
+      } else if (preferences.dashboard_sensor_selection === 'latest') {
+        // For 'latest', we'll get the most recent data from any sensor
+        sensorPattern = '%'
+      }
+
+
+      // Get the latest sensor data based on user preference
+      const { data, error } = await supabase
+        .from('sensor_data')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('sensor_type', 'temperatuurmeter')
+        .like('sensor_id', sensorPattern)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+
+      if (error) {
+        console.error('Error loading sensor data:', error)
+        return
+      }
+
+      if (data && data.length > 0) {
+        const latestReading = data[0]
+        setSensorTemperature(latestReading.temperature)
+        setSelectedSensorId(latestReading.sensor_id)
+        
+        // Get display name from individual_sensor_configs
+        const { data: configData, error: configError } = await supabase
+          .from('individual_sensor_configs')
+          .select('display_name')
+          .eq('sensor_id', latestReading.sensor_id)
+          .single()
+
+        if (configError && configError.code !== 'PGRST116') {
+          console.error('Error loading sensor config:', configError)
+        }
+
+        // Use display name or fallback to default
+        const displayName = configData?.display_name || 'Water Temperatuur'
+        setSensorDisplayName(displayName)
+        
+        // Show relative time using the new formatting function
+        setSensorLastUpdate(formatTimeDifference(latestReading.created_at))
+        
+      } else {
+        setSensorTemperature(null)
+        setSensorLastUpdate("No data")
+        setSensorDisplayName("Water Temperatuur")
+      }
+    } catch (error) {
+      console.error('Error in loadSensorData:', error)
+    } finally {
+      setSensorDataLoading(false)
+    }
+  }
+
+
 
   const getParameterStatus = (type: string, value: number): "good" | "warning" | "danger" => {
     // Handle cases where value is 0 or undefined
@@ -197,7 +423,11 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
     }
   }
 
-  const currentTemp = waterParameters.find(p => p.name === t("waterParameters.temperature"))?.value || 0
+  // Use ESP32 sensor data for main display - don't fall back to water parameters
+  const currentTemp = sensorTemperature !== null ? sensorTemperature : 0
+
+  // Use water parameters as-is since temperature is already included
+  const displayWaterParameters = waterParameters
 
   // Generate dynamic alerts based on actual water parameter values
   const generateAlerts = () => {
@@ -208,7 +438,7 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
       parameter: string
     }> = []
 
-    waterParameters.forEach(param => {
+    displayWaterParameters.forEach(param => {
       if (param.status === "danger") {
         switch (param.name) {
           case t("waterParameters.ph"):
@@ -300,9 +530,18 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
   const alerts = generateAlerts()
 
   const handleParameterClick = (parameterName: string) => {
+    // Special handling for temperature - use pond sensor for water parameters
+    if (parameterName === t("waterParameters.temperature")) {
+      if (pondSensorId && onNavigateToTemperatureSensor) {
+        onNavigateToTemperatureSensor(pondSensorId)
+      } else {
+        onNavigate("temperature")
+      }
+      return
+    }
+    
     const parameterRoutes: Record<string, string> = {
       [t("waterParameters.ph")]: "ph",
-      [t("waterParameters.temperature")]: "temperature",
       [t("waterParameters.kh")]: "kh", 
       [t("waterParameters.gh")]: "gh",
       [t("waterParameters.nitrite")]: "nitrite",
@@ -357,13 +596,18 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card 
           className="bg-gradient-water cursor-pointer hover:shadow-water transition-shadow"
-          onClick={() => onNavigate("temperature")}
+          onClick={() => selectedSensorId ? onNavigateToTemperatureSensor?.(selectedSensorId) : onNavigate("temperature")}
         >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{t("waterParameters.temperature")}</p>
+                <p className="text-sm font-medium text-muted-foreground">{sensorDisplayName}</p>
                 <p className="text-2xl font-bold">{currentTemp}°C</p>
+                {sensorTemperature !== null && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    📡 <span className="font-mono">{sensorLastUpdate}</span>
+                  </p>
+                )}
               </div>
               <Thermometer className="h-8 w-8 text-primary" />
             </div>
@@ -438,6 +682,10 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
                 <Plus className="h-4 w-4 mr-2" />
                 {t("waterParameters.addReading")}
               </Button>
+              <Button onClick={() => onNavigate("water-change")} size="sm" className="w-full sm:w-auto">
+                <Waves className="h-4 w-4 mr-2" />
+                Waterwissel
+              </Button>
               <Button onClick={() => onNavigate("water-history")} variant="outline" size="sm" className="w-full sm:w-auto">
                 <History className="h-4 w-4 mr-2" />
                 Bekijk eerdere metingen
@@ -446,34 +694,119 @@ export function Dashboard({ onNavigate, refreshTrigger }: DashboardProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {waterParameters.map((param) => (
+          <div className="space-y-4">
+            {/* First 6 parameters in 3-column grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {displayWaterParameters.slice(0, 6).map((param) => (
+                <Card 
+                  key={param.name}
+                  className="cursor-pointer hover:shadow-water transition-shadow"
+                  onClick={() => handleParameterClick(param.name)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold">{param.name}</h3>
+                      <Badge className={getStatusColor(param.status)}>
+                        {getStatusText(param.status)}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-2xl font-bold">
+                        {param.value}{param.unit}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t("dashboard.ideal")}: {param.range}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            
+            {/* Last 2 parameters (temperature and water change) in 2-column grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Temperature (7th position) */}
+              {displayWaterParameters.slice(6, 7).map((param) => (
+                <Card 
+                  key={param.name}
+                  className="cursor-pointer hover:shadow-water transition-shadow"
+                  onClick={() => handleParameterClick(param.name)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold">{param.name}</h3>
+                      <Badge className={getStatusColor(param.status)}>
+                        {getStatusText(param.status)}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-2xl font-bold">
+                        {param.value}{param.unit}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t("dashboard.ideal")}: {param.range}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {/* Water Change Tile (8th position) */}
               <Card 
-                key={param.name}
                 className="cursor-pointer hover:shadow-water transition-shadow"
-                onClick={() => handleParameterClick(param.name)}
+                onClick={() => onNavigate("water-change")}
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold">{param.name}</h3>
-                    <Badge className={getStatusColor(param.status)}>
-                      {getStatusText(param.status)}
+                    <h3 className="font-semibold flex items-center space-x-2">
+                      <Waves className="h-4 w-4 text-blue-600" />
+                      <span>Laatste Waterwissel</span>
+                    </h3>
+                    <Badge variant="outline" className="text-blue-600 border-blue-600">
+                      Waterwissel
                     </Badge>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-2xl font-bold">
-                      {param.value}{param.unit}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t("dashboard.ideal")}: {param.range}
-                    </p>
+                    {lastWaterChange ? (
+                      <>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {lastWaterChange.liters_added.toLocaleString('nl-NL')}L
+                        {pondSize && pondSize > 0 && lastWaterChange?.liters_added && (
+                          <span className="text-sm font-semibold text-purple-600 ml-2">
+                            ({((lastWaterChange.liters_added / pondSize) * 100).toFixed(1)}%)
+                          </span>
+                        )}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatTimeDifference(lastWaterChange.changed_at)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {lastWaterChange.water_type === 'tap_water' ? 'Kraanwater' :
+                           lastWaterChange.water_type === 'well_water' ? 'Putwater' :
+                           lastWaterChange.water_type === 'rain_water' ? 'Regenwater' :
+                           lastWaterChange.water_type === 'ro_water' ? 'RO water' :
+                           lastWaterChange.water_type === 'mixed' ? 'Gemengd' : lastWaterChange.water_type}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-lg font-semibold text-gray-500">
+                          Geen waterwissel
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Klik om een waterwissel te registreren
+                        </p>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            </div>
           </div>
+          
         </CardContent>
       </Card>
+
 
       {/* Smart Recommendations */}
       {!recommendationsLoading && (recommendations.length > 0 || (riskAssessment && riskAssessment.overall_risk !== 'low')) && (

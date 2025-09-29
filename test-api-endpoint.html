@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Endpoint Test</title>
+</head>
+<body>
+    <h1>ESP32 Config API Test</h1>
+    <button onclick="testAPI()">Test API Endpoint</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch('https://pbpuvumeshaeplbwbwzv.supabase.co/functions/v1/esp32-config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4'
+                    },
+                    body: JSON.stringify({
+                        sensor_id: 'KOIoT-A1b2C3',
+                        action: 'get_config'
+                    })
+                });
+
+                const result = await response.text();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3>✅ API Endpoint werkt!</h3>
+                        <p>Status: ${response.status}</p>
+                        <pre>${result}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <h3>❌ API Error</h3>
+                        <p>Status: ${response.status}</p>
+                        <pre>${result}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>❌ Network Error</h3>
+                    <p>Error: ${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

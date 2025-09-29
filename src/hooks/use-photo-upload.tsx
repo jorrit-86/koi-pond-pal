@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
+import { useTranslation } from 'react-i18next'
 
 interface PhotoUploadResult {
   url: string
@@ -13,6 +14,7 @@ export function usePhotoUpload() {
   const [uploading, setUploading] = useState(false)
   const { user } = useAuth()
   const { toast } = useToast()
+  const { t } = useTranslation()
 
   const uploadPhoto = async (
     file: File, 
@@ -21,8 +23,8 @@ export function usePhotoUpload() {
   ): Promise<PhotoUploadResult | null> => {
     if (!user) {
       toast({
-        title: "Authentication Required",
-        description: "You must be logged in to upload photos.",
+        title: t('photoUpload.authRequired'),
+        description: t('photoUpload.authRequiredDesc'),
         variant: "destructive",
       })
       return null
@@ -54,8 +56,8 @@ export function usePhotoUpload() {
         if (error.message.includes('Bucket not found') || error.message.includes('bucket not found')) {
           console.error('Photos bucket not found. Please run the create-photos-bucket.sql script in your Supabase database.')
           toast({
-            title: "Storage Not Configured",
-            description: "Photo storage is not set up. Please contact support.",
+            title: t('photoUpload.storageNotConfigured'),
+            description: t('photoUpload.storageNotConfiguredDesc'),
             variant: "destructive",
           })
           return null
@@ -74,8 +76,8 @@ export function usePhotoUpload() {
           if (retryError) {
             console.error('Retry upload error:', retryError)
             toast({
-              title: "Upload Failed",
-              description: `Failed to upload photo: ${retryError.message}`,
+              title: t('photoUpload.uploadFailed'),
+              description: t('photoUpload.uploadFailedDesc', { error: retryError.message }),
               variant: "destructive",
             })
             return null
@@ -87,8 +89,8 @@ export function usePhotoUpload() {
             .getPublicUrl(filePath)
 
           toast({
-            title: "Photo Uploaded",
-            description: "Photo has been uploaded successfully.",
+            title: t('photoUpload.photoUploaded'),
+            description: t('photoUpload.photoUploadedDesc'),
           })
 
           return {
@@ -103,8 +105,8 @@ export function usePhotoUpload() {
         const localPath = `local/${user.id}/${folder}/${finalFileName}`
         
         toast({
-          title: "Upload Failed - Using Local Storage",
-          description: "Photo saved locally. Will retry upload later.",
+          title: t('photoUpload.uploadFailedLocal'),
+          description: t('photoUpload.uploadFailedLocalDesc'),
           variant: "default",
         })
         
@@ -123,8 +125,8 @@ export function usePhotoUpload() {
       console.log('Upload successful:', { url: urlData.publicUrl, path: filePath })
 
       toast({
-        title: "Photo Uploaded",
-        description: "Photo has been uploaded successfully.",
+        title: t('photoUpload.photoUploaded'),
+        description: t('photoUpload.photoUploadedDesc'),
       })
 
       return {
@@ -135,8 +137,8 @@ export function usePhotoUpload() {
     } catch (error) {
       console.error('Upload error:', error)
       toast({
-        title: "Upload Failed",
-        description: "An unexpected error occurred while uploading.",
+        title: t('photoUpload.uploadFailed'),
+        description: t('photoUpload.uploadFailedUnexpected'),
         variant: "destructive",
       })
       return null
@@ -154,24 +156,24 @@ export function usePhotoUpload() {
       if (error) {
         console.error('Delete error:', error)
         toast({
-          title: "Delete Failed",
-          description: "Failed to delete photo.",
+          title: t('photoUpload.deleteFailed'),
+          description: t('photoUpload.deleteFailedDesc'),
           variant: "destructive",
         })
         return false
       }
 
       toast({
-        title: "Photo Deleted",
-        description: "Photo has been deleted successfully.",
+        title: t('photoUpload.photoDeleted'),
+        description: t('photoUpload.photoDeletedDesc'),
       })
 
       return true
     } catch (error) {
       console.error('Delete error:', error)
       toast({
-        title: "Delete Failed",
-        description: "An unexpected error occurred while deleting.",
+        title: t('photoUpload.deleteFailed'),
+        description: t('photoUpload.deleteFailedUnexpected'),
         variant: "destructive",
       })
       return false

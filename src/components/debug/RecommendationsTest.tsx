@@ -135,7 +135,7 @@ export function RecommendationsTest() {
               recommendations={analysis.recommendations}
               riskAssessment={analysis.riskAssessment}
               onRecommendationAction={(recommendationId, action) => {
-                console.log('Recommendation action:', recommendationId, action)
+                // Recommendation action handled
               }}
             />
           </CardContent>

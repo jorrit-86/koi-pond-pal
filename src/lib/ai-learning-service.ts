@@ -171,7 +171,7 @@ export class AILearningService {
       if (error) {
         console.error('Error triggering learning:', error)
       } else {
-        console.log('AI learning triggered successfully')
+        // AI learning triggered successfully
       }
     } catch (error) {
       console.error('Error in triggerLearning:', error)

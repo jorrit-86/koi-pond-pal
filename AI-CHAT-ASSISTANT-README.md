@@ -149,19 +149,32 @@ Specifiek voor je 8 koi:
 • Voer alleen wat ze in 5 minuten opeten"
 ```
 
-### Filter Advies
+### Filter Analyse
 ```
 Gebruiker: "Wat vind je van mijn filter?"
-AI: "Filter analyse voor je 12.500 liter vijver:
-Aanbevolen filtercapaciteit:
-• Minimale doorstroming: 13 liter per uur (1x vijverinhoud)
-• Optimale doorstroming: 25 liter per uur (2x vijverinhoud)
-• Filtergrootte: groot filtersysteem
-Specifieke aanbevelingen voor je 12.500 liter vijver:
-• Grote vijver: Zeer stabiel, minder kritiek
-• Grote biologische filter met veel oppervlakte
-• Meerdere filterkamers voor optimale werking
-• Onderhoud 1x per maand voldoende"
+AI: "Analyse van je huidige filtersysteem:
+
+Je huidige opstelling:
+• Filtratie type: Mechanisch + Biologisch
+• Filter media: sponsen, keramiek, bio-ballen
+• UV-sterilisator: ✅ Aanwezig
+• Protein skimmer: ❌ Niet aanwezig
+• Waterval: ✅ Aanwezig
+• Beluchtingssysteem: ✅ Aanwezig
+
+Mijn analyse van je filtersysteem:
+• Filtratie type: 9/10 - Uitstekende keuze! Combinatie van mechanische en biologische filtratie is ideaal.
+• Filter media: 8/10 - Uitstekende combinatie van filter media! Sponsen voor mechanische filtratie. Keramiek voor biologische filtratie.
+• Uitrusting: 8/10 - Uitstekende uitrusting! UV-sterilisator voor helder water. Beluchtingssysteem voor zuurstof.
+
+Algemene beoordeling: 8/10
+Uitstekend filtersysteem! Je hebt een professionele opstelling.
+
+Specifieke aanbevelingen:
+• Protein skimmer aanbevolen voor hoge bezetting
+
+Onderhoudstips voor je huidige opstelling:
+• Reinig sponsen wekelijks, vervang UV-lamp jaarlijks, controleer beluchting regelmatig"
 ```
 
 ### Temperatuur Beheer

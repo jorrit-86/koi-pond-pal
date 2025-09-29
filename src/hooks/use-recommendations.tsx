@@ -41,33 +41,33 @@ export function useRecommendations(): UseRecommendationsReturn {
   const getParameterStatus = (type: string, value: number): 'good' | 'warning' | 'danger' => {
     switch (type) {
       case 'ph':
-        if (value < 6.5 || value > 8.5) return 'danger'
-        if (value < 6.8 || value > 8.2) return 'warning'
-        return 'good'
+        if (value >= 6.8 && value <= 8.2) return 'good'
+        if (value >= 6.5 && value <= 8.5) return 'warning'
+        return 'danger'
       case 'temperature':
-        if (value < 10 || value > 30) return 'danger'
-        if (value < 15 || value > 25) return 'warning'
-        return 'good'
+        if (value >= 15 && value <= 25) return 'good'
+        if (value >= 10 && value <= 30) return 'warning'
+        return 'danger'
       case 'nitrite':
-        if (value > 0.3) return 'danger'
-        if (value > 0.1) return 'warning'
-        return 'good'
+        if (value <= 0.3) return 'good'
+        if (value <= 0.5) return 'warning'
+        return 'danger'
       case 'nitrate':
-        if (value > 50) return 'danger'
-        if (value > 25) return 'warning'
-        return 'good'
+        if (value < 25) return 'good'
+        if (value < 50) return 'warning'
+        return 'danger'
       case 'phosphate':
-        if (value > 1.0) return 'danger'
-        if (value > 0.5) return 'warning'
-        return 'good'
+        if (value < 0.5) return 'good'
+        if (value < 1.0) return 'warning'
+        return 'danger'
       case 'kh':
-        if (value < 3 || value > 12) return 'danger'
-        if (value < 4 || value > 10) return 'warning'
-        return 'good'
+        if (value >= 3 && value <= 8) return 'good'
+        if (value >= 2 && value <= 10) return 'warning'
+        return 'danger'
       case 'gh':
-        if (value < 4 || value > 20) return 'danger'
-        if (value < 6 || value > 16) return 'warning'
-        return 'good'
+        if (value >= 4 && value <= 12) return 'good'
+        if (value >= 3 && value <= 15) return 'warning'
+        return 'danger'
       default:
         return 'good'
     }
@@ -148,13 +148,14 @@ export function useRecommendations(): UseRecommendationsReturn {
       // Set learning data in the recommendation engine
       recommendationEngine.setLearningData(patterns, effectiveness)
 
-      // Get latest water parameters - use the same approach as dashboard
+      // Get ONLY the latest measurement for each parameter type
+      // Use SAME logic as dashboard to ensure consistency
       const { data: waterData, error: waterError } = await supabase
         .from('water_parameters')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(100) // Get last 100 measurements
+        .order('measured_at', { ascending: false })
+        .limit(50) // Get more data to ensure we have latest for each parameter
 
       if (waterError) {
         console.error('Error loading water parameters:', waterError)
@@ -169,14 +170,17 @@ export function useRecommendations(): UseRecommendationsReturn {
         return
       }
 
-      // Group by parameter type and get the latest value for each (same as dashboard)
+      // Group by parameter type and get ONLY the latest value for each parameter
+      // Use SAME logic as dashboard (measured_at instead of created_at)
       const latestReadings: Record<string, any> = {}
       waterData.forEach(reading => {
         if (!latestReadings[reading.parameter_type] || 
-            new Date(reading.created_at) > new Date(latestReadings[reading.parameter_type].created_at)) {
+            new Date(reading.measured_at) > new Date(latestReadings[reading.parameter_type].measured_at)) {
           latestReadings[reading.parameter_type] = reading
         }
       })
+
+      // Using only the most recent measurement per parameter type
 
       // Transform to WaterParameter format
       const currentParameters: WaterParameter[] = Object.values(latestReadings).map(param => ({
@@ -186,6 +190,8 @@ export function useRecommendations(): UseRecommendationsReturn {
         status: getParameterStatus(param.parameter_type, param.value),
         range: getParameterRange(param.parameter_type)
       }))
+
+      // Current parameters processed
 
       // Generate recommendations using AI engine (only if enabled)
       let analysis = null
@@ -220,6 +226,10 @@ export function useRecommendations(): UseRecommendationsReturn {
       // Save recommendations to database (only if recommendations are enabled)
       if (aiPreferences.ai_recommendations_enabled && analysis) {
         await saveRecommendationsToDatabase(analysis.recommendations)
+      } else {
+        // If AI recommendations are disabled or no analysis, clear existing recommendations
+        // Clearing all existing recommendations
+        await clearAllRecommendations()
       }
 
     } catch (error) {
@@ -267,6 +277,27 @@ export function useRecommendations(): UseRecommendationsReturn {
       }
     } catch (error) {
       console.error('Error in saveRecommendationsToDatabase:', error)
+    }
+  }
+
+  // Clear all existing recommendations
+  const clearAllRecommendations = async () => {
+    if (!user) return
+
+    try {
+      const { error } = await supabase
+        .from('recommendations')
+        .update({ status: 'dismissed' })
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+
+      if (error) {
+        console.error('Error clearing recommendations:', error)
+      } else {
+        // All existing recommendations cleared
+      }
+    } catch (error) {
+      console.error('Error in clearAllRecommendations:', error)
     }
   }
 

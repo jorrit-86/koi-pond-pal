@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Upload, X, Image as ImageIcon, CheckCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useTranslation } from 'react-i18next'
 
 interface PhotoUploadProps {
   onPhotoSelected: (photoUrl: string, photoFile: File) => void
@@ -17,6 +18,7 @@ export function PhotoUpload({
   title = "Select Photo",
   description = "Choose a photo from your device"
 }: PhotoUploadProps) {
+  const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -246,7 +248,7 @@ export function PhotoUpload({
           <CardContent className="p-4">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Preview Photo</h3>
+                <h3 className="text-lg font-semibold">{t('photoUpload.previewPhoto')}</h3>
                 <Button variant="ghost" size="sm" onClick={onClose}>
                   <X className="h-4 w-4" />
                 </Button>
@@ -255,7 +257,7 @@ export function PhotoUpload({
               <div className="relative">
                 <img 
                   src={selectedPhoto} 
-                  alt="Selected photo" 
+                  alt={t('photoUpload.selectedPhoto')} 
                   className="w-full rounded-lg"
                 />
               </div>
@@ -266,14 +268,14 @@ export function PhotoUpload({
                   onClick={handleCancel}
                   className="flex-1"
                 >
-                  Select Different Photo
+                  {t('photoUpload.selectDifferentPhoto')}
                 </Button>
                 <Button 
                   onClick={handleConfirm}
                   className="flex-1"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Use This Photo
+                  {t('photoUpload.useThisPhoto')}
                 </Button>
               </div>
             </div>
@@ -303,10 +305,10 @@ export function PhotoUpload({
               <div>
                 <h4 className="font-medium mb-2">{description}</h4>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Supported formats: JPG, PNG, WebP, GIF<br/>
-                  Large images will be automatically compressed to 1MB<br/>
+                  {t('photoUpload.supportedFormats')}<br/>
+                  {t('photoUpload.compressionInfo')}<br/>
                   <span className="text-xs text-muted-foreground/70">
-                    If compression fails, original file will be used
+                    {t('photoUpload.compressionFallback')}
                   </span>
                 </p>
               </div>
@@ -320,12 +322,12 @@ export function PhotoUpload({
                 {isProcessing ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Processing...
+                    {t('photoUpload.processing')}
                   </>
                 ) : (
                   <>
                     <Upload className="h-4 w-4 mr-2" />
-                    Choose Photo
+                    {t('photoUpload.choosePhoto')}
                   </>
                 )}
               </Button>

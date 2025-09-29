@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PhotoUpload } from "@/components/ui/photo-upload"
-import { ArrowLeft, Image, Save, Pencil, Check, X, Trash2, Plus, Star } from "lucide-react"
+import { ArrowLeft, Image, Save, Pencil, Check, X, Trash2, Plus, Star, BarChart3 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
@@ -13,6 +13,14 @@ import { usePhotoUpload } from "@/hooks/use-photo-upload"
 import { useToast } from "@/hooks/use-toast"
 import { calculateCurrentAge, getAgeDisplayText } from "@/lib/koi-age-utils"
 import { KoiLogbook } from "./koi-logbook"
+import { GrowthChart } from "./growth-chart"
+
+// Helper function to extract healthStatus from notes
+function extractHealthStatusFromNotes(notes: string | null): string | null {
+  if (!notes) return null
+  const match = notes.match(/\[HealthStatus: ([^\]]+)\]/)
+  return match ? match[1] : null
+}
 
 interface Koi {
   id: string
@@ -61,6 +69,7 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
   const [editingField, setEditingField] = useState<string | null>(null)
   const [currentLength, setCurrentLength] = useState<number | null>(null)
   const [tempValue, setTempValue] = useState<string>("")
+  const [showGrowthChart, setShowGrowthChart] = useState(false)
 
   useEffect(() => {
     if (user && koiId) {
@@ -107,13 +116,13 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
       // Transform database data to match our interface
       const transformedKoi: Koi = {
         id: data.id,
-        name: data.name,
+        name: data.name || data.species || data.variety || 'Unknown', // Use variety as name if no name provided
         variety: data.species || data.variety || 'Unknown',
         age: data.age_years || 0,
         length: data.size_cm || 0,
         weight: data.weight,
         color: data.color || '',
-        healthStatus: 'excellent' as const, // Default for now
+        healthStatus: extractHealthStatusFromNotes(data.notes) || 'good',
         dateAdded: data.purchase_date || data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         notes: data.notes || undefined,
         photo_url: data.photo_url || undefined,
@@ -308,6 +317,54 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
     try {
       const updateData: any = {}
       
+      // Save healthStatus to notes field in database
+      if (field === 'healthStatus') {
+        console.log(`Updating healthStatus to: ${tempValue}`)
+        // Update notes field with healthStatus
+        const currentNotes = koi.notes || ''
+        const healthStatusNote = `[HealthStatus: ${tempValue}]`
+        let newNotes = currentNotes
+        
+        if (currentNotes.includes('[HealthStatus:')) {
+          // Replace existing healthStatus
+          newNotes = currentNotes.replace(/\[HealthStatus:[^\]]+\]/, healthStatusNote)
+        } else {
+          // Add new healthStatus
+          newNotes = currentNotes + (currentNotes ? ' ' : '') + healthStatusNote
+        }
+        
+        updateData['notes'] = newNotes
+        // Also update local state
+        setKoi(prev => prev ? { ...prev, [field]: tempValue } : null)
+        
+        // Skip the rest of the function to avoid healthStatus column error
+        const { data, error } = await supabase
+          .from('koi')
+          .update(updateData)
+          .eq('id', koi.id)
+        
+        if (error) {
+          console.error('Error updating field:', error)
+          toast({
+            title: "Fout",
+            description: `Kon veld niet bijwerken: ${error.message}`,
+            variant: "destructive",
+          })
+          return
+        }
+        
+        setEditingField(null)
+        setTempValue("")
+        toast({
+          title: "Bijgewerkt",
+          description: "Gezondheidsstatus is bijgewerkt.",
+        })
+        return
+      } else if (field === 'location') {
+        console.log(`Updating location to: ${tempValue}`)
+        updateData['location'] = tempValue || null
+      }
+      
       // Convert value based on field type
       if (field === 'age' || field === 'length' || field === 'age_at_purchase' || field === 'length_at_purchase') {
         updateData[field] = parseInt(tempValue) || 0
@@ -355,7 +412,7 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
   }
 
   const handleUpdateKoi = async () => {
-    if (!koi || !koi.name || !koi.variety || !koi.age || !koi.length) {
+    if (!koi || !koi.variety || !koi.age || !koi.length) {
       toast({
         title: "Ontbrekende informatie",
         description: "Vul alle verplichte velden in.",
@@ -379,7 +436,7 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
       const { error } = await supabase
         .from('koi')
         .update({
-          name: koi.name,
+          name: koi.name || koi.variety, // Use variety as name if no name provided
           species: koi.variety,
           age_years: parseInt(koi.age.toString()),
           size_cm: parseInt(koi.length.toString()),
@@ -451,14 +508,15 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Koi Details</h1>
-          <p className="text-muted-foreground">Bekijk en bewerk de details van {koi.name}</p>
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="icon" onClick={() => onNavigate("koi")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Koi Details</h1>
+            <p className="text-muted-foreground">Bekijk en bewerk de details van {koi.name}</p>
+          </div>
         </div>
-        <Button variant="outline" onClick={() => onNavigate("koi")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Terug naar Collectie
-        </Button>
       </div>
 
       <Card className="max-w-4xl mx-auto">
@@ -612,6 +670,7 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
                             <SelectContent>
                               <SelectItem value="Asagi">Asagi</SelectItem>
                               <SelectItem value="Bekko">Bekko</SelectItem>
+                              <SelectItem value="Benigoi">Benigoi</SelectItem>
                               <SelectItem value="Goshiki">Goshiki</SelectItem>
                               <SelectItem value="Kohaku">Kohaku</SelectItem>
                               <SelectItem value="Other">Other</SelectItem>
@@ -738,6 +797,15 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
                           <p className="text-lg font-semibold text-gray-900">
                             {currentLength || koi.length_at_purchase || koi.length} cm
                           </p>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => setShowGrowthChart(true)} 
+                            className="h-8 w-8 p-0 hover:bg-gray-100"
+                            title="Bekijk groeiontwikkeling"
+                          >
+                            <BarChart3 className="h-4 w-4 text-gray-500" />
+                          </Button>
                           <Button size="sm" variant="ghost" onClick={() => startEditing('length', currentLength || koi.length_at_purchase || koi.length)} className="h-8 w-8 p-0">
                             <Pencil className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                           </Button>
@@ -1064,6 +1132,22 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
           }}
         />
       </div>
+
+      {/* Growth Chart Dialog */}
+      {koi && (
+        <GrowthChart
+          koiId={koiId}
+          koiName={koi.name}
+          isOpen={showGrowthChart}
+          onClose={() => setShowGrowthChart(false)}
+          onAddMeasurement={() => {
+            console.log('onAddMeasurement called from koi-edit'); // Debug log
+            setShowGrowthChart(false)
+            console.log('User is already on edit page, can add measurements directly'); // Debug log
+            // The user is already on the edit page, so they can add measurements directly
+          }}
+        />
+      )}
     </div>
   )
 }

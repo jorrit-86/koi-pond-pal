@@ -5,11 +5,12 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { PhotoUpload } from "@/components/ui/photo-upload"
 import { useState } from "react"
-import { Droplets, Save, History, Camera } from "lucide-react"
+import { Droplets, Save, History, Camera, ArrowLeft } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
 import { usePhotoUpload } from "@/hooks/use-photo-upload"
+import { useSensorManagement } from "@/hooks/use-sensor-management"
 
 interface WaterReading {
   ph: string
@@ -21,6 +22,7 @@ interface WaterReading {
   temperature: string
   notes: string
   test_strip_photo?: string
+  measured_at?: string
 }
 
 interface ParameterFormProps {
@@ -32,6 +34,7 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
   const { toast } = useToast()
   const { user } = useAuth()
   const { uploadPhoto, uploading } = usePhotoUpload()
+  const { sensors } = useSensorManagement()
   const [reading, setReading] = useState<WaterReading>({
     ph: "",
     kh: "",
@@ -41,10 +44,14 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
     phosphate: "",
     temperature: "",
     notes: "",
-    test_strip_photo: ""
+    test_strip_photo: "",
+    measured_at: new Date().toISOString().slice(0, 16) // Format: YYYY-MM-DDTHH:MM
   })
   const [saving, setSaving] = useState(false)
   const [showPhotoUpload, setShowPhotoUpload] = useState(false)
+
+  // Check if user has an active temperature sensor
+  const hasActiveTemperatureSensor = sensors.some(sensor => sensor.status === 'active')
 
   const handleInputChange = (field: keyof WaterReading, value: string) => {
     setReading(prev => ({ ...prev, [field]: value }))
@@ -62,11 +69,24 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
   }
 
   const handleSave = async () => {
-    // Validate required fields
-    if (!reading.ph || !reading.temperature) {
+    // Validate required fields - only require temperature if no active sensor
+    const requiredFields = ['ph']
+    if (!hasActiveTemperatureSensor) {
+      requiredFields.push('temperature')
+    }
+    
+    const missingFields = requiredFields.filter(field => !reading[field as keyof WaterReading])
+    
+    if (missingFields.length > 0) {
+      const fieldNames = missingFields.map(field => 
+        field === 'ph' ? 'pH' : 
+        field === 'temperature' ? 'temperatuur' : 
+        field
+      ).join(' en ')
+      
       toast({
         title: "Ontbrekende informatie",
-        description: "Vul ten minste pH en temperatuur waarden in.",
+        description: `Vul ten minste ${fieldNames} waarden in.`,
         variant: "destructive",
       })
       return
@@ -87,7 +107,7 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
       // Prepare data for database insertion
       const parametersToSave = [
         { type: 'ph', value: parseFloat(reading.ph), unit: '' },
-        { type: 'temperature', value: parseFloat(reading.temperature), unit: '°C' },
+        ...(reading.temperature ? [{ type: 'temperature', value: parseFloat(reading.temperature), unit: '°C' }] : []),
         ...(reading.kh ? [{ type: 'kh', value: parseFloat(reading.kh), unit: '°dH' }] : []),
         ...(reading.gh ? [{ type: 'gh', value: parseFloat(reading.gh), unit: '°dH' }] : []),
         ...(reading.nitrite ? [{ type: 'nitrite', value: parseFloat(reading.nitrite), unit: 'mg/l' }] : []),
@@ -104,7 +124,7 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
           unit: param.unit,
           notes: reading.notes || null,
           test_strip_photo_url: reading.test_strip_photo || null,
-          measured_at: new Date().toISOString()
+          measured_at: reading.measured_at ? new Date(reading.measured_at).toISOString() : new Date().toISOString()
         })
       )
 
@@ -145,7 +165,8 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
         phosphate: "",
         temperature: "",
         notes: "",
-        test_strip_photo: ""
+        test_strip_photo: "",
+        measured_at: new Date().toISOString().slice(0, 16)
       })
 
       // Trigger dashboard refresh
@@ -168,7 +189,7 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
     }
   }
 
-  const parameters = [
+  const allParameters = [
     {
       key: "ph" as keyof WaterReading,
       label: "pH Waarde",
@@ -216,23 +237,54 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
       label: "Water Temperatuur",
       placeholder: "18.5",
       unit: "°C",
-      range: "15 - 25 °C"
+      range: "15 - 25 °C",
+      optional: hasActiveTemperatureSensor
     }
   ]
+
+  // Show all parameters, but temperature is optional when sensor is active
+  const parameters = allParameters
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Water Parameters</h1>
-          <p className="text-muted-foreground">Registreer de waterkwaliteit van je vijver</p>
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="icon" onClick={() => onNavigate("dashboard")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Water Parameters</h1>
+            <p className="text-muted-foreground">Registreer de waterkwaliteit van je vijver</p>
+          </div>
         </div>
         <Button variant="outline" onClick={() => onNavigate("water-history")}>
           <History className="h-4 w-4 mr-2" />
           Bekijk eerdere metingen
         </Button>
       </div>
+
+      {/* Sensor Information */}
+      {hasActiveTemperatureSensor && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-600 text-sm">📡</span>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-blue-900">Temperatuur via Sensor</h3>
+                <p className="text-sm text-blue-700">
+                  De watertemperatuur wordt automatisch gemeten door je gekoppelde KOIoT sensor. 
+                  Je kunt nog steeds handmatig een temperatuur invoeren als referentie.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -251,6 +303,7 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
                 <Label htmlFor={param.key} className="text-sm font-medium">
                   {param.label}
                   {param.unit && <span className="text-muted-foreground ml-1">({param.unit})</span>}
+                  {(param as any).optional && <span className="text-muted-foreground ml-1">(Optioneel)</span>}
                 </Label>
                 <Input
                   id={param.key}
@@ -266,6 +319,33 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
                 </p>
               </div>
             ))}
+          </div>
+
+          {/* Date and Time Picker */}
+          <div className="space-y-2">
+            <Label htmlFor="measured_at" className="text-sm font-medium">
+              Datum en tijd van meting
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="measured_at"
+                type="datetime-local"
+                value={reading.measured_at}
+                onChange={(e) => handleInputChange("measured_at", e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleInputChange("measured_at", new Date().toISOString().slice(0, 16))}
+                className="px-3"
+              >
+                Nu
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Kies de datum en tijd wanneer de meting is uitgevoerd. Klik op "Nu" voor de huidige tijd.
+            </p>
           </div>
 
           <div className="space-y-2">

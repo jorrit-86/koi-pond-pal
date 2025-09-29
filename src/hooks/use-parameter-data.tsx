@@ -30,7 +30,6 @@ export function useParameterData(config: ParameterConfig): ParameterData {
   const loadParameterData = async () => {
     try {
       setLoading(true)
-      
       // Get parameter data from database
       const { data, error } = await supabase
         .from('water_parameters')
@@ -45,9 +44,10 @@ export function useParameterData(config: ParameterConfig): ParameterData {
       }
 
       if (data && data.length > 0) {
-        // Set current value (most recent)
-        setCurrentValue(data[0].value)
-        setStatus(config.getStatus(data[0].value))
+        // Set current value (most recent) - prioritize manual measurements
+        const mostRecentReading = data[0]
+        setCurrentValue(mostRecentReading.value)
+        setStatus(config.getStatus(mostRecentReading.value))
 
         // Process historical data - group by date and take most recent per date
         const dataByDate = new Map<string, any>()
@@ -66,7 +66,9 @@ export function useParameterData(config: ParameterConfig): ParameterData {
           .map(reading => ({
             date: new Date(reading.measured_at).toISOString().split('T')[0],
             value: reading.value,
-            time: new Date(reading.measured_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            time: new Date(reading.measured_at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
+            timestamp: reading.measured_at,
+            measured_at: reading.measured_at
           }))
 
         setHistoricData(chartData)

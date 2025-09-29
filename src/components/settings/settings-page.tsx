@@ -9,11 +9,13 @@ import { useTheme } from "@/components/theme-provider"
 import { useParameterTimers } from "@/hooks/use-parameter-timers"
 import { useAuth } from "@/contexts/AuthContext"
 import { AdminPanel } from "@/components/admin/admin-panel"
-import { Settings, Home, Bell, Database, Wifi, Timer, Globe, Shield } from "lucide-react"
+import { Settings, Home, Bell, Database, Wifi, Timer, Globe, Shield, Cpu } from "lucide-react"
 import { RecommendationsTest } from "@/components/debug/RecommendationsTest"
 import { AISettings } from '@/components/settings/ai-settings'
 import { AILearningDashboard } from '@/components/ai/ai-learning-dashboard'
 import { PondProperties } from '@/components/settings/pond-properties'
+import { KOIoTSettings } from '@/components/settings/koiot-settings'
+import { DashboardSensorSettings } from '@/components/settings/dashboard-sensor-settings'
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -56,6 +58,11 @@ export function SettingsPage() {
     if (activeSubmenu === "pond-properties") {
       return <PondProperties />
     }
+    
+    if (activeSubmenu === "koiot") {
+      return <KOIoTSettings />
+    }
+    
     
     if (activeSubmenu === "ai-settings") {
       return <AISettings />
@@ -250,6 +257,9 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Dashboard Sensor Settings */}
+      <DashboardSensorSettings />
+
       {/* Notifications */}
       <Card>
         <CardHeader>
@@ -360,6 +370,15 @@ export function SettingsPage() {
         >
           <Database className="h-4 w-4" />
           Vijver Eigenschappen
+        </Button>
+        <Button
+          variant={activeSubmenu === "koiot" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveSubmenu("koiot")}
+          className="flex items-center gap-2"
+        >
+          <Cpu className="h-4 w-4" />
+          KOIoT
         </Button>
         <Button
           variant={activeSubmenu === "ai-settings" ? "default" : "ghost"}

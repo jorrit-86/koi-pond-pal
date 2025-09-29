@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "build:standalone": "node build-standalone.js",
+    "build:prod": "vite build --mode production",
+    "build:live": "npm run build:prod && echo '✅ Live build ready for deployment'",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:backup": "node scripts/backup-database.js",
+    "deploy:live": "npm run build:live && echo '🚀 Ready for live deployment'"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -1,11 +1,19 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Fish, Plus, Calendar, Ruler, Heart } from "lucide-react"
+import { Fish, Plus, Calendar, Ruler, Heart, BarChart3, ArrowLeft } from "lucide-react"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
 import { calculateCurrentAge, getAgeDisplayText } from "@/lib/koi-age-utils"
+import { GrowthChart } from "./growth-chart"
+
+// Helper function to extract healthStatus from notes
+function extractHealthStatusFromNotes(notes: string | null): string | null {
+  if (!notes) return null
+  const match = notes.match(/\[HealthStatus: ([^\]]+)\]/)
+  return match ? match[1] : null
+}
 
 interface Koi {
   id: string
@@ -38,13 +46,15 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
   const { user } = useAuth()
   const [koiList, setKoiList] = useState<Koi[]>([])
   const [loading, setLoading] = useState(true)
+  const [showGrowthChart, setShowGrowthChart] = useState(false)
+  const [selectedKoiId, setSelectedKoiId] = useState<string | null>(null)
+  const [selectedKoiName, setSelectedKoiName] = useState<string>('')
 
 
   // Load koi data from database
-  useEffect(() => {
-    const loadKoiData = async () => {
-      if (!user) return
-      
+  const loadKoiData = async () => {
+    if (!user) return
+    
     try {
       setLoading(true)
       const { data, error } = await supabase
@@ -97,13 +107,13 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
           
           return {
         id: koi.id,
-        name: koi.name,
+        name: koi.name || koi.species || koi.variety || 'Unknown', // Use variety as name if no name provided
         variety: koi.species || koi.variety || 'Unknown',
         age: koi.age_years || 0,
             length: currentLength,
         weight: koi.weight,
         color: koi.color || '',
-        healthStatus: 'excellent' as const, // Default for now
+        healthStatus: koi.healthStatus || 'good',
         dateAdded: koi.purchase_date || koi.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
             notes: koi.notes || undefined,
             photo_url: koi.photo_url || undefined,
@@ -113,7 +123,9 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
             purchase_price: koi.purchase_price || undefined,
             purchase_date: koi.purchase_date || undefined,
             age_at_purchase: koi.age_at_purchase || undefined,
-            length_at_purchase: koi.length_at_purchase || undefined
+            length_at_purchase: koi.length_at_purchase || undefined,
+            healthStatus: extractHealthStatusFromNotes(koi.notes) || 'good',
+            location: koi.location || 'pond'
           }
         })
 
@@ -125,6 +137,7 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
     }
   }
 
+  useEffect(() => {
     loadKoiData()
   }, [user])
 
@@ -136,8 +149,19 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
   }, [refreshTrigger, user])
 
   const handleEditKoi = (koi: Koi) => {
+    console.log('handleEditKoi called for koi:', koi.name); // Debug log
     onEditKoi(koi.id, koi.name)
     onNavigate("koi-edit")
+  }
+
+  const handleShowGrowthChart = (koiId: string) => {
+    console.log('handleShowGrowthChart called with koiId:', koiId); // Debug log
+    const koi = koiList.find(k => k.id === koiId)
+    const koiName = koi?.name || koi?.species || koi?.variety || 'Onbekend'
+    console.log('Selected koi:', koi, 'Name:', koiName); // Debug log
+    setSelectedKoiId(koiId)
+    setSelectedKoiName(koiName)
+    setShowGrowthChart(true)
   }
 
   const getHealthColor = (status: string) => {
@@ -173,9 +197,14 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Mijn Koi Collectie</h1>
-          <p className="text-muted-foreground">Beheer informatie over je koi vissen</p>
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="icon" onClick={() => onNavigate("dashboard")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Mijn Koi Collectie</h1>
+            <p className="text-muted-foreground">Beheer informatie over je koi vissen</p>
+          </div>
         </div>
         <Button onClick={() => onNavigate("koi-add")}>
               <Plus className="h-4 w-4 mr-2" />
@@ -254,7 +283,17 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
                     </div>
                     <div className="flex justify-between text-sm gap-2">
                       <span className="text-gray-600">Lengte:</span>
-                      <span className="text-gray-900">{koi.length} cm</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-900">{koi.length} cm</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 w-6 p-0 hover:bg-gray-100"
+                          onClick={() => handleShowGrowthChart(koi.id)}
+                        >
+                          <BarChart3 className="h-4 w-4 text-gray-500" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="flex justify-between text-sm gap-2">
                       <span className="text-gray-600">Kweker:</span>
@@ -329,6 +368,41 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
           </div>
         </CardContent>
       </Card>
+
+      {/* Growth Chart Dialog */}
+      {selectedKoiId && (
+        console.log('Rendering GrowthChart with koiId:', selectedKoiId, 'koiName:', selectedKoiName, 'isOpen:', showGrowthChart) || 
+        <GrowthChart
+          koiId={selectedKoiId}
+          koiName={selectedKoiName}
+          isOpen={showGrowthChart}
+          onClose={() => {
+            setShowGrowthChart(false)
+            setSelectedKoiId(null)
+            setSelectedKoiName('')
+          }}
+          onAddMeasurement={() => {
+            console.log('onAddMeasurement called from koi-management'); // Debug log
+            
+            // Close the growth chart first
+            setShowGrowthChart(false)
+            setSelectedKoiId(null)
+            setSelectedKoiName('')
+            
+            // Use the existing edit function to open koi-edit with the selected koi
+            console.log('Using existing edit function to open koi-edit'); // Debug log
+            const koi = koiList.find(k => k.id === selectedKoiId);
+            if (koi) {
+              console.log('Opening koi-edit for koi:', koi.name); // Debug log
+              onEditKoi(koi.id, koi.name);
+              onNavigate("koi-edit");
+            } else {
+              console.log('Koi not found, using fallback navigation'); // Debug log
+              onNavigate("koi-edit");
+            }
+          }}
+        />
+      )}
 
     </div>
   )
