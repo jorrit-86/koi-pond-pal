@@ -99,7 +99,7 @@
 
 | Datum | Versie | Status | Notes |
 |-------|--------|--------|-------|
-| $(Get-Date) | Latest | ✅ Ready | Deployment package klaar |
+| 29-9-2025 | Final Build | ✅ Ready | Latest update with navigation improvements |
 
 ## 🆘 Support Contact
 

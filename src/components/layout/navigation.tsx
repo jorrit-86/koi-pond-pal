@@ -41,10 +41,10 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
   const NavContent = () => (
     <nav className="flex flex-col h-full p-4">
       {/* Header */}
-      <button 
-        className="flex items-center space-x-3 mb-6 w-full text-left hover:opacity-80 transition-opacity bg-transparent border-none p-0"
+      <Button 
+        variant="ghost"
+        className="flex items-center space-x-3 mb-6 w-full text-left hover:opacity-80 transition-opacity h-auto p-0 justify-start"
         onClick={() => onTabChange("dashboard")}
-        type="button"
       >
         <img 
           src={koiSenseiLogo} 
@@ -54,7 +54,7 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
         <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
           Koi Sensei
         </h1>
-      </button>
+      </Button>
 
       {/* Main Navigation Items */}
       <div className="flex-1 space-y-2">

@@ -45,8 +45,8 @@ Als er problemen zijn na deployment:
 4. Raadpleeg de troubleshooting sectie in `DEPLOYMENT-CHECKLIST.md`
 
 ---
-**Versie**: Fresh Build (Latest)  
-**Build Datum**: 29-9-2025 20:10  
-**Git Commit**: c36bafb - Include latest navigation changes and update deployment docs  
+**Versie**: Final Build (Latest Update)  
+**Build Datum**: 29-9-2025 20:26  
+**Git Commit**: 3933013 - Final update: navigation improvements and deployment package updates  
 **Status**: ✅ Ready for Live Deployment  
 **Nieuwe Features**: All latest updates included, navigation improvements, enhanced sensor management, improved analytics, better error handling
