@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Waves, Droplets, Fish, Settings, BarChart3, Menu, LogOut, User } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "@/contexts/AuthContext"
 import koiSenseiLogo from "@/assets/koi-sensei-logo.svg"
@@ -16,6 +16,13 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
   const { t } = useTranslation()
   const { user, signOut } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+
+  // Custom touch handler for mobile compatibility
+  const handleLogoClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onTabChange("dashboard")
+  }, [onTabChange])
 
   // Get user initials for avatar fallback
   const getUserInitials = () => {
@@ -43,21 +50,16 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
       {/* Header */}
       <div 
         className="flex items-center space-x-3 mb-6 cursor-pointer hover:opacity-80 transition-opacity"
-        onClick={() => onTabChange("dashboard")}
-        onMouseDown={() => onTabChange("dashboard")}
-        onTouchStart={(e) => {
-          e.preventDefault();
-          onTabChange("dashboard");
-        }}
-        onTouchEnd={(e) => {
-          e.preventDefault();
-          onTabChange("dashboard");
-        }}
+        onClick={handleLogoClick}
+        onTouchStart={handleLogoClick}
+        onTouchEnd={handleLogoClick}
+        onMouseDown={handleLogoClick}
         style={{ 
           WebkitTouchCallout: 'none',
           WebkitUserSelect: 'none',
           userSelect: 'none',
-          touchAction: 'manipulation'
+          touchAction: 'manipulation',
+          WebkitTapHighlightColor: 'transparent'
         }}
       >
         <img 

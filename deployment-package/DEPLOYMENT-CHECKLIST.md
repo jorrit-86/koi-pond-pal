@@ -99,7 +99,7 @@
 
 | Datum | Versie | Status | Notes |
 |-------|--------|--------|-------|
-| 29-9-2025 | Latest Build | ✅ Ready | Updated with navigation improvements |
+| 29-9-2025 | Latest Build | ✅ Ready | Most recent update with navigation improvements |
 
 ## 🆘 Support Contact
 
