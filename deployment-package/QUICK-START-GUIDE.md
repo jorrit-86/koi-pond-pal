@@ -95,8 +95,8 @@ Je website root/
 ---
 **🎉 Succes met je deployment!**
 
-**Versie**: Complete Build (All Changes)  
-**Build Datum**: 29-9-2025 20:00  
-**Git Commit**: 1d39d2d - Include all latest changes for deployment  
+**Versie**: Fresh Build (Latest)  
+**Build Datum**: 29-9-2025 20:10  
+**Git Commit**: c36bafb - Include latest navigation changes and update deployment docs  
 **Status**: ✅ Ready for Live Deployment  
-**Nieuwe Features**: All latest updates included, enhanced sensor management, improved analytics, better error handling
+**Nieuwe Features**: All latest updates included, navigation improvements, enhanced sensor management, improved analytics, better error handling
