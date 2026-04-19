@@ -17,14 +17,18 @@ import {
   RefreshCw,
   Plus,
   X,
-  ArrowRight
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
+import './pond-properties.css'
 
 interface FilterSegment {
   id: string
   type: 'mechanical' | 'biological' | 'chemical' | 'uv' | 'skimmer' | 'empty'
   media: string[]
   description: string
+  aeration?: boolean // For biological segments, indicates if the media is aerated
 }
 
 interface PondProperties {
@@ -63,6 +67,83 @@ interface KoiCounts {
   pond_koi: number
   quarantine_koi: number
   hospital_koi: number
+}
+
+// Helper function to calculate segment score (normalized to 1-10 scale)
+const calculateSegmentScore = (segment: FilterSegment): { score: number; maxScore: number; reasoning: string[] } => {
+  const reasoning: string[] = []
+  let rawScore = 0
+  let maxRawScore = 0
+
+  // Base score for segment type (0-3 points)
+  const typeScores: Record<string, number> = {
+    'mechanical': 1,
+    'biological': 2,
+    'chemical': 1.5,
+    'uv': 1,
+    'skimmer': 1.5,
+    'empty': 0
+  }
+
+  const typeScore = typeScores[segment.type] || 0
+  rawScore += typeScore
+  maxRawScore += 3
+  reasoning.push(`${segment.type} segment: ${typeScore}/3 punten`)
+
+  // Media scoring (0-4 points)
+  if (segment.media.length > 0) {
+    const mediaScores: Record<string, number> = {
+      // Mechanical media
+      'vortex_chamber': 1,
+      'brush_filter': 1.2,
+      'mat_filter': 1.5,
+      'sieve_filter': 2,
+      'drum_filter': 2.5,
+      'sponges': 0.8,
+      'foam': 1,
+      // Biological media
+      'japanese_mats': 2,
+      'moving_bed_k1': 2.5,
+      'moving_bed_k3': 2.2,
+      'bead_filter': 2,
+      'trickle_filter': 2.8,
+      'shower_filter': 2.5,
+      'glass_foam': 2.8,
+      'ceramic_rings': 1.8,
+      'bio_balls': 1.5,
+      'lava_rock': 1.8,
+      'matrix': 2.5,
+      'bacteria_house': 2.2,
+      // Chemical media
+      'activated_carbon': 1,
+      'zeolite': 1.5,
+      'phosphate_remover': 1.2,
+      'ozone': 2
+    }
+
+    const mediaScore = segment.media.reduce((total, media) => {
+      return total + (mediaScores[media] || 0.5)
+    }, 0)
+    
+    rawScore += Math.min(mediaScore, 4)
+    maxRawScore += 4
+    reasoning.push(`Media: ${Math.min(mediaScore, 4).toFixed(1)}/4 punten`)
+
+    // Aeration bonus for biological segments (0-1.5 points)
+    if (segment.type === 'biological' && segment.aeration) {
+      rawScore += 1.5
+      maxRawScore += 1.5
+      reasoning.push('Beluchting: +1.5 punten')
+    }
+  }
+
+  // Normalize to 1-10 scale
+  // Minimum score is 1 (even empty segments get 1 point)
+  // Maximum possible raw score is 8.5, so we scale accordingly
+  const normalizedScore = Math.max(1, Math.min(10, (rawScore / maxRawScore) * 9 + 1))
+  const maxScore = 10
+
+  return { score: normalizedScore, maxScore, reasoning }
 }
 
 // Helper function to get media options based on segment type
@@ -108,9 +189,11 @@ const getMediaOptions = (type: string) => {
 
 export function PondProperties() {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [scrollPosition, setScrollPosition] = useState({ canScrollLeft: false, canScrollRight: false })
+  const [isMobile, setIsMobile] = useState(false)
   const [pondProperties, setPondProperties] = useState<PondProperties>({
     pond_size_liters: null,
     pond_depth_cm: null,
@@ -170,19 +253,177 @@ export function PondProperties() {
     }
   }, [])
 
+  // Check scroll position and update arrow visibility
+  const checkScrollPosition = (container: HTMLElement) => {
+    const canScrollLeft = container.scrollLeft > 0
+    const canScrollRight = container.scrollLeft < (container.scrollWidth - container.clientWidth)
+    setScrollPosition({ canScrollLeft, canScrollRight })
+  }
+
+  // Scroll functions
+  const scrollLeft = () => {
+    const container = document.querySelector('.filter-segments-container') as HTMLElement
+    if (container) {
+      if (isMobile) {
+        // On mobile, center the previous segment
+        const segments = container.querySelectorAll('[data-segment]')
+        const currentScrollLeft = container.scrollLeft
+        const containerWidth = container.clientWidth
+        
+        // Find the currently visible segment
+        let targetSegment = null
+        for (let i = segments.length - 1; i >= 0; i--) {
+          const segment = segments[i] as HTMLElement
+          const segmentLeft = segment.offsetLeft
+          const segmentRight = segmentLeft + segment.offsetWidth
+          
+          if (segmentLeft <= currentScrollLeft + containerWidth / 2 && segmentRight >= currentScrollLeft + containerWidth / 2) {
+            targetSegment = i > 0 ? segments[i - 1] : segments[i]
+            break
+          }
+        }
+        
+        if (targetSegment) {
+          const targetElement = targetSegment as HTMLElement
+          const targetLeft = targetElement.offsetLeft
+          const targetWidth = targetElement.offsetWidth
+          const centerPosition = targetLeft + targetWidth / 2 - containerWidth / 2
+          
+          container.scrollTo({ left: Math.max(0, centerPosition), behavior: 'smooth' })
+        }
+      } else {
+        // On desktop, use fixed scroll distance
+        container.scrollBy({ left: -300, behavior: 'smooth' })
+      }
+    }
+  }
+
+  const scrollRight = () => {
+    const container = document.querySelector('.filter-segments-container') as HTMLElement
+    if (container) {
+      if (isMobile) {
+        // On mobile, center the next segment
+        const segments = container.querySelectorAll('[data-segment]')
+        const currentScrollLeft = container.scrollLeft
+        const containerWidth = container.clientWidth
+        
+        // Find the currently visible segment
+        let targetSegment = null
+        for (let i = 0; i < segments.length; i++) {
+          const segment = segments[i] as HTMLElement
+          const segmentLeft = segment.offsetLeft
+          const segmentRight = segmentLeft + segment.offsetWidth
+          
+          if (segmentLeft <= currentScrollLeft + containerWidth / 2 && segmentRight >= currentScrollLeft + containerWidth / 2) {
+            targetSegment = i < segments.length - 1 ? segments[i + 1] : segments[i]
+            break
+          }
+        }
+        
+        if (targetSegment) {
+          const targetElement = targetSegment as HTMLElement
+          const targetLeft = targetElement.offsetLeft
+          const targetWidth = targetElement.offsetWidth
+          const centerPosition = targetLeft + targetWidth / 2 - containerWidth / 2
+          
+          container.scrollTo({ left: Math.max(0, centerPosition), behavior: 'smooth' })
+        }
+      } else {
+        // On desktop, use fixed scroll distance
+        container.scrollBy({ left: 300, behavior: 'smooth' })
+      }
+    }
+  }
+
+  // Check scroll position on mount and when segments change
+  useEffect(() => {
+    const container = document.querySelector('.filter-segments-container') as HTMLElement
+    if (container) {
+      checkScrollPosition(container)
+    }
+  }, [pondProperties.filter_segments])
+
+  // Detect mobile view
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768) // md breakpoint
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+
   const loadPondProperties = async () => {
     if (!user) return
 
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('user_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle()
+      console.log('Loading pond properties for user:', user.id)
+      
+      // Check if Supabase has a session
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      
+      let data: any = null
+      let error: any = null
+      
+      // If no Supabase session but we have React session, use direct fetch
+      if (!currentSession && session?.access_token) {
+        try {
+          console.log('Loading pond properties using direct fetch with access token...')
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?user_id=eq.${user.id}&select=*`,
+            {
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          )
+          
+          if (response.ok) {
+            const responseData = await response.json()
+            // maybeSingle() returns a single object or null, so we need to handle array response
+            data = Array.isArray(responseData) ? (responseData.length > 0 ? responseData[0] : null) : responseData
+            console.log('Loaded pond properties (direct fetch):', data ? 'found' : 'none')
+          } else if (response.status === 406 || response.status === 404) {
+            // Table doesn't exist or not accessible - silently ignore
+            console.log('Table not accessible (406/404), using defaults')
+            data = null
+          } else {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+        } catch (fetchError: any) {
+          console.error('Error loading pond properties with direct fetch:', fetchError)
+          error = fetchError
+          // Fall through to try normal Supabase query
+        }
+      }
+      
+      // If we don't have data yet, try normal Supabase query
+      if (!data && !error) {
+        const queryResult = await supabase
+          .from('user_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        
+        data = queryResult.data
+        error = queryResult.error
+      }
+
+      console.log('Database query result:', { data, error })
+      console.log('Data type:', typeof data)
+      console.log('Data is null?', data === null)
+      console.log('Data is undefined?', data === undefined)
+      console.log('Data length/keys:', data ? Object.keys(data) : 'no data')
 
       if (error) {
         console.error('Error loading pond properties:', error)
+        console.error('Error details:', JSON.stringify(error, null, 2))
         toast({
           title: "Fout",
           description: "Kon vijver eigenschappen niet laden: " + error.message,
@@ -192,8 +433,10 @@ export function PondProperties() {
       }
 
       if (data) {
-        // Debug: log the filter_segments data
-        console.log('Loaded filter_segments from database:', data.filter_segments)
+        // Debug: log all loaded data
+        console.log('Loaded data from database:', data)
+        console.log('pond_size_liters:', data.pond_size_liters, 'type:', typeof data.pond_size_liters)
+        console.log('pond_depth_cm:', data.pond_depth_cm, 'type:', typeof data.pond_depth_cm)
         
         // Ensure filter_segments is properly parsed
         let filterSegments = data.filter_segments
@@ -218,9 +461,17 @@ export function PondProperties() {
           ]
         }
 
-        setPondProperties({
-          pond_size_liters: data.pond_size_liters,
-          pond_depth_cm: data.pond_depth_cm,
+        // Convert DECIMAL to number if needed (Supabase returns DECIMAL as string sometimes)
+        const pondSizeLiters = data.pond_size_liters != null 
+          ? (typeof data.pond_size_liters === 'string' ? parseFloat(data.pond_size_liters) : Number(data.pond_size_liters))
+          : null
+        const pondDepthCm = data.pond_depth_cm != null
+          ? (typeof data.pond_depth_cm === 'string' ? parseFloat(data.pond_depth_cm) : Number(data.pond_depth_cm))
+          : null
+
+        const loadedProperties = {
+          pond_size_liters: pondSizeLiters,
+          pond_depth_cm: pondDepthCm,
           pond_type: data.pond_type || 'outdoor',
           location: data.location || '',
           climate_zone: data.climate_zone || 'temperate',
@@ -247,10 +498,20 @@ export function PondProperties() {
           // Plant life
           plants_present: data.plants_present ?? false,
           plant_types: data.plant_types || []
-        })
+        }
+
+        console.log('Setting pond properties state:', loadedProperties)
+        setPondProperties(loadedProperties)
+      } else {
+        console.log('No data found in database for user, using defaults')
       }
     } catch (error) {
       console.error('Error in loadPondProperties:', error)
+      toast({
+        title: "Fout",
+        description: "Onverwachte fout bij laden vijver eigenschappen",
+        variant: "destructive"
+      })
     } finally {
       setLoading(false)
     }
@@ -260,14 +521,53 @@ export function PondProperties() {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
-        .from('pond_koi_count')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
+      // Check if Supabase has a session
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      
+      let data: any = null
+      let error: any = null
+
+      // If no Supabase session but we have React session, use direct fetch
+      if (!currentSession && session?.access_token) {
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/pond_koi_count?user_id=eq.${user.id}&select=*`,
+            {
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          )
+
+          if (response.ok) {
+            const responseData = await response.json()
+            data = Array.isArray(responseData) ? (responseData.length > 0 ? responseData[0] : null) : responseData
+          } else if (response.status === 406 || response.status === 404) {
+            // Table doesn't exist or not accessible - silently ignore
+            return
+          }
+        } catch (fetchError: any) {
+          // Silently ignore fetch errors for koi counts
+          return
+        }
+      }
+
+      // If we don't have data yet, try normal Supabase query
+      if (!data && !error) {
+        const queryResult = await supabase
+          .from('pond_koi_count')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        
+        data = queryResult.data
+        error = queryResult.error
+      }
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error loading koi counts:', error)
+        // Silently ignore errors for koi counts (table might not exist or be accessible)
         return
       }
 
@@ -280,7 +580,7 @@ export function PondProperties() {
         })
       }
     } catch (error) {
-      console.error('Error in loadKoiCounts:', error)
+      // Silently ignore errors for koi counts
     }
   }
 
@@ -318,70 +618,102 @@ export function PondProperties() {
       // Debug: log the properties data before saving
       console.log('Auto-saving pond properties to database:', properties)
 
-      // First try to update existing record
-      const { data: updateData, error: updateError } = await supabase
-        .from('user_preferences')
-        .update(properties)
-        .eq('user_id', user.id)
-        .select()
+      // Check if Supabase has a session
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      
+      let data: any = null
+      let error: any = null
 
-      console.log('Update result:', { updateData, updateError })
+      // Prepare the data to save
+      const dataToSave = {
+        user_id: user.id,
+        ...properties,
+        // Set defaults only if they don't exist in the record
+        maintenance_frequency: properties.maintenance_frequency || 'weekly',
+        seasonal_awareness: properties.seasonal_awareness ?? true,
+        auto_recommendations: properties.auto_recommendations ?? true
+      }
 
-      // Check if update actually affected any rows
-      if (updateError) {
-        console.log('Update error, inserting new record...')
-        const { data: insertData, error: insertError } = await supabase
+      // If no Supabase session but we have React session, use direct fetch
+      if (!currentSession && session?.access_token) {
+        try {
+          console.log('Saving pond properties using direct fetch with access token...')
+          
+          // First, try to get existing record to determine if we should PATCH or POST
+          const checkResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?user_id=eq.${user.id}&select=id`,
+            {
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          )
+
+          if (checkResponse.ok) {
+            const existingData = await checkResponse.json()
+            const recordExists = Array.isArray(existingData) && existingData.length > 0
+
+            // Use PATCH for update, POST for insert
+            const method = recordExists ? 'PATCH' : 'POST'
+            const url = recordExists 
+              ? `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?user_id=eq.${user.id}&select=*`
+              : `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?select=*`
+
+            const saveResponse = await fetch(url, {
+              method,
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify(dataToSave)
+            })
+
+            if (saveResponse.ok) {
+              const responseData = await saveResponse.json()
+              data = Array.isArray(responseData) ? (responseData.length > 0 ? responseData[0] : null) : responseData
+              console.log('Pond properties saved successfully (direct fetch)')
+            } else {
+              const errorData = await saveResponse.json().catch(() => ({ message: `HTTP ${saveResponse.status}` }))
+              error = { message: errorData.message || `HTTP error! status: ${saveResponse.status}` }
+            }
+          } else {
+            error = { message: `Failed to check existing record: ${checkResponse.status}` }
+          }
+        } catch (fetchError: any) {
+          console.error('Error saving pond properties with direct fetch:', fetchError)
+          error = fetchError
+          // Fall through to try normal Supabase query
+        }
+      }
+
+      // If we don't have data yet, try normal Supabase query
+      if (!data && !error) {
+        const queryResult = await supabase
           .from('user_preferences')
-          .insert({
-            user_id: user.id,
-            ...properties,
-            experience_level: 'beginner',
-            maintenance_frequency: 'weekly',
-            seasonal_awareness: true,
-            auto_recommendations: true
+          .upsert(dataToSave, {
+            onConflict: 'user_id'
           })
           .select()
+        
+        data = queryResult.data
+        error = queryResult.error
+      }
 
-        console.log('Insert result:', { insertData, insertError })
+      console.log('Upsert result:', { data, error })
 
-        if (insertError) {
-          console.error('Error auto-saving pond properties (insert):', insertError)
-          toast({
-            title: "Fout",
-            description: "Kon vijver eigenschappen niet opslaan: " + insertError.message,
-            variant: "destructive"
-          })
-        } else {
-          console.log('Pond properties saved successfully (insert)')
-        }
-      } else if (updateData && updateData.length > 0) {
-        console.log('Pond properties saved successfully (update)')
+      if (error) {
+        console.error('Error auto-saving pond properties:', error)
+        toast({
+          title: "Fout",
+          description: "Kon vijver eigenschappen niet opslaan: " + (error.message || 'Onbekende fout'),
+          variant: "destructive"
+        })
       } else {
-        console.log('No rows updated, trying insert...')
-        const { data: insertData, error: insertError } = await supabase
-          .from('user_preferences')
-          .insert({
-            user_id: user.id,
-            ...properties,
-            experience_level: 'beginner',
-            maintenance_frequency: 'weekly',
-            seasonal_awareness: true,
-            auto_recommendations: true
-          })
-          .select()
-
-        console.log('Insert result:', { insertData, insertError })
-
-        if (insertError) {
-          console.error('Error auto-saving pond properties (insert):', insertError)
-          toast({
-            title: "Fout",
-            description: "Kon vijver eigenschappen niet opslaan: " + insertError.message,
-            variant: "destructive"
-          })
-        } else {
-          console.log('Pond properties saved successfully (insert)')
-        }
+        console.log('Pond properties saved successfully')
       }
     } catch (error) {
       console.error('Error in autoSavePondProperties:', error)
@@ -401,70 +733,102 @@ export function PondProperties() {
       // Debug: log the filter_segments data before saving
       console.log('Auto-saving filter_segments to database:', segments)
 
-      // First try to update existing record
-      const { data: updateData, error: updateError } = await supabase
-        .from('user_preferences')
-        .update({ filter_segments: segments })
-        .eq('user_id', user.id)
-        .select()
+      // Check if Supabase has a session
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      
+      let data: any = null
+      let error: any = null
 
-      console.log('Update result:', { updateData, updateError })
+      // Prepare the data to save
+      const dataToSave = {
+        user_id: user.id,
+        filter_segments: segments,
+        // Set defaults only if they don't exist in the record
+        maintenance_frequency: 'weekly',
+        seasonal_awareness: true,
+        auto_recommendations: true
+      }
 
-      // Check if update actually affected any rows
-      if (updateError) {
-        console.log('Update error, inserting new record...')
-        const { data: insertData, error: insertError } = await supabase
+      // If no Supabase session but we have React session, use direct fetch
+      if (!currentSession && session?.access_token) {
+        try {
+          console.log('Saving filter segments using direct fetch with access token...')
+          
+          // First, try to get existing record to determine if we should PATCH or POST
+          const checkResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?user_id=eq.${user.id}&select=id`,
+            {
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          )
+
+          if (checkResponse.ok) {
+            const existingData = await checkResponse.json()
+            const recordExists = Array.isArray(existingData) && existingData.length > 0
+
+            // Use PATCH for update, POST for insert
+            const method = recordExists ? 'PATCH' : 'POST'
+            const url = recordExists 
+              ? `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?user_id=eq.${user.id}&select=*`
+              : `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?select=*`
+
+            const saveResponse = await fetch(url, {
+              method,
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify(dataToSave)
+            })
+
+            if (saveResponse.ok) {
+              const responseData = await saveResponse.json()
+              data = Array.isArray(responseData) ? (responseData.length > 0 ? responseData[0] : null) : responseData
+              console.log('Filter segments saved successfully (direct fetch)')
+            } else {
+              const errorData = await saveResponse.json().catch(() => ({ message: `HTTP ${saveResponse.status}` }))
+              error = { message: errorData.message || `HTTP error! status: ${saveResponse.status}` }
+            }
+          } else {
+            error = { message: `Failed to check existing record: ${checkResponse.status}` }
+          }
+        } catch (fetchError: any) {
+          console.error('Error saving filter segments with direct fetch:', fetchError)
+          error = fetchError
+          // Fall through to try normal Supabase query
+        }
+      }
+
+      // If we don't have data yet, try normal Supabase query
+      if (!data && !error) {
+        const queryResult = await supabase
           .from('user_preferences')
-          .insert({
-            user_id: user.id,
-            filter_segments: segments,
-            experience_level: 'beginner',
-            maintenance_frequency: 'weekly',
-            seasonal_awareness: true,
-            auto_recommendations: true
+          .upsert(dataToSave, {
+            onConflict: 'user_id'
           })
           .select()
+        
+        data = queryResult.data
+        error = queryResult.error
+      }
 
-        console.log('Insert result:', { insertData, insertError })
+      console.log('Upsert result:', { data, error })
 
-        if (insertError) {
-          console.error('Error auto-saving filter segments (insert):', insertError)
-          toast({
-            title: "Fout",
-            description: "Kon filter segmenten niet opslaan: " + insertError.message,
-            variant: "destructive"
-          })
-        } else {
-          console.log('Filter segments saved successfully (insert)')
-        }
-      } else if (updateData && updateData.length > 0) {
-        console.log('Filter segments saved successfully (update)')
+      if (error) {
+        console.error('Error auto-saving filter segments:', error)
+        toast({
+          title: "Fout",
+          description: "Kon filter segmenten niet opslaan: " + (error.message || 'Onbekende fout'),
+          variant: "destructive"
+        })
       } else {
-        console.log('No rows updated, trying insert...')
-        const { data: insertData, error: insertError } = await supabase
-          .from('user_preferences')
-          .insert({
-            user_id: user.id,
-            filter_segments: segments,
-            experience_level: 'beginner',
-            maintenance_frequency: 'weekly',
-            seasonal_awareness: true,
-            auto_recommendations: true
-          })
-          .select()
-
-        console.log('Insert result:', { insertData, insertError })
-
-        if (insertError) {
-          console.error('Error auto-saving filter segments (insert):', insertError)
-          toast({
-            title: "Fout",
-            description: "Kon filter segmenten niet opslaan: " + insertError.message,
-            variant: "destructive"
-          })
-        } else {
-          console.log('Filter segments saved successfully (insert)')
-        }
+        console.log('Filter segments saved successfully')
       }
     } catch (error) {
       console.error('Error in autoSaveFilterSegments:', error)
@@ -732,10 +1096,40 @@ export function PondProperties() {
                 <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-200 border-t-2 border-b-2 border-t-transparent border-b-transparent"></div>
               </div>
 
+              {/* Navigation Arrows */}
+              {scrollPosition.canScrollLeft && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10 bg-white shadow-lg hover:bg-gray-50"
+                  onClick={scrollLeft}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              )}
+
+              {scrollPosition.canScrollRight && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 bg-white shadow-lg hover:bg-gray-50"
+                  onClick={scrollRight}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
+
               {/* Filter Segments */}
-              <div className="flex gap-4 overflow-x-auto pb-4">
+              <div 
+                className="flex gap-4 overflow-x-auto pb-4 filter-segments-container"
+                style={{
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none'
+                }}
+                onScroll={(e) => checkScrollPosition(e.currentTarget)}
+              >
                 {pondProperties.filter_segments.map((segment, index) => (
-                  <div key={segment.id} className="flex items-center gap-2">
+                  <div key={segment.id} className="flex items-center gap-2" data-segment>
                     {/* Segment */}
                     <div className="relative bg-white border-2 border-gray-300 rounded-lg p-4 min-w-[200px] shadow-sm hover:shadow-md transition-shadow">
                       {/* Segment Type Badge */}
@@ -793,20 +1187,65 @@ export function PondProperties() {
                             {segment.media.length > 0 && (
                               <div className="p-2 bg-green-50 border border-green-200 rounded-md">
                                 <div className="flex items-center justify-between">
-                                  <div>
-                                    <span className="text-xs font-medium text-green-800">
-                                      {getMediaOptions(segment.type).find(m => m.value === segment.media[0])?.label}
-                                    </span>
+                                  <div className="flex-1">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs font-medium text-green-800">
+                                        {getMediaOptions(segment.type).find(m => m.value === segment.media[0])?.label}
+                                      </span>
+                                      {/* Score Display */}
+                                      {(() => {
+                                        const segmentScore = calculateSegmentScore(segment)
+                                        const percentage = (segmentScore.score / segmentScore.maxScore) * 100
+                                        const scoreColor = segmentScore.score >= 8 ? 'text-green-600' : segmentScore.score >= 6 ? 'text-yellow-600' : 'text-red-600'
+                                        return (
+                                          <div className="flex items-center space-x-1">
+                                            <span className={`text-xs font-bold ${scoreColor}`}>
+                                              {segmentScore.score.toFixed(1)}/10
+                                            </span>
+                                            <div className="w-8 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                              <div 
+                                                className={`h-full ${segmentScore.score >= 8 ? 'bg-green-500' : segmentScore.score >= 6 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                                              />
+                                            </div>
+                                          </div>
+                                        )
+                                      })()}
+                                    </div>
                                     <p className="text-xs text-green-600">
                                       {getMediaOptions(segment.type).find(m => m.value === segment.media[0])?.desc}
                                     </p>
+                                    {/* Aeration checkbox for biological segments */}
+                                    {segment.type === 'biological' && (
+                                      <label className="flex items-center space-x-2 mt-2">
+                                        <input
+                                          type="checkbox"
+                                          checked={segment.aeration || false}
+                                          onChange={(e) => {
+                                            const newSegments = pondProperties.filter_segments.map(s => 
+                                              s.id === segment.id ? { ...s, aeration: e.target.checked } : s
+                                            )
+                                            setPondProperties(prev => ({
+                                              ...prev,
+                                              filter_segments: newSegments
+                                            }))
+                                            // Auto-save the changes
+                                            autoSaveFilterSegments(newSegments)
+                                          }}
+                                          className="rounded text-xs"
+                                        />
+                                        <span className="text-xs text-green-700 font-medium">
+                                          Belucht filter medium
+                                        </span>
+                                      </label>
+                                    )}
                                   </div>
                                   <Button
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => {
                                       const newSegments = pondProperties.filter_segments.map(s => 
-                                        s.id === segment.id ? { ...s, media: [] } : s
+                                        s.id === segment.id ? { ...s, media: [], aeration: false } : s
                                       )
                                       setPondProperties(prev => ({
                                         ...prev,

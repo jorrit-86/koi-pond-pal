@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Users, UserCheck, UserX, Shield, Trash2, Search, Filter, RefreshCw } from "lucide-react"
+import { EmailService } from "@/lib/email-service"
 
 interface User {
   id: string
@@ -22,6 +23,10 @@ interface User {
   city?: string
   country?: string
   role: 'admin' | 'user'
+  approval_status?: 'pending' | 'approved' | 'rejected'
+  approved_at?: string
+  approved_by?: string
+  rejection_reason?: string
   created_at: string
   last_sign_in_at?: string
   koi_count?: number
@@ -33,6 +38,7 @@ interface AdminStats {
   active_users: number
   admin_users: number
   new_users_today: number
+  pending_approvals: number
 }
 
 export function AdminPanel() {
@@ -45,12 +51,14 @@ export function AdminPanel() {
     total_users: 0,
     active_users: 0,
     admin_users: 0,
-    new_users_today: 0
+    new_users_today: 0,
+    pending_approvals: 0
   })
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [approvalFilter, setApprovalFilter] = useState<string>("all")
 
   // Load users and stats
   useEffect(() => {
@@ -77,6 +85,10 @@ export function AdminPanel() {
           city,
           country,
           role,
+          approval_status,
+          approved_at,
+          approved_by,
+          rejection_reason,
           two_factor_enabled,
           last_login_at,
           created_at
@@ -136,7 +148,7 @@ export function AdminPanel() {
     try {
       const { data: usersData, error } = await supabase
         .from('users')
-        .select('role, created_at')
+        .select('role, created_at, approval_status')
 
       if (error) {
         console.error('Error loading stats:', error)
@@ -149,7 +161,8 @@ export function AdminPanel() {
         total_users: usersData?.length || 0,
         active_users: usersData?.filter(user => user.created_at).length || 0,
         admin_users: usersData?.filter(user => user.role === 'admin').length || 0,
-        new_users_today: usersData?.filter(user => user.created_at.startsWith(today)).length || 0
+        new_users_today: usersData?.filter(user => user.created_at.startsWith(today)).length || 0,
+        pending_approvals: usersData?.filter(user => user.approval_status === 'pending').length || 0
       }
 
       setStats(stats)
@@ -231,6 +244,80 @@ export function AdminPanel() {
     }
   }
 
+  const handleApproveUser = async (userId: string, userEmail: string, userName?: string) => {
+    try {
+      const { error } = await supabase.rpc('approve_user', {
+        target_user_id: userId,
+        admin_user_id: currentUser?.id,
+        approval_reason: 'Approved by administrator'
+      })
+
+      if (error) {
+        throw error
+      }
+
+      // Send approval email
+      const emailResult = await EmailService.sendApprovalEmail(userEmail, userName)
+      if (!emailResult.success) {
+        console.warn('Failed to send approval email:', emailResult.error)
+      }
+
+      await logAdminAction('user_approve', userId, { email: userEmail })
+      
+      toast({
+        title: "Success",
+        description: "User approved successfully and notification email sent",
+      })
+
+      loadUsers()
+      loadStats()
+    } catch (error) {
+      console.error('Error approving user:', error)
+      toast({
+        title: "Error",
+        description: "Failed to approve user",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleRejectUser = async (userId: string, userEmail: string, reason: string, userName?: string) => {
+    try {
+      const { error } = await supabase.rpc('reject_user', {
+        target_user_id: userId,
+        admin_user_id: currentUser?.id,
+        rejection_reason: reason
+      })
+
+      if (error) {
+        throw error
+      }
+
+      // Send rejection email
+      const emailResult = await EmailService.sendRejectionEmail(userEmail, userName, reason)
+      if (!emailResult.success) {
+        console.warn('Failed to send rejection email:', emailResult.error)
+      }
+
+      await logAdminAction('user_reject', userId, { email: userEmail, reason })
+      
+      toast({
+        title: "Success",
+        description: "User rejected successfully and notification email sent",
+      })
+
+      loadUsers()
+      loadStats()
+    } catch (error) {
+      console.error('Error rejecting user:', error)
+      toast({
+        title: "Error",
+        description: "Failed to reject user",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleDeleteUser = async (userId: string, userEmail: string) => {
     try {
       // Delete user data first
@@ -276,8 +363,13 @@ export function AdminPanel() {
     const matchesStatus = statusFilter === "all" || 
       (statusFilter === "active" && user.last_sign_in_at) ||
       (statusFilter === "inactive" && !user.last_sign_in_at)
+    
+    const matchesApproval = approvalFilter === "all" || 
+      (approvalFilter === "pending" && user.approval_status === "pending") ||
+      (approvalFilter === "approved" && user.approval_status === "approved") ||
+      (approvalFilter === "rejected" && user.approval_status === "rejected")
 
-    return matchesSearch && matchesRole && matchesStatus
+    return matchesSearch && matchesRole && matchesStatus && matchesApproval
   })
 
   if (currentUser?.role !== 'admin') {
@@ -300,7 +392,7 @@ export function AdminPanel() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t("settings.totalUsers")}</CardTitle>
@@ -338,6 +430,16 @@ export function AdminPanel() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.new_users_today}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.pending_approvals}</div>
           </CardContent>
         </Card>
       </div>
@@ -382,6 +484,17 @@ export function AdminPanel() {
                 <SelectItem value="inactive">{t("settings.inactive")}</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={approvalFilter} onValueChange={setApprovalFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by Approval" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Approvals</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
             <Button variant="outline" onClick={loadUsers} disabled={loading}>
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               {t("settings.refresh")}
@@ -395,6 +508,7 @@ export function AdminPanel() {
                 <TableRow>
                   <TableHead>{t("settings.fullName")}</TableHead>
                   <TableHead>{t("settings.userRole")}</TableHead>
+                  <TableHead>Approval Status</TableHead>
                   <TableHead>{t("settings.location")}</TableHead>
                   <TableHead>{t("settings.data")}</TableHead>
                   <TableHead>2FA</TableHead>
@@ -406,7 +520,7 @@ export function AdminPanel() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
+                    <TableCell colSpan={9} className="text-center py-8">
                       <div className="flex items-center justify-center">
                         <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                         {t("settings.loadingUsers")}
@@ -415,7 +529,7 @@ export function AdminPanel() {
                   </TableRow>
                 ) : filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       {t("settings.noUsersFound")}
                     </TableCell>
                   </TableRow>
@@ -431,6 +545,15 @@ export function AdminPanel() {
                       <TableCell>
                         <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
                           {user.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          user.approval_status === 'approved' ? 'default' :
+                          user.approval_status === 'pending' ? 'secondary' :
+                          'destructive'
+                        }>
+                          {user.approval_status || 'pending'}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -470,51 +593,100 @@ export function AdminPanel() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Select
-                            value={user.role}
-                            onValueChange={(value: 'admin' | 'user') => handleRoleChange(user.id, value)}
-                          >
-                            <SelectTrigger className="w-[100px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">User</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePasswordReset(user.id, user.email)}
-                          >
-                            {t("settings.resetPassword")}
-                          </Button>
-
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="sm">
-                                <Trash2 className="h-4 w-4" />
+                          {user.approval_status === 'pending' && (
+                            <>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleApproveUser(user.id, user.email, user.full_name)}
+                              >
+                                Approve
                               </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>{t("settings.deleteUser")}</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  {t("settings.deleteUserConfirm", { email: user.email })}
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>{t("settings.cancel")}</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteUser(user.id, user.email)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  {t("settings.delete")}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" size="sm">
+                                    Reject
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Reject User</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Please provide a reason for rejecting this user registration.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <div className="py-4">
+                                    <Input
+                                      placeholder="Rejection reason..."
+                                      id="rejection-reason"
+                                    />
+                                  </div>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => {
+                                        const reason = (document.getElementById('rejection-reason') as HTMLInputElement)?.value || 'No reason provided'
+                                        handleRejectUser(user.id, user.email, reason, user.full_name)
+                                      }}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Reject User
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </>
+                          )}
+                          
+                          {user.approval_status === 'approved' && (
+                            <>
+                              <Select
+                                value={user.role}
+                                onValueChange={(value: 'admin' | 'user') => handleRoleChange(user.id, value)}
+                              >
+                                <SelectTrigger className="w-[100px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="user">User</SelectItem>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePasswordReset(user.id, user.email)}
+                              >
+                                {t("settings.resetPassword")}
+                              </Button>
+
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" size="sm">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>{t("settings.deleteUser")}</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      {t("settings.deleteUserConfirm", { email: user.email })}
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>{t("settings.cancel")}</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteUser(user.id, user.email)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      {t("settings.delete")}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

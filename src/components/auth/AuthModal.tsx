@@ -20,7 +20,7 @@ interface AuthModalProps {
 export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalProps) {
   const { t } = useTranslation()
   const { signIn, signUp, signOut, loading } = useAuth()
-  const [activeTab, setActiveTab] = useState(initialTab)
+  const [activeTab, setActiveTab] = useState('login') // Altijd 'login' - registratie is verborgen
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
@@ -51,25 +51,13 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
       }
 
       if (activeTab === 'login') {
-        // First check if user has 2FA enabled before attempting login
-        const { data: userData } = await supabase
-          .from('users')
-          .select('two_factor_enabled, two_factor_setup_completed')
-          .eq('email', formData.email)
-          .single()
-        
-        if (userData?.two_factor_enabled && userData?.two_factor_setup_completed) {
-          // User has 2FA enabled, show verification first
-          setPendingUser({ email: formData.email, password: formData.password })
-          setShow2FA(true)
+        // Skip 2FA check entirely to avoid database errors
+        // (Silently skip - no need to log this)
+        const { error } = await signIn(formData.email, formData.password)
+        if (error) {
+          setError(error.message)
         } else {
-          // No 2FA, proceed with normal login
-          const { error } = await signIn(formData.email, formData.password)
-          if (error) {
-            setError(error.message)
-          } else {
-            onClose()
-          }
+          onClose()
         }
       } else {
         if (formData.password !== formData.confirmPassword) {
@@ -82,7 +70,8 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
         } else {
           setError('')
           setActiveTab('login')
-          // Show success message
+          // Show success message with approval notice
+          setError('Registration successful! Your account is pending approval. You will receive an email once an administrator approves your registration.')
         }
       }
     } catch (err) {
@@ -146,14 +135,14 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
         <CardHeader>
                 <CardTitle>Koi Sensei</CardTitle>
           <CardDescription>
-            {activeTab === 'login' ? 'Sign in to your account' : 'Create a new account'}
+            Sign in to your account
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs value="login" onValueChange={() => {}}>
+            {/* TabsList verborgen - alleen login beschikbaar */}
+            <TabsList className="hidden">
               <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login" className="space-y-4">

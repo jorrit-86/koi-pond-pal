@@ -45,19 +45,53 @@ export function useCombinedTemperatureData(timeRange: string = "7d", specificSen
         sensorQuery = sensorQuery.eq('sensor_id', specificSensorId)
       }
 
-      const { data: sensorData, error: sensorError } = await sensorQuery
+      // Race query against timeout
+      let queryResult: any
+      try {
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Query timeout after 10 seconds'))
+          }, 10000) // 10 second timeout
+        })
+        
+        queryResult = await Promise.race([sensorQuery, timeoutPromise])
+      } catch (timeoutError: any) {
+        if (timeoutError.message === 'Query timeout after 10 seconds') {
+          console.warn('Sensor data query timed out after 10 seconds')
+          setCombinedData([])
+          setError('Query timeout - please try again')
+          return
+        }
+        throw timeoutError // Re-throw if it's a different error
+      }
+
+      const { data: sensorData, error: sensorError } = queryResult
 
       if (sensorError) throw sensorError
 
       // Debug logging removed
 
-      // Get display names from individual_sensor_configs
-      const { data: configData, error: configError } = await supabase
-        .from('individual_sensor_configs')
-        .select('sensor_type, display_name, sensor_id')
-
-      if (configError) {
-        console.error('Error loading sensor configs:', configError)
+      // Get display names from individual_sensor_configs (with timeout)
+      let configData: any = null
+      try {
+        const configQueryPromise = supabase
+          .from('individual_sensor_configs')
+          .select('sensor_type, display_name, sensor_id')
+        
+        const configTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Config query timeout')), 5000) // 5 second timeout
+        })
+        
+        const { data: configResult, error: configError } = await Promise.race([configQueryPromise, configTimeout]) as any
+        
+        if (configError) {
+          console.error('Error loading sensor configs:', configError)
+        } else {
+          configData = configResult
+        }
+      } catch (configError) {
+        console.warn('Config query timed out or failed:', configError)
+        // Continue without config data
       }
 
       // Combine and format data
@@ -133,22 +167,40 @@ export function useCombinedTemperatureData(timeRange: string = "7d", specificSen
           cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000) // 24 hours ago
           break
         case "7d":
-          cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) // 7 days ago
+          // 7 days ago - use date calculation for consistency
+          cutoffDate = new Date(now)
+          cutoffDate.setDate(now.getDate() - 7)
+          cutoffDate.setHours(0, 0, 0, 0) // Start of day 7 days ago
           break
         case "14d":
-          cutoffDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000) // 14 days ago
+          // 14 days ago - use date calculation for consistency
+          cutoffDate = new Date(now)
+          cutoffDate.setDate(now.getDate() - 14)
+          cutoffDate.setHours(0, 0, 0, 0) // Start of day 14 days ago
           break
         case "30d":
-          cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) // 30 days ago
+          // 30 days ago - use date calculation for consistency
+          cutoffDate = new Date(now)
+          cutoffDate.setDate(now.getDate() - 30)
+          cutoffDate.setHours(0, 0, 0, 0) // Start of day 30 days ago
           break
         case "90d":
-          cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000) // 90 days ago
+          // 90 days ago - use date calculation for consistency
+          cutoffDate = new Date(now)
+          cutoffDate.setDate(now.getDate() - 90)
+          cutoffDate.setHours(0, 0, 0, 0) // Start of day 90 days ago
           break
         case "365d":
-          cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000) // 365 days ago
+          // 365 days ago - use date calculation for consistency
+          cutoffDate = new Date(now)
+          cutoffDate.setDate(now.getDate() - 365)
+          cutoffDate.setHours(0, 0, 0, 0) // Start of day 365 days ago
           break
         default:
-          cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) // 7 days ago
+          // Default to 7 days ago
+          cutoffDate = new Date(now)
+          cutoffDate.setDate(now.getDate() - 7)
+          cutoffDate.setHours(0, 0, 0, 0) // Start of day 7 days ago
           break
       }
       
@@ -207,7 +259,10 @@ export function useCombinedTemperatureData(timeRange: string = "7d", specificSen
     } catch (err: any) {
       console.error('Error loading combined temperature data:', err.message)
       setError(err.message)
+      // Ensure data is set to empty array on error
+      setCombinedData([])
     } finally {
+      // Always clear loading state, even if there was an error or early return
       setLoading(false)
     }
   }
@@ -219,8 +274,24 @@ export function useCombinedTemperatureData(timeRange: string = "7d", specificSen
       // Auto-refresh disabled - data will only load on initial mount or manual refresh
       // const interval = setInterval(loadCombinedData, 120000)
       // return () => clearInterval(interval)
+    } else if (!user) {
+      // If no user, clear loading state
+      setLoading(false)
     }
   }, [user, timeRange, specificSensorId])
+
+  // Add timeout to prevent infinite loading
+  useEffect(() => {
+    if (loading && user) {
+      const timeout = setTimeout(() => {
+        console.warn('Combined temperature data loading timeout - forcing loading to false')
+        setLoading(false)
+        setError('Loading timeout - please try again')
+      }, 15000) // 15 second timeout
+      
+      return () => clearTimeout(timeout)
+    }
+  }, [loading, user])
 
   // Get current value (prioritize sensor if available)
   const currentValue = sensorTemp !== null ? sensorTemp : 

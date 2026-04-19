@@ -3,8 +3,136 @@
     "dashboard": "Dashboard",
     "waterParameters": "Water Parameters",
     "koiManagement": "Koi Management",
+    "khCalculator": "KH Calculator",
     "settings": "Settings",
     "signOut": "Sign Out"
+  },
+  "khCalculator": {
+    "title": "KH Calculator",
+    "subtitle": "Calculate how much sodium bicarbonate is needed to safely raise KH.",
+    "recommendationText": "A KH around 6 dKH is a practical target for many koi ponds to help keep biological filtration stable.",
+    "enterValidValues": "Enter valid values to see your KH guidance and dosing plan.",
+    "quickCheckPrefix": "Quick check: measured KH",
+    "quickCheckTarget": "target KH",
+    "quickCheckTotal": "total sodium bicarbonate needed",
+    "validation": {
+      "measuredKh": "Enter a valid KH value",
+      "targetKh": "Enter a valid target KH",
+      "pondVolume": "Enter a valid pond volume"
+    },
+    "form": {
+      "title": "Inputs",
+      "description": "Enter your current KH, target KH, and pond volume.",
+      "measuredKhLabel": "Measured KH (dKH)",
+      "measuredKhPlaceholder": "3.0",
+      "useRecommendedTarget": "Use recommended target KH (6 dKH)",
+      "targetKhLabel": "Target KH (dKH)",
+      "targetKhPlaceholder": "6.0",
+      "pondVolumeLabel": "Pond volume in liters",
+      "pondVolumePlaceholder": "13000"
+    },
+    "result": {
+      "title": "Result",
+      "baseInfo": "For a 13,000 liter pond, raising KH by 1 dKH requires about 390 g sodium bicarbonate.",
+      "recommendedTargetKh": "Recommended target KH",
+      "measuredKh": "Measured KH",
+      "targetKh": "Target KH",
+      "khDifference": "KH difference",
+      "totalRequiredDose": "Total required dose",
+      "maxDailyDose": "Maximum daily dose"
+    },
+    "schedule": {
+      "title": "Dosing schedule",
+      "description": "Split doses by day and do not exceed the daily maximum.",
+      "empty": "No dosing schedule is needed with the current KH and target.",
+      "dayLabel": "Day {{day}}"
+    },
+    "messages": {
+      "belowTarget": "Your KH is below the selected target. Raise KH gradually using sodium bicarbonate.",
+      "atTarget": "Your KH is at the selected target. No correction is needed right now.",
+      "aboveTarget": "Your KH is above the selected target. Do not add sodium bicarbonate right now.",
+      "safetyAdvice": "Dose gradually, not all at once. Dissolve each dose in a bucket of pond water first and add it in an area with good circulation. Measure again after the final dose.",
+      "maintenanceAdvice": "KH often declines gradually due to biological activity. Weekly measurements help you learn how much KH your pond uses."
+    },
+    "advice": {
+      "title": "Advice",
+      "maintenanceLead": "KH often declines gradually due to biological activity. Weekly measurements help you learn how much KH your pond uses.",
+      "belowTargetBullet1": "Raise KH gradually using sodium bicarbonate.",
+      "belowTargetBullet2": "Dissolve each day's dose in a bucket of pond water first.",
+      "belowTargetBullet3": "Add it in an area with good water flow.",
+      "belowTargetBullet4": "Do not add the full amount at once.",
+      "belowTargetBullet5": "Measure KH again after the final dose.",
+      "atTargetFollowup": "Keep measuring weekly to track consumption over time.",
+      "aboveTargetFollowup": "Lowering KH is usually not necessary if the value is stable. Keep monitoring KH over time.",
+      "safetyTitle": "Safety advice",
+      "maintenanceTitle": "Maintenance guidance",
+      "maintenanceExample": "Example: If you raise KH to 6 dKH and measure 4 dKH a week later, your pond is using about 2 dKH per week."
+    }
+  },
+  "maintenance": {
+    "title": "Maintenance Tasks",
+    "todos": "To-Do's",
+    "taskTypes": {
+      "water_change": "Water Change",
+      "clean_brushes": "Clean Brushes",
+      "filter_check": "Filter Check",
+      "water_parameters": "Measure Water Parameters",
+      "custom": "Custom"
+    },
+    "frequencyTypes": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "x_days": "Every X Days",
+      "monthly": "Monthly",
+      "four_weeks": "Every 4 Weeks"
+    },
+    "status": {
+      "pending": "Pending",
+      "completed": "Completed",
+      "overdue": "Overdue"
+    },
+    "weekDays": {
+      "sunday": "Sunday",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday"
+    },
+    "form": {
+      "taskName": "Task Name",
+      "taskType": "Task Type",
+      "frequency": "Frequency",
+      "frequencyValue": "Value",
+      "advanceNotice": "Days in Advance",
+      "advanceNoticeDesc": "How many days before due date should the task appear",
+      "isActive": "Active",
+      "createTask": "New Task",
+      "editTask": "Edit Task",
+      "deleteTask": "Delete Task",
+      "completeTask": "Complete Task",
+      "addNotes": "Add Notes"
+    },
+    "dashboard": {
+      "upcomingTasks": "Upcoming Tasks",
+      "overdueTasks": "Overdue Tasks",
+      "noTasks": "No tasks scheduled",
+      "dueToday": "Today",
+      "dueTomorrow": "Tomorrow",
+      "dueInDays": "In {{days}} days",
+      "overdueByDays": "{{days}} days overdue"
+    },
+    "messages": {
+      "taskCreated": "Task created successfully",
+      "taskUpdated": "Task updated successfully",
+      "taskDeleted": "Task deleted successfully",
+      "taskCompleted": "Task marked as completed",
+      "createError": "Error creating task",
+      "updateError": "Error updating task",
+      "deleteError": "Error deleting task",
+      "completeError": "Error completing task"
+    }
   },
   "photoUpload": {
     "previewPhoto": "Preview Photo",
@@ -58,7 +186,7 @@
       },
       "koiManagement": {
         "title": "Koi Management",
-        "description": "Keep track of your koi collection, including health status, feeding and growth tracking."
+        "description": "Keep track of your koi collection, including health status and growth tracking."
       },
       "analytics": {
         "title": "Advanced Analytics",
@@ -137,6 +265,7 @@
     "lowTempWarning": "Water temperature is dangerously low. Koi may become stressed or go into hibernation.",
     "highTempWarning": "Water temperature is dangerously high. This can cause oxygen depletion and stress.",
     "elevatedTemperature": "Elevated Temperature",
+    "lowTemperature": "Low Temperature",
     "temperatureWarning": "Water temperature is outside optimal range. Monitor koi behavior closely.",
     "dangerousNitriteLevel": "Dangerous Nitrite Level",
     "nitriteDangerWarning": "Nitrite levels are dangerously high! This is toxic to koi. Immediate water change required.",
@@ -186,8 +315,6 @@
     "healthy": "Healthy",
     "sick": "Sick",
     "recovering": "Recovering",
-    "lastFeeding": "Last Feeding",
-    "feedingSchedule": "Feeding Schedule",
     "notes": "Notes"
   },
   "settings": {
@@ -237,6 +364,45 @@
     "passwordMismatchDesc": "New password and confirmation do not match",
     "passwordTooShort": "Password Too Short",
     "passwordTooShortDesc": "Password must be at least 6 characters long",
+    "general": {
+      "title": "General Settings",
+      "subtitle": "Configure your koi pond management preferences",
+      "appearance": "Appearance",
+      "appearanceDescription": "Customize the look and feel of your dashboard",
+      "darkMode": "Dark Mode",
+      "darkModeDescription": "Toggle between light and dark theme",
+      "chooseLanguage": "Choose your preferred language",
+      "selectLanguage": "Select language",
+      "homeAssistantIntegration": "Home Assistant Integration",
+      "homeAssistantDescription": "Connect to your Home Assistant instance for automated data logging",
+      "homeAssistantUrl": "Home Assistant URL",
+      "homeAssistantUrlPlaceholder": "https://your-homeassistant.local:8123",
+      "longLivedAccessToken": "Long-Lived Access Token",
+      "accessTokenPlaceholder": "Your Home Assistant access token",
+      "autoLoggingFromHA": "Auto-logging from HA",
+      "autoLoggingDescription": "Automatically log water parameters from Home Assistant sensors",
+      "testConnection": "Test Connection",
+      "parameterTestingTimers": "Parameter Testing Timers",
+      "parameterTimersDescription": "Set countdown timers for regular water parameter testing",
+      "timerDuration": "Timer Duration (minutes)",
+      "enableTimerReminders": "Enable timer reminders for {parameter} testing",
+      "notificationsAlerts": "Notifications & Alerts",
+      "notificationsDescription": "Configure when and how you receive alerts",
+      "parameterAlerts": "Parameter Alerts",
+      "parameterAlertsDescription": "Get notified when water parameters are outside ideal ranges",
+      "alertThresholds": "Alert Thresholds",
+      "phWarningLevel": "pH Warning Level",
+      "phDangerLevel": "pH Danger Level",
+      "nitrateWarning": "Nitrate Warning (mg/l)",
+      "nitrateDanger": "Nitrate Danger (mg/l)",
+      "dataManagement": "Data Management",
+      "dataManagementDescription": "Manage your pond data and history",
+      "exportData": "Export Data",
+      "importData": "Import Data",
+      "dangerZone": "Danger Zone",
+      "dangerZoneDescription": "These actions cannot be undone. Please be careful.",
+      "clearAllHistoricalData": "Clear All Historical Data"
+    },
     "profilePhoto": "Profile Photo",
     "profilePhotoDescription": "Upload and manage your profile picture",
     "uploadPhoto": "Upload Photo",

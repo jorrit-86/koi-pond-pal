@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PhotoUpload } from "@/components/ui/photo-upload"
-import { ArrowLeft, Image, Save, Pencil, Check, X, Trash2, Plus, Star, BarChart3 } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ArrowLeft, Image, Save, Pencil, Check, X, Trash2, Plus, Star, BarChart3, Archive, Printer } from "lucide-react"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
@@ -16,10 +17,15 @@ import { KoiLogbook } from "./koi-logbook"
 import { GrowthChart } from "./growth-chart"
 
 // Helper function to extract healthStatus from notes
-function extractHealthStatusFromNotes(notes: string | null): string | null {
+function extractHealthStatusFromNotes(notes: string | null): "excellent" | "good" | "needs-attention" | null {
   if (!notes) return null
   const match = notes.match(/\[HealthStatus: ([^\]]+)\]/)
-  return match ? match[1] : null
+  if (!match) return null
+  const status = match[1]
+  if (status === 'excellent' || status === 'good' || status === 'needs-attention') {
+    return status
+  }
+  return null
 }
 
 interface Koi {
@@ -41,6 +47,9 @@ interface Koi {
   age_at_purchase?: number
   length_at_purchase?: number
   location?: string
+  archived?: boolean
+  archive_reason?: string
+  archive_date?: string
 }
 
 interface KoiPhoto {
@@ -58,7 +67,7 @@ interface KoiEditPageProps {
 }
 
 export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProps) {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const { uploadPhoto, uploading } = usePhotoUpload()
   const { toast } = useToast()
   const [showPhotoUpload, setShowPhotoUpload] = useState(false)
@@ -70,6 +79,9 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
   const [currentLength, setCurrentLength] = useState<number | null>(null)
   const [tempValue, setTempValue] = useState<string>("")
   const [showGrowthChart, setShowGrowthChart] = useState(false)
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false)
+  const [archiveReason, setArchiveReason] = useState<string>("")
+  const [isArchiving, setIsArchiving] = useState(false)
 
   useEffect(() => {
     if (user && koiId) {
@@ -81,6 +93,95 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
   const loadKoiData = async () => {
     try {
       setLoading(true)
+      
+      // Check if Supabase has a session
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      
+      // If no Supabase session but we have React session, use direct fetch
+      if (!currentSession && session?.access_token) {
+        try {
+          console.log('Loading koi data using direct fetch with access token...')
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi?id=eq.${koiId}&user_id=eq.${user?.id}&select=*`,
+            {
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          )
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+          
+          const dataArray = await response.json()
+          const data = dataArray && dataArray.length > 0 ? dataArray[0] : null
+          
+          if (!data) {
+            throw new Error('No koi data found')
+          }
+          
+          // Continue with photo loading and transformation...
+          // Load koi photos using direct fetch
+          const photosResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi_photos?koi_id=eq.${koiId}&select=*&order=display_order.asc`,
+            {
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          )
+          
+          let photosData = []
+          if (photosResponse.ok) {
+            photosData = await photosResponse.json()
+          }
+          
+          setKoiPhotos(photosData || [])
+          
+          // Transform database data (same as normal path below)
+          // ... transformation code will be added below
+          const transformedKoi = {
+            id: data.id,
+            name: data.name || data.species || 'Unknown',
+            variety: data.species || 'Unknown',
+            age: data.age_years || 0,
+            length: data.size_cm || 0,
+            weight: data.weight,
+            color: data.color || '',
+            healthStatus: extractHealthStatusFromNotes(data.notes) || data.healthStatus || 'good',
+            dateAdded: data.purchase_date || data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            notes: data.notes || undefined,
+            photo_url: data.photo_url || undefined,
+            breeder: data.breeder || undefined,
+            dealer: data.dealer || undefined,
+            purchase_price: data.purchase_price || undefined,
+            purchase_date: data.purchase_date || undefined,
+            age_at_purchase: data.age_at_purchase || undefined,
+            length_at_purchase: data.length_at_purchase || undefined,
+            location: data.location || 'pond'
+          }
+          
+          setKoi(transformedKoi)
+          setLoading(false)
+          return
+        } catch (error) {
+          console.error('Error loading koi data with direct fetch:', error)
+          toast({
+            title: "Fout",
+            description: "Kon koi gegevens niet laden.",
+            variant: "destructive",
+          })
+          onNavigate("koi")
+          return
+        }
+      }
+      
+      // Normal Supabase query path
       const { data, error } = await supabase
         .from('koi')
         .select('*')
@@ -116,13 +217,13 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
       // Transform database data to match our interface
       const transformedKoi: Koi = {
         id: data.id,
-        name: data.name || data.species || data.variety || 'Unknown', // Use variety as name if no name provided
-        variety: data.species || data.variety || 'Unknown',
+        name: data.name || data.species || 'Unknown', // Use species as name if no name provided
+        variety: data.species || 'Unknown',
         age: data.age_years || 0,
         length: data.size_cm || 0,
         weight: data.weight,
         color: data.color || '',
-        healthStatus: extractHealthStatusFromNotes(data.notes) || 'good',
+        healthStatus: extractHealthStatusFromNotes(data.notes) ?? 'good',
         dateAdded: data.purchase_date || data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         notes: data.notes || undefined,
         photo_url: data.photo_url || undefined,
@@ -132,7 +233,10 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
         purchase_date: data.purchase_date || undefined,
         age_at_purchase: data.age_at_purchase || undefined,
         length_at_purchase: data.length_at_purchase || undefined,
-        location: data.location || 'pond'
+        location: data.location || 'pond',
+        archived: data.archived || false,
+        archive_reason: data.archive_reason || undefined,
+        archive_date: data.archive_date || undefined
       }
 
       setKoi(transformedKoi)
@@ -150,8 +254,60 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
   }
 
   const loadCurrentLength = async () => {
+    if (!user || !koiId) {
+      return
+    }
+
     try {
-      // Haal de laatste meting op
+      // Check if Supabase has a session
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      
+      // If no Supabase session but we have React session, use direct fetch
+      if (!currentSession && session?.access_token) {
+        try {
+          console.log('Loading current length using direct fetch with access token...')
+          // Fetch all measurements and filter in JavaScript to avoid REST API syntax issues
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi_log_entries?koi_id=eq.${koiId}&entry_type=eq.measurement&select=length_cm,entry_date&order=entry_date.desc`,
+            {
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          )
+          
+          if (!response.ok) {
+            // If 404 or no data, that's okay - just means no measurements yet
+            if (response.status === 404 || response.status === 406) {
+              console.log('No measurements found for current length')
+              return
+            }
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+          
+          const data = await response.json()
+          const measurements = Array.isArray(data) ? data : [data]
+          
+          // Find the first measurement with a non-null length_cm
+          const measurement = measurements.find((m: any) => m.length_cm != null)
+          
+          if (measurement?.length_cm) {
+            console.log('Loaded current length (direct fetch):', measurement.length_cm, 'cm')
+            setCurrentLength(measurement.length_cm)
+          } else {
+            console.log('No measurements with length found for current length')
+          }
+          return
+        } catch (error: any) {
+          console.error('Error loading current length with direct fetch:', error)
+          // Don't throw - just return, we'll fall back to length_at_purchase
+          return
+        }
+      }
+
+      // Normal Supabase query
       const { data, error } = await supabase
         .from('koi_log_entries')
         .select('length_cm')
@@ -168,7 +324,11 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
       }
 
       if (data?.length_cm) {
+        console.log('Loaded current length (normal query):', data.length_cm, 'cm')
         setCurrentLength(data.length_cm)
+      } else {
+        // Reset to null if no measurement found, so it falls back to length_at_purchase
+        setCurrentLength(null)
       }
     } catch (error) {
       console.error('Error in loadCurrentLength:', error)
@@ -335,7 +495,12 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
         
         updateData['notes'] = newNotes
         // Also update local state
-        setKoi(prev => prev ? { ...prev, [field]: tempValue } : null)
+        setKoi(prev => prev ? { 
+          ...prev, 
+          healthStatus: (tempValue === 'excellent' || tempValue === 'good' || tempValue === 'needs-attention') 
+            ? tempValue as "excellent" | "good" | "needs-attention"
+            : prev.healthStatus
+        } : null)
         
         // Skip the rest of the function to avoid healthStatus column error
         const { data, error } = await supabase
@@ -481,6 +646,416 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
     }
   }
 
+  const handleArchiveKoi = async () => {
+    toast({
+      title: "Archief functionaliteit",
+      description: "Archief functionaliteit is tijdelijk uitgeschakeld. Controleer of de database update is uitgevoerd.",
+      variant: "destructive",
+    })
+    setShowArchiveDialog(false)
+  }
+
+  const handleUnarchiveKoi = async () => {
+    toast({
+      title: "Archief functionaliteit",
+      description: "Archief functionaliteit is tijdelijk uitgeschakeld. Controleer of de database update is uitgevoerd.",
+      variant: "destructive",
+    })
+  }
+
+  const handlePrint = async () => {
+    if (!koi) return
+
+    try {
+      // Haal recente logboek entries op voor print
+      const { data: logEntries = [] } = await supabase
+        .from('koi_log_entries')
+        .select('*')
+        .eq('koi_id', koiId)
+        .order('entry_date', { ascending: false })
+        .limit(10)
+
+      // Maak een nieuw venster voor print
+      const printWindow = window.open('', '_blank')
+      if (!printWindow) {
+        toast({
+          title: "Print fout",
+          description: "Kon print venster niet openen. Controleer pop-up blocker.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Haal primaire foto op
+      const primaryPhoto = koiPhotos.find(p => p.is_primary)?.photo_url || koiPhotos[0]?.photo_url || koi.photo_url
+      
+      // Format datum helper
+      const formatDate = (date: string | undefined) => {
+        if (!date) return 'Onbekend'
+        return new Date(date).toLocaleDateString('nl-NL', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      }
+
+      // Format gezondheidsstatus
+      const healthStatusText = {
+        'excellent': 'Uitstekend',
+        'good': 'Goed',
+        'needs-attention': 'Aandacht Nodig'
+      }[koi.healthStatus] || koi.healthStatus
+
+      // Format locatie
+      const locationText = {
+        'pond': 'Vijver',
+        'quarantine': 'Quarantaine',
+        'hospital': 'Ziekenboeg',
+        'breeding_tank': 'Kweekbak',
+        'breeder': 'Kweker',
+        'dealer': 'Dealer',
+        'other': 'Anders'
+      }[koi.location || 'pond'] || 'Vijver'
+
+      // Format entry type
+      const entryTypeLabels: { [key: string]: string } = {
+        'measurement': 'Meting',
+        'medication': 'Medicijngebruik',
+        'note': 'Opmerking',
+        'behavior': 'Gedrag',
+        'treatment': 'Ziekte/Behandeling'
+      }
+
+      // Bereken huidige leeftijd
+      const currentAge = koi.purchase_date && koi.age_at_purchase !== undefined 
+        ? getAgeDisplayText(calculateCurrentAge(koi.purchase_date, koi.age_at_purchase))
+        : 'Onbekend'
+
+      // Schrijf print HTML
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Koi Details - ${koi.name}</title>
+            <meta charset="utf-8">
+            <style>
+              @page {
+                margin: 1.5cm;
+              }
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                color: #333;
+                line-height: 1.6;
+                max-width: 800px;
+                margin: 0 auto;
+              }
+              .header {
+                text-align: center;
+                border-bottom: 3px solid #2563eb;
+                padding-bottom: 20px;
+                margin-bottom: 30px;
+              }
+              .header h1 {
+                color: #2563eb;
+                margin: 0;
+                font-size: 32px;
+              }
+              .header .subtitle {
+                color: #666;
+                margin-top: 5px;
+                font-size: 14px;
+              }
+              .content {
+                display: grid;
+                grid-template-columns: 1fr 2fr;
+                gap: 30px;
+                margin-bottom: 30px;
+              }
+              .photo-section {
+                text-align: center;
+              }
+              .photo-section img {
+                max-width: 100%;
+                height: auto;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                margin-bottom: 10px;
+              }
+              .photo-section .photo-label {
+                font-size: 12px;
+                color: #666;
+              }
+              .info-section {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+              }
+              .section {
+                margin-bottom: 25px;
+              }
+              .section-title {
+                font-size: 18px;
+                font-weight: bold;
+                color: #2563eb;
+                margin-bottom: 15px;
+                border-bottom: 2px solid #e5e7eb;
+                padding-bottom: 5px;
+              }
+              .info-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+              }
+              .info-item {
+                margin-bottom: 12px;
+              }
+              .info-label {
+                font-size: 12px;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 3px;
+              }
+              .info-value {
+                font-size: 16px;
+                font-weight: 600;
+                color: #111;
+              }
+              .full-width {
+                grid-column: 1 / -1;
+              }
+              .badge {
+                display: inline-block;
+                padding: 4px 12px;
+                border-radius: 12px;
+                font-size: 13px;
+                font-weight: 500;
+              }
+              .badge-excellent {
+                background-color: #dcfce7;
+                color: #166534;
+              }
+              .badge-good {
+                background-color: #dbeafe;
+                color: #1e40af;
+              }
+              .badge-attention {
+                background-color: #fef3c7;
+                color: #92400e;
+              }
+              .logbook-section {
+                margin-top: 30px;
+                page-break-inside: avoid;
+              }
+              .logbook-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+              }
+              .logbook-table th {
+                background-color: #f3f4f6;
+                padding: 10px;
+                text-align: left;
+                font-size: 12px;
+                text-transform: uppercase;
+                color: #666;
+                border-bottom: 2px solid #e5e7eb;
+              }
+              .logbook-table td {
+                padding: 10px;
+                border-bottom: 1px solid #e5e7eb;
+                font-size: 14px;
+              }
+              .logbook-table tr:last-child td {
+                border-bottom: none;
+              }
+              .footer {
+                margin-top: 40px;
+                padding-top: 20px;
+                border-top: 2px solid #e5e7eb;
+                text-align: center;
+                font-size: 12px;
+                color: #666;
+              }
+              @media print {
+                .no-print {
+                  display: none;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>Koi Details Overzicht</h1>
+              <div class="subtitle">Gegenereerd op ${new Date().toLocaleDateString('nl-NL', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}</div>
+            </div>
+
+            <div class="content">
+              ${primaryPhoto ? `
+                <div class="photo-section">
+                  <img src="${primaryPhoto}" alt="${koi.name}" />
+                  <div class="photo-label">${koi.name}</div>
+                </div>
+              ` : ''}
+
+              <div class="info-section">
+                <div class="section">
+                  <div class="section-title">Basis Informatie</div>
+                  <div class="info-grid">
+                    <div class="info-item">
+                      <div class="info-label">Naam</div>
+                      <div class="info-value">${koi.name}</div>
+                    </div>
+                    <div class="info-item">
+                      <div class="info-label">Variëteit</div>
+                      <div class="info-value">${koi.variety}</div>
+                    </div>
+                    <div class="info-item full-width">
+                      <div class="info-label">Gezondheidsstatus</div>
+                      <div class="info-value">
+                        <span class="badge badge-${koi.healthStatus === 'excellent' ? 'excellent' : koi.healthStatus === 'good' ? 'good' : 'attention'}">
+                          ${healthStatusText}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="section">
+                  <div class="section-title">Huidige Metingen</div>
+                  <div class="info-grid">
+                    <div class="info-item">
+                      <div class="info-label">Huidige Leeftijd</div>
+                      <div class="info-value">${currentAge}</div>
+                    </div>
+                    <div class="info-item">
+                      <div class="info-label">Huidige Lengte</div>
+                      <div class="info-value">${currentLength || koi.length_at_purchase || koi.length} cm</div>
+                    </div>
+                    <div class="info-item">
+                      <div class="info-label">Locatie</div>
+                      <div class="info-value">${locationText}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="section">
+                  <div class="section-title">Aanschaf Informatie</div>
+                  <div class="info-grid">
+                    <div class="info-item">
+                      <div class="info-label">Datum Aanschaf</div>
+                      <div class="info-value">${formatDate(koi.purchase_date)}</div>
+                    </div>
+                    <div class="info-item">
+                      <div class="info-label">Leeftijd bij Aanschaf</div>
+                      <div class="info-value">${koi.age_at_purchase ? `${koi.age_at_purchase} jaar` : 'Onbekend'}</div>
+                    </div>
+                    <div class="info-item">
+                      <div class="info-label">Lengte bij Aanschaf</div>
+                      <div class="info-value">${koi.length_at_purchase ? `${koi.length_at_purchase} cm` : 'Onbekend'}</div>
+                    </div>
+                    ${koi.purchase_price ? `
+                      <div class="info-item">
+                        <div class="info-label">Aankoopbedrag</div>
+                        <div class="info-value">€${koi.purchase_price.toFixed(2)}</div>
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+
+                ${(koi.breeder || koi.dealer) ? `
+                  <div class="section">
+                    <div class="section-title">Herkomst</div>
+                    <div class="info-grid">
+                      ${koi.breeder ? `
+                        <div class="info-item">
+                          <div class="info-label">Kweker</div>
+                          <div class="info-value">${koi.breeder}</div>
+                        </div>
+                      ` : ''}
+                      ${koi.dealer ? `
+                        <div class="info-item">
+                          <div class="info-label">Dealer</div>
+                          <div class="info-value">${koi.dealer}</div>
+                        </div>
+                      ` : ''}
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${koi.notes ? `
+                  <div class="section">
+                    <div class="section-title">Notities</div>
+                    <div class="info-value" style="font-weight: normal; font-size: 14px; white-space: pre-wrap;">${koi.notes.replace(/\[HealthStatus:[^\]]+\]/g, '').trim() || 'Geen notities'}</div>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+
+            ${logEntries && logEntries.length > 0 ? `
+              <div class="logbook-section">
+                <div class="section-title">Recent Logboek Overzicht</div>
+                <table class="logbook-table">
+                  <thead>
+                    <tr>
+                      <th>Datum</th>
+                      <th>Type</th>
+                      <th>Beschrijving</th>
+                      ${logEntries.some(e => e.length_cm) ? '<th>Lengte</th>' : ''}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${logEntries.map(entry => `
+                      <tr>
+                        <td>${formatDate(entry.entry_date)}</td>
+                        <td>${entryTypeLabels[entry.entry_type] || entry.entry_type}</td>
+                        <td>${entry.description}</td>
+                        ${entry.length_cm ? `<td>${entry.length_cm} cm</td>` : ''}
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : ''}
+
+            <div class="footer">
+              <p>Dit document is gegenereerd vanuit Koi Pond Pal</p>
+            </div>
+
+            <script>
+              window.onload = function() {
+                window.print();
+                window.onafterprint = function() {
+                  window.close();
+                };
+              };
+            </script>
+          </body>
+        </html>
+      `)
+
+      printWindow.document.close()
+      
+      toast({
+        title: "Print voorbereiden",
+        description: "Print dialoog wordt geopend...",
+      })
+    } catch (error) {
+      console.error('Error printing:', error)
+      toast({
+        title: "Print fout",
+        description: "Er is een fout opgetreden bij het voorbereiden van de print.",
+        variant: "destructive",
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -607,6 +1182,16 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Foto Toevoegen
+              </Button>
+
+              {/* Print Button */}
+              <Button 
+                variant="outline" 
+                onClick={handlePrint}
+                className="w-full"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print Details
               </Button>
             </div>
 
@@ -1089,7 +1674,7 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-center pt-6">
+              <div className="flex justify-center gap-4 pt-6">
                 <Button 
                   onClick={handleUpdateKoi} 
                   disabled={saving || uploading}
@@ -1098,6 +1683,62 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
                   <Save className="h-4 w-4 mr-2" />
                   {saving ? 'Opslaan...' : uploading ? 'Uploaden...' : 'Alle Wijzigingen Opslaan'}
                 </Button>
+                
+                {koi?.archived ? (
+                  <Button 
+                    variant="default" 
+                    className="px-6"
+                    onClick={handleUnarchiveKoi}
+                    disabled={isArchiving}
+                  >
+                    <Archive className="h-4 w-4 mr-2" />
+                    {isArchiving ? 'Terugzetten...' : 'Naar Collectie'}
+                  </Button>
+                ) : (
+                  <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+                    <DialogTrigger asChild>
+                      <Button variant="destructive" className="px-6">
+                        <Archive className="h-4 w-4 mr-2" />
+                        Naar Archief
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Koi Archiveren</DialogTitle>
+                        <DialogDescription>
+                          Selecteer de reden waarom {koi?.name} naar het archief wordt verplaatst.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="archive-reason">Reden voor archivering</Label>
+                          <Select value={archiveReason} onValueChange={setArchiveReason}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecteer een reden" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="overleden">Overleden</SelectItem>
+                              <SelectItem value="verkocht">Verkocht</SelectItem>
+                              <SelectItem value="overige">Overige reden</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowArchiveDialog(false)}>
+                          Annuleren
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          onClick={handleArchiveKoi}
+                          disabled={isArchiving || !archiveReason}
+                        >
+                          {isArchiving ? 'Archiveren...' : 'Archiveren'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
             </div>
           </div>

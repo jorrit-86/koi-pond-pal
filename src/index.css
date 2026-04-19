@@ -127,5 +127,7 @@ All colors MUST be HSL.
   html, body {
     max-width: 1920px;
     margin: 0 auto;
+    /* Reserve scrollbar space to prevent layout shift when dropdowns open/close */
+    scrollbar-gutter: stable;
   }
 }

@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { AIChatService, ChatMessage, ChatContext } from '@/lib/ai-chat-service'
+import { EnhancedAIChatService, EnhancedChatMessage, EnhancedChatContext } from '@/lib/enhanced-ai-chat-service'
 import { 
   MessageCircle, 
   X, 
@@ -33,6 +34,8 @@ export function AIChatAssistant({ currentPage = 'dashboard' }: AIChatAssistantPr
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [pondContext, setPondContext] = useState<ChatContext | null>(null)
+  const [enhancedPondContext, setEnhancedPondContext] = useState<EnhancedChatContext | null>(null)
+  const [useEnhancedService, setUseEnhancedService] = useState(false) // Disabled for now
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
   const { toast } = useToast()
@@ -94,6 +97,10 @@ export function AIChatAssistant({ currentPage = 'dashboard' }: AIChatAssistantPr
       // Load pond context
       const context = await AIChatService.getPondContext(user.id)
       setPondContext(context)
+      
+      // Load enhanced pond context
+      const enhancedContext = await EnhancedAIChatService.getEnhancedPondContext(user.id)
+      setEnhancedPondContext(enhancedContext)
 
       if (chatHistory.length > 0) {
         setMessages(chatHistory)
@@ -119,17 +126,25 @@ export function AIChatAssistant({ currentPage = 'dashboard' }: AIChatAssistantPr
   }
 
   const generateAIResponse = async (userMessage: string): Promise<string> => {
-    if (!pondContext) {
+    if (useEnhancedService && enhancedPondContext) {
+      // Use enhanced service with all new features
+      const updatedContext: EnhancedChatContext = {
+        ...enhancedPondContext,
+        currentPage
+      }
+      
+      const enhancedResponse = await EnhancedAIChatService.generateEnhancedResponse(userMessage, updatedContext)
+      return enhancedResponse.content
+    } else if (pondContext) {
+      // Use original service as fallback
+      const updatedContext: ChatContext = {
+        ...pondContext,
+        currentPage
+      }
+      return await AIChatService.generateResponse(userMessage, updatedContext)
+    } else {
       return "Ik ben nog bezig met het laden van je vijvergegevens. Probeer het over een momentje opnieuw!"
     }
-
-    // Update context with current page
-    const updatedContext: ChatContext = {
-      ...pondContext,
-      currentPage
-    }
-
-    return await AIChatService.generateResponse(userMessage, updatedContext)
   }
 
   const handleSendMessage = async () => {
@@ -235,6 +250,22 @@ export function AIChatAssistant({ currentPage = 'dashboard' }: AIChatAssistantPr
                     <p className="text-xs text-muted-foreground">
                       {getPageContext()} • Altijd beschikbaar
                     </p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Badge 
+                        variant={useEnhancedService ? "default" : "secondary"}
+                        className="text-xs"
+                      >
+                        {useEnhancedService ? "Enhanced" : "Basic"}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setUseEnhancedService(!useEnhancedService)}
+                        className="h-6 px-2 text-xs"
+                      >
+                        Switch
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 <Button

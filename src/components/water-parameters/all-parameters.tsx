@@ -8,15 +8,15 @@ interface ParameterPageProps {
 }
 
 export const KhPage = ({ onNavigate }: ParameterPageProps) => {
-  const [timeRange, setTimeRange] = useState("7d")
-  
+  const [timeRange, setTimeRange] = useState("30d")
+
   const getKhStatus = (value: number): "optimal" | "warning" | "critical" => {
     if (value >= 6 && value <= 10) return "optimal"
     if (value >= 4 && value <= 12) return "warning"
     return "critical"
   }
 
-  const { historicData, currentValue, status, loading, hasDataInTimeRange, timeRangeInfo } = useParameterDataWithTimeRange({
+  const { historicData, currentValue, status, loading, hasDataInTimeRange, hasAnyDataInDatabase, timeRangeInfo } = useParameterDataWithTimeRange({
     parameterType: 'kh',
     getStatus: getKhStatus
   }, timeRange)
@@ -42,10 +42,11 @@ export const KhPage = ({ onNavigate }: ParameterPageProps) => {
       idealRange="6 - 10°dKH"
       status={status}
       historicData={historicData}
+      hasDataInTimeRange={hasDataInTimeRange}
+      hasAnyDataInDatabase={hasAnyDataInDatabase}
+      timeRangeInfo={timeRangeInfo}
       timeRange={timeRange}
       onTimeRangeChange={setTimeRange}
-      hasDataInTimeRange={hasDataInTimeRange}
-      timeRangeInfo={timeRangeInfo}
       infoContent={{
         description: "Buffering capacity of pond water",
         importance: "KH measures the water's ability to resist pH changes",
@@ -67,7 +68,7 @@ export const KhPage = ({ onNavigate }: ParameterPageProps) => {
 }
 
 export const GhPage = ({ onNavigate }: ParameterPageProps) => {
-  const [timeRange, setTimeRange] = useState("7d")
+  const [timeRange, setTimeRange] = useState("30d")
   
   const getGhStatus = (value: number): "optimal" | "warning" | "critical" => {
     if (value >= 6 && value <= 12) return "optimal"
@@ -75,7 +76,7 @@ export const GhPage = ({ onNavigate }: ParameterPageProps) => {
     return "critical"
   }
 
-  const { historicData, currentValue, status, loading, hasDataInTimeRange, timeRangeInfo } = useParameterDataWithTimeRange({
+  const { historicData, currentValue, status, loading, hasDataInTimeRange, hasAnyDataInDatabase, timeRangeInfo } = useParameterDataWithTimeRange({
     parameterType: 'gh',
     getStatus: getGhStatus
   }, timeRange)
@@ -101,10 +102,11 @@ export const GhPage = ({ onNavigate }: ParameterPageProps) => {
       idealRange="6 - 12°dGH"
       status={status}
       historicData={historicData}
+      hasDataInTimeRange={hasDataInTimeRange}
+      hasAnyDataInDatabase={hasAnyDataInDatabase}
+      timeRangeInfo={timeRangeInfo}
       timeRange={timeRange}
       onTimeRangeChange={setTimeRange}
-      hasDataInTimeRange={hasDataInTimeRange}
-      timeRangeInfo={timeRangeInfo}
       infoContent={{
         description: "Total mineral content in pond water",
         importance: "GH measures dissolved minerals, particularly calcium and magnesium",
@@ -127,7 +129,7 @@ export const GhPage = ({ onNavigate }: ParameterPageProps) => {
 
 export const NitritePage = ({ onNavigate }: ParameterPageProps) => {
   const { t } = useTranslation()
-  const [timeRange, setTimeRange] = useState("7d")
+  const [timeRange, setTimeRange] = useState("30d")
   
   const getNitriteStatus = (value: number): "optimal" | "warning" | "critical" => {
     // 0 mg/l is actually good for nitrite
@@ -136,7 +138,7 @@ export const NitritePage = ({ onNavigate }: ParameterPageProps) => {
     return "critical"
   }
 
-  const { historicData, currentValue, status, loading, hasDataInTimeRange, timeRangeInfo } = useParameterDataWithTimeRange({
+  const { historicData, currentValue, status, loading, hasDataInTimeRange, hasAnyDataInDatabase, timeRangeInfo } = useParameterDataWithTimeRange({
     parameterType: 'nitrite',
     getStatus: getNitriteStatus
   }, timeRange)
@@ -162,10 +164,11 @@ export const NitritePage = ({ onNavigate }: ParameterPageProps) => {
       idealRange="0 - 0.3 mg/L"
       status={status}
       historicData={historicData}
+      hasDataInTimeRange={hasDataInTimeRange}
+      hasAnyDataInDatabase={hasAnyDataInDatabase}
+      timeRangeInfo={timeRangeInfo}
       timeRange={timeRange}
       onTimeRangeChange={setTimeRange}
-      hasDataInTimeRange={hasDataInTimeRange}
-      timeRangeInfo={timeRangeInfo}
       infoContent={{
         description: "Giftig tussenproduct in de stikstofcyclus",
         importance: "Nitriet is zeer giftig voor koi, zelfs bij lage concentraties",
@@ -188,7 +191,7 @@ export const NitritePage = ({ onNavigate }: ParameterPageProps) => {
 
 export const NitratePage = ({ onNavigate }: ParameterPageProps) => {
   const { t } = useTranslation()
-  const [timeRange, setTimeRange] = useState("7d")
+  const [timeRange, setTimeRange] = useState("30d")
   
   const getNitrateStatus = (value: number): "optimal" | "warning" | "critical" => {
     if (value < 25) return "optimal"
@@ -196,7 +199,7 @@ export const NitratePage = ({ onNavigate }: ParameterPageProps) => {
     return "critical"
   }
 
-  const { historicData, currentValue, status, loading, hasDataInTimeRange, timeRangeInfo } = useParameterDataWithTimeRange({
+  const { historicData, currentValue, status, loading, hasDataInTimeRange, hasAnyDataInDatabase, timeRangeInfo } = useParameterDataWithTimeRange({
     parameterType: 'nitrate',
     getStatus: getNitrateStatus
   }, timeRange)
@@ -222,10 +225,11 @@ export const NitratePage = ({ onNavigate }: ParameterPageProps) => {
       idealRange="< 25 mg/L"
       status={status}
       historicData={historicData}
+      hasDataInTimeRange={hasDataInTimeRange}
+      hasAnyDataInDatabase={hasAnyDataInDatabase}
+      timeRangeInfo={timeRangeInfo}
       timeRange={timeRange}
       onTimeRangeChange={setTimeRange}
-      hasDataInTimeRange={hasDataInTimeRange}
-      timeRangeInfo={timeRangeInfo}
       infoContent={{
         description: "Eindproduct van de stikstofcyclus",
         importance: "Nitraatophoping geeft filtereffectiviteit en voedingsniveaus aan",
@@ -247,16 +251,16 @@ export const NitratePage = ({ onNavigate }: ParameterPageProps) => {
 }
 
 export const PhosphatePage = ({ onNavigate }: ParameterPageProps) => {
-  const [timeRange, setTimeRange] = useState("7d")
+  const [timeRange, setTimeRange] = useState("30d")
   
   const getPhosphateStatus = (value: number): "optimal" | "warning" | "critical" => {
     // 0 mg/l is actually good for phosphate
-    if (value < 0.5) return "optimal"
-    if (value < 1.0) return "warning"
+    if (value < 1.0) return "optimal"
+    if (value < 2.0) return "warning"
     return "critical"
   }
 
-  const { historicData, currentValue, status, loading, hasDataInTimeRange, timeRangeInfo } = useParameterDataWithTimeRange({
+  const { historicData, currentValue, status, loading, hasDataInTimeRange, hasAnyDataInDatabase, timeRangeInfo } = useParameterDataWithTimeRange({
     parameterType: 'phosphate',
     getStatus: getPhosphateStatus
   }, timeRange)
@@ -279,13 +283,14 @@ export const PhosphatePage = ({ onNavigate }: ParameterPageProps) => {
       parameterKey="phosphate"
       currentValue={currentValue}
       unit=" mg/L"
-      idealRange="< 0.5 mg/L"
+      idealRange="< 1.0 mg/L"
       status={status}
       historicData={historicData}
+      hasDataInTimeRange={hasDataInTimeRange}
+      hasAnyDataInDatabase={hasAnyDataInDatabase}
+      timeRangeInfo={timeRangeInfo}
       timeRange={timeRange}
       onTimeRangeChange={setTimeRange}
-      hasDataInTimeRange={hasDataInTimeRange}
-      timeRangeInfo={timeRangeInfo}
       infoContent={{
         description: "Nutrient that promotes algae growth",
         importance: "Phosphate levels directly correlate with algae problems",

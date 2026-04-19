@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Waves, Droplets, Fish, Settings, BarChart3, Menu, LogOut, User } from "lucide-react"
+import { Waves, Droplets, Fish, Settings, BarChart3, Menu, LogOut, User, Sparkles, Utensils, Calculator } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { useState, useCallback } from "react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "@/contexts/AuthContext"
 import koiSenseiLogo from "@/assets/koi-sensei-logo.svg"
@@ -17,12 +17,6 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
   const { user, signOut } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
 
-  // Custom touch handler for mobile compatibility
-  const handleLogoClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    onTabChange("dashboard")
-  }, [onTabChange])
 
   // Get user initials for avatar fallback
   const getUserInitials = () => {
@@ -41,7 +35,10 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
     { id: "dashboard", label: t("navigation.dashboard"), icon: Waves },
     { id: "parameters", label: t("navigation.waterParameters"), icon: Droplets },
     { id: "koi", label: t("navigation.koiManagement"), icon: Fish },
+    { id: "feed-advisor", label: "Feed Advisor", icon: Utensils },
+    { id: "kh-calculator", label: t("navigation.khCalculator"), icon: Calculator },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
+    // { id: "enhanced-services-demo", label: "Enhanced Services", icon: Sparkles }, // Disabled for now
     { id: "settings", label: t("navigation.settings"), icon: Settings },
   ]
 
@@ -49,28 +46,32 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
     <nav className="flex flex-col h-full p-4">
       {/* Header */}
       <div 
-        className="flex items-center space-x-3 mb-6 cursor-pointer hover:opacity-80 transition-opacity"
-        onClick={handleLogoClick}
-        onTouchStart={handleLogoClick}
-        onTouchEnd={handleLogoClick}
-        onMouseDown={handleLogoClick}
-        style={{ 
-          WebkitTouchCallout: 'none',
-          WebkitUserSelect: 'none',
-          userSelect: 'none',
-          touchAction: 'manipulation',
-          WebkitTapHighlightColor: 'transparent'
+        className="mb-6 cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={() => onTabChange("dashboard")}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onTabChange("dashboard")
+          }
+        }}
+        style={{
+          WebkitTapHighlightColor: 'transparent',
+          touchAction: 'manipulation'
         }}
       >
-        <img 
-          src={koiSenseiLogo} 
-          alt="Koi Sensei Logo" 
-          className="h-10 w-10"
-          draggable="false"
-        />
-        <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          Koi Sensei
-        </h1>
+        <div className="flex items-center space-x-3 p-3">
+          <img 
+            src={koiSenseiLogo} 
+            alt="Koi Sensei Logo" 
+            className="h-10 w-10"
+            draggable="false"
+          />
+          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Koi Sensei
+          </h1>
+        </div>
       </div>
 
       {/* Main Navigation Items */}

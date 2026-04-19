@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Navigation } from "@/components/layout/navigation"
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { ParameterForm } from "@/components/water-parameters/parameter-form"
@@ -7,12 +7,15 @@ import { KoiManagement } from "@/components/koi/koi-management"
 import { KoiAddPage } from "@/components/koi/koi-add-page"
 import { KoiEditPage } from "@/components/koi/koi-edit-page"
 import { KoiLogbookOverview } from "@/components/koi/koi-logbook-overview"
+import { KoiArchive } from "@/components/koi/koi-archive"
 import { SettingsPage } from "@/components/settings/settings-page"
 import { UserProfilePage } from "@/components/user/user-profile-page"
 import { AnalyticsPage } from "@/components/analytics/analytics-page"
 import { PhPage } from "@/components/water-parameters/ph-page"
 import { TemperaturePage } from "@/components/water-parameters/temperature-page"
 import { TemperatureSensorPage } from "@/components/water-parameters/temperature-sensor-page"
+import { AmmoniaPage } from "@/components/water-parameters/ammonia-page"
+import { WaterChangePage } from "@/components/water-parameters/water-change-page"
 import { KhPage, GhPage, NitritePage, NitratePage, PhosphatePage } from "@/components/water-parameters/all-parameters"
 import { AuthModal } from "@/components/auth/AuthModal"
 import { LandingPage } from "@/pages/LandingPage"
@@ -24,6 +27,12 @@ import { AIChatAssistant } from "@/components/ai/ai-chat-assistant"
 import { SensorTransferNotification } from "@/components/settings/sensor-transfer-notification"
 import { WaterChangeForm } from "@/components/water-changes/water-change-form"
 import { WaterChangeHistory } from "@/components/water-changes/water-change-history"
+import { EnhancedServicesDemo } from "@/components/demo/enhanced-services-demo"
+import { FeedAdvisor } from "@/components/feed-advisor/feed-advisor"
+import { EnhancedFeedAdvisor } from "@/components/feed-advisor/enhanced-feed-advisor"
+import { FeedAdvisorSettings } from "@/components/feed-advisor/feed-advisor-settings"
+import { MaintenanceHistory } from "@/components/maintenance/maintenance-history"
+import { KhCalculatorPage } from "@/components/kh-calculator/kh-calculator-page"
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard")
@@ -33,7 +42,7 @@ const Index = () => {
   const [editingKoiName, setEditingKoiName] = useState<string>('')
   const [selectedSensorId, setSelectedSensorId] = useState<string | null>(null)
   const { t } = useTranslation()
-  const { user, loading } = useAuth()
+  const { user, loading, session } = useAuth()
   useLanguage() // Initialize language hook
 
   const handleDataSaved = () => {
@@ -44,6 +53,11 @@ const Index = () => {
     setSelectedSensorId(sensorId)
     setActiveTab("temperature-sensor")
   }
+
+  // Scroll to top when activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+  }, [activeTab])
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -96,6 +110,14 @@ const Index = () => {
             setDashboardRefreshTrigger(prev => prev + 1)
           }}
         />
+      case "koi-archive":
+        return <KoiArchive 
+          onNavigate={setActiveTab} 
+          onEditKoi={(koiId, koiName) => {
+            setEditingKoiId(koiId);
+            setEditingKoiName(koiName);
+          }}
+        />
       case "analytics":
         return <AnalyticsPage onNavigate={setActiveTab} />
       case "settings":
@@ -116,12 +138,26 @@ const Index = () => {
         return <NitratePage onNavigate={setActiveTab} />
       case "phosphate":
         return <PhosphatePage onNavigate={setActiveTab} />
+      case "ammonia":
+        return <AmmoniaPage onNavigate={setActiveTab} />
       case "water-change":
+        return <WaterChangePage onNavigate={setActiveTab} />
+      case "water-change-form":
         return <WaterChangeForm onNavigate={setActiveTab} onDataSaved={handleDataSaved} />
       case "water-change-history":
         return <WaterChangeHistory onNavigate={setActiveTab} />
       case "user-profile":
         return <UserProfilePage onNavigate={setActiveTab} />
+      case "enhanced-services-demo":
+        return <EnhancedServicesDemo onNavigate={setActiveTab} />
+      case "feed-advisor":
+        return <EnhancedFeedAdvisor onNavigate={setActiveTab} />
+      case "feed-advisor-settings":
+        return <FeedAdvisorSettings onNavigate={setActiveTab} />
+      case "maintenance-history":
+        return <MaintenanceHistory onNavigate={setActiveTab} />
+      case "kh-calculator":
+        return <KhCalculatorPage onNavigate={setActiveTab} />
       default:
         return <Dashboard onNavigate={setActiveTab} />
     }

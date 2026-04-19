@@ -7,15 +7,15 @@ interface PhPageProps {
 }
 
 export const PhPage = ({ onNavigate }: PhPageProps) => {
-  const [timeRange, setTimeRange] = useState("7d")
-  
+  const [timeRange, setTimeRange] = useState("30d")
+
   const getPhStatus = (value: number): "optimal" | "warning" | "critical" => {
     if (value >= 6.8 && value <= 8.2) return "optimal"
     if (value >= 6.5 && value <= 8.5) return "warning"
     return "critical"
   }
 
-  const { historicData, currentValue, status, loading, hasDataInTimeRange, timeRangeInfo } = useParameterDataWithTimeRange({
+  const { historicData, currentValue, status, loading, hasDataInTimeRange, hasAnyDataInDatabase, timeRangeInfo } = useParameterDataWithTimeRange({
     parameterType: 'ph',
     getStatus: getPhStatus
   }, timeRange)
@@ -41,10 +41,11 @@ export const PhPage = ({ onNavigate }: PhPageProps) => {
       idealRange="6.8 - 8.2"
       status={status}
       historicData={historicData}
+      hasDataInTimeRange={hasDataInTimeRange}
+      hasAnyDataInDatabase={hasAnyDataInDatabase}
+      timeRangeInfo={timeRangeInfo}
       timeRange={timeRange}
       onTimeRangeChange={setTimeRange}
-      hasDataInTimeRange={hasDataInTimeRange}
-      timeRangeInfo={timeRangeInfo}
       infoContent={{
         description: "Water acidity/alkalinity measurement",
         importance: "Understanding water acidity and alkalinity",

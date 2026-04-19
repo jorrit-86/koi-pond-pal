@@ -1,0 +1,9 @@
+/* Hide scrollbar for filter segments */
+.filter-segments-container {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.filter-segments-container::-webkit-scrollbar {
+  display: none; /* WebKit */
+}

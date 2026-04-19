@@ -28,18 +28,37 @@ export function useParameterData(config: ParameterConfig): ParameterData {
   }, [user, config.parameterType])
 
   const loadParameterData = async () => {
+    if (!user || !user.id) {
+      setHistoricData([])
+      setCurrentValue(0)
+      setStatus("optimal")
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
+      
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Query timeout')), 10000) // 10 seconds
+      })
+      
       // Get parameter data from database
-      const { data, error } = await supabase
+      const queryPromise = supabase
         .from('water_parameters')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .eq('parameter_type', config.parameterType)
         .order('measured_at', { ascending: false })
 
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any
+
       if (error) {
         console.error(`Error loading ${config.parameterType} data:`, error)
+        setHistoricData([])
+        setCurrentValue(0)
+        setStatus("optimal")
         return
       }
 
@@ -78,8 +97,14 @@ export function useParameterData(config: ParameterConfig): ParameterData {
         setCurrentValue(0)
         setStatus("optimal")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error in loadParameterData for ${config.parameterType}:`, error)
+      if (error?.message === 'Query timeout') {
+        console.warn(`loadParameterData for ${config.parameterType} timed out after 10 seconds`)
+      }
+      setHistoricData([])
+      setCurrentValue(0)
+      setStatus("optimal")
     } finally {
       setLoading(false)
     }

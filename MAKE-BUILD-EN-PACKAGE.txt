@@ -1,0 +1,24 @@
+INSTRUCTIES VOOR NIEUWE BUILD EN FTP PACKAGE
+===========================================
+
+1. Open een terminal/command prompt in deze map
+
+2. Maak een build:
+   npm run build:prod
+
+3. Voer daarna dit PowerShell commando uit:
+   $timestamp = Get-Date -Format "yyyy-MM-dd-HHmm"; $m = "koi-pond-pal-ftp-upload-$timestamp"; New-Item -ItemType Directory -Path $m -Force | Out-Null; Copy-Item -Path "dist\*" -Destination $m -Recurse -Force; Copy-Item -Path "ftp-update-package\website\.htaccess" -Destination "$m\.htaccess" -Force; explorer $m
+
+4. De map wordt automatisch geopend en staat klaar voor FTP upload!
+
+
+
+
+
+
+
+
+
+
+
+

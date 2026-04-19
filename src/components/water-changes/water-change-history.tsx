@@ -85,6 +85,8 @@ export function WaterChangeHistory({ onNavigate }: WaterChangeHistoryProps) {
 
       if (!error && data) {
         setPondSize(data.pond_size_liters)
+      } else {
+        setPondSize(1000) // Default 1000 liters
       }
     } catch (error) {
       console.error('Error loading pond size:', error)

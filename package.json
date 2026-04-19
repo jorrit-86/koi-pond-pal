@@ -12,9 +12,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy:backup": "node scripts/backup-database.js",
-    "deploy:live": "npm run build:live && echo '🚀 Ready for live deployment'"
+    "deploy:live": "npm run build:live && echo '🚀 Ready for live deployment'",
+    "package:ftp": "create-ftp-package.bat"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -50,9 +52,12 @@
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
+    "html2canvas": "^1.4.1",
     "i18next": "^25.5.2",
     "i18next-browser-languagedetector": "^8.2.0",
     "input-otp": "^1.4.2",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
     "react": "^18.3.1",

@@ -9,13 +9,10 @@ import { useTheme } from "@/components/theme-provider"
 import { useParameterTimers } from "@/hooks/use-parameter-timers"
 import { useAuth } from "@/contexts/AuthContext"
 import { AdminPanel } from "@/components/admin/admin-panel"
-import { Settings, Home, Bell, Database, Wifi, Timer, Globe, Shield, Cpu } from "lucide-react"
-import { RecommendationsTest } from "@/components/debug/RecommendationsTest"
-import { AISettings } from '@/components/settings/ai-settings'
-import { AILearningDashboard } from '@/components/ai/ai-learning-dashboard'
+import { Settings, Home, Bell, Database, Wifi, Timer, Globe, Shield, Cpu, Menu, X } from "lucide-react"
 import { PondProperties } from '@/components/settings/pond-properties'
 import { KOIoTSettings } from '@/components/settings/koiot-settings'
-import { DashboardSensorSettings } from '@/components/settings/dashboard-sensor-settings'
+import { MaintenanceSettings } from '@/components/maintenance/maintenance-settings'
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -29,6 +26,7 @@ export function SettingsPage() {
   const [notifications, setNotifications] = useState(true)
   const [autoLogging, setAutoLogging] = useState(false)
   const [activeSubmenu, setActiveSubmenu] = useState<string>("general")
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
 
   const parameterNames = {
@@ -38,7 +36,8 @@ export function SettingsPage() {
     gh: t("waterParameters.gh"),
     nitrite: t("waterParameters.nitrite"),
     nitrate: t("waterParameters.nitrate"),
-    phosphate: t("waterParameters.phosphate")
+    phosphate: t("waterParameters.phosphate"),
+    ammonia: t("waterParameters.ammonia")
   }
 
   const changeLanguage = (newLang: string) => {
@@ -64,16 +63,10 @@ export function SettingsPage() {
     }
     
     
-    if (activeSubmenu === "ai-settings") {
-      return <AISettings />
-    }
     
-    if (activeSubmenu === "ai-learning") {
-      return <AILearningDashboard />
-    }
     
-    if (activeSubmenu === "recommendations-test") {
-      return <RecommendationsTest />
+    if (activeSubmenu === "maintenance") {
+      return <MaintenanceSettings />
     }
     
     if (activeSubmenu === "admin") {
@@ -81,28 +74,28 @@ export function SettingsPage() {
     }
     
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold mb-2">{t("settings.title")}</h1>
-          <p className="text-muted-foreground">Configure your koi pond management preferences</p>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{t("settings.general.title")}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">{t("settings.general.subtitle")}</p>
         </div>
 
       {/* Theme Settings */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-primary" />
-            Appearance
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            {t("settings.general.appearance")}
           </CardTitle>
-          <CardDescription>Customize the look and feel of your dashboard</CardDescription>
+          <CardDescription className="text-sm">{t("settings.general.appearanceDescription")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4 pt-0">
           <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Dark Mode</Label>
-              <p className="text-sm text-muted-foreground">
-                Toggle between light and dark theme
+            <div className="space-y-0.5 flex-1 pr-3">
+              <Label className="text-sm sm:text-base">{t("settings.general.darkMode")}</Label>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                {t("settings.general.darkModeDescription")}
               </p>
             </div>
             <Switch
@@ -114,16 +107,16 @@ export function SettingsPage() {
           <Separator />
           
           <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
+            <Label className="flex items-center gap-2 text-sm sm:text-base">
+              <Globe className="h-3 w-3 sm:h-4 sm:w-4" />
               {t("settings.language")}
             </Label>
-            <p className="text-sm text-muted-foreground">
-              Choose your preferred language
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              {t("settings.general.chooseLanguage")}
             </p>
             <Select value={i18n.language} onValueChange={changeLanguage}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select language" />
+                <SelectValue placeholder={t("settings.general.selectLanguage")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="en">
@@ -146,42 +139,44 @@ export function SettingsPage() {
 
       {/* Home Assistant Integration */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Home className="h-5 w-5 text-primary" />
-            Home Assistant Integration
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Home className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            {t("settings.general.homeAssistantIntegration")}
           </CardTitle>
-          <CardDescription>
-            Connect to your Home Assistant instance for automated data logging
+          <CardDescription className="text-sm">
+            {t("settings.general.homeAssistantDescription")}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4 pt-0">
           <div className="space-y-2">
-            <Label htmlFor="ha-url">Home Assistant URL</Label>
+            <Label htmlFor="ha-url" className="text-sm sm:text-base">{t("settings.general.homeAssistantUrl")}</Label>
             <Input
               id="ha-url"
-              placeholder="https://your-homeassistant.local:8123"
+              placeholder={t("settings.general.homeAssistantUrlPlaceholder")}
               value={homeAssistantUrl}
               onChange={(e) => setHomeAssistantUrl(e.target.value)}
+              className="h-9 sm:h-10"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="ha-token">Long-Lived Access Token</Label>
+            <Label htmlFor="ha-token" className="text-sm sm:text-base">{t("settings.general.longLivedAccessToken")}</Label>
             <Input
               id="ha-token"
               type="password"
-              placeholder="Your Home Assistant access token"
+              placeholder={t("settings.general.accessTokenPlaceholder")}
               value={homeAssistantToken}
               onChange={(e) => setHomeAssistantToken(e.target.value)}
+              className="h-9 sm:h-10"
             />
           </div>
 
           <div className="flex items-center justify-between pt-2">
-            <div className="space-y-0.5">
-              <Label>Auto-logging from HA</Label>
-              <p className="text-sm text-muted-foreground">
-                Automatically log water parameters from Home Assistant sensors
+            <div className="space-y-0.5 flex-1 pr-3">
+              <Label className="text-sm sm:text-base">{t("settings.general.autoLoggingFromHA")}</Label>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                {t("settings.general.autoLoggingDescription")}
               </p>
             </div>
             <Switch
@@ -191,9 +186,9 @@ export function SettingsPage() {
           </div>
 
           <div className="pt-2">
-            <Button variant="outline" className="w-full">
-              <Wifi className="h-4 w-4 mr-2" />
-              Test Connection
+            <Button variant="outline" className="w-full h-9 sm:h-10">
+              <Wifi className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              <span className="text-sm">{t("settings.general.testConnection")}</span>
             </Button>
           </div>
         </CardContent>
@@ -201,21 +196,21 @@ export function SettingsPage() {
 
       {/* Parameter Timers */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Timer className="h-5 w-5 text-primary" />
-            Parameter Testing Timers
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Timer className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            {t("settings.general.parameterTestingTimers")}
           </CardTitle>
-          <CardDescription>Set countdown timers for regular water parameter testing</CardDescription>
+          <CardDescription className="text-sm">{t("settings.general.parameterTimersDescription")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 sm:space-y-6 pt-0">
           {Object.entries(parameterNames).map(([key, name]) => (
             <div key={key} className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>{name} Timer</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Enable timer reminders for {name.toLowerCase()} testing
+                <div className="space-y-0.5 flex-1 pr-3">
+                  <Label className="text-sm sm:text-base">{name} Timer</Label>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    {t("settings.general.enableTimerReminders", { parameter: name.toLowerCase() })}
                   </p>
                 </div>
                 <Switch
@@ -231,22 +226,44 @@ export function SettingsPage() {
               
               {timerConfigs[key]?.enabled && (
                 <div className="ml-4 space-y-2">
-                  <Label htmlFor={`${key}-duration`} className="text-sm">
-                    Timer Duration (minutes)
+                  <Label htmlFor={`${key}-duration`} className="text-xs sm:text-sm">
+                    {t("settings.general.timerDuration")}
                   </Label>
                   <Input
                     id={`${key}-duration`}
                     type="number"
                     min={1}
                     max={1440}
-                    value={timerConfigs[key]?.duration || 30}
-                    onChange={(e) => 
-                      updateTimerConfig(key, {
-                        ...timerConfigs[key],
-                        duration: parseInt(e.target.value) || 30
-                      })
-                    }
-                    className="w-32"
+                    value={timerConfigs[key]?.duration === 0 ? '' : timerConfigs[key]?.duration || 30}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (value === '') {
+                        // Allow empty value temporarily
+                        updateTimerConfig(key, {
+                          ...timerConfigs[key],
+                          duration: 0
+                        })
+                      } else {
+                        const numValue = parseInt(value)
+                        if (!isNaN(numValue) && numValue > 0) {
+                          updateTimerConfig(key, {
+                            ...timerConfigs[key],
+                            duration: numValue
+                          })
+                        }
+                      }
+                    }}
+                    onFocus={(e) => e.target.select()}
+                    onClick={(e) => e.target.select()}
+                    onBlur={(e) => {
+                      if (e.target.value === '' || parseInt(e.target.value) <= 0) {
+                        updateTimerConfig(key, {
+                          ...timerConfigs[key],
+                          duration: 30
+                        })
+                      }
+                    }}
+                    className="w-24 sm:w-32 h-8 sm:h-9"
                   />
                 </div>
               )}
@@ -257,24 +274,21 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Dashboard Sensor Settings */}
-      <DashboardSensorSettings />
-
       {/* Notifications */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-primary" />
-            Notifications & Alerts
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            {t("settings.general.notificationsAlerts")}
           </CardTitle>
-          <CardDescription>Configure when and how you receive alerts</CardDescription>
+          <CardDescription className="text-sm">{t("settings.general.notificationsDescription")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4 pt-0">
           <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Parameter Alerts</Label>
-              <p className="text-sm text-muted-foreground">
-                Get notified when water parameters are outside ideal ranges
+            <div className="space-y-0.5 flex-1 pr-3">
+              <Label className="text-sm sm:text-base">{t("settings.general.parameterAlerts")}</Label>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                {t("settings.general.parameterAlertsDescription")}
               </p>
             </div>
             <Switch
@@ -285,28 +299,28 @@ export function SettingsPage() {
 
           <Separator />
 
-          <div className="space-y-4">
-            <h4 className="font-semibold text-sm">Alert Thresholds</h4>
+          <div className="space-y-3 sm:space-y-4">
+            <h4 className="font-semibold text-sm">{t("settings.general.alertThresholds")}</h4>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm">pH Warning Level</Label>
-                <Input placeholder="6.5" type="number" step="0.1" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1 sm:space-y-2">
+                <Label className="text-xs sm:text-sm">{t("settings.general.phWarningLevel")}</Label>
+                <Input placeholder="6.5" type="number" step="0.1" className="h-8 sm:h-9" />
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm">pH Danger Level</Label>
-                <Input placeholder="6.0" type="number" step="0.1" />
+              <div className="space-y-1 sm:space-y-2">
+                <Label className="text-xs sm:text-sm">{t("settings.general.phDangerLevel")}</Label>
+                <Input placeholder="6.0" type="number" step="0.1" className="h-8 sm:h-9" />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm">Nitraat Waarschuwing (mg/l)</Label>
-                <Input placeholder="20" type="number" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1 sm:space-y-2">
+                <Label className="text-xs sm:text-sm">{t("settings.general.nitrateWarning")}</Label>
+                <Input placeholder="20" type="number" className="h-8 sm:h-9" />
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Nitraat Gevaar (mg/l)</Label>
-                <Input placeholder="30" type="number" />
+              <div className="space-y-1 sm:space-y-2">
+                <Label className="text-xs sm:text-sm">{t("settings.general.nitrateDanger")}</Label>
+                <Input placeholder="30" type="number" className="h-8 sm:h-9" />
               </div>
             </div>
           </div>
@@ -315,32 +329,32 @@ export function SettingsPage() {
 
       {/* Data Management */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-primary" />
-            Data Management
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Database className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            {t("settings.general.dataManagement")}
           </CardTitle>
-          <CardDescription>Manage your pond data and history</CardDescription>
+          <CardDescription className="text-sm">{t("settings.general.dataManagementDescription")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button variant="outline">
-              Export Data
+        <CardContent className="space-y-3 sm:space-y-4 pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <Button variant="outline" className="h-9 sm:h-10 text-sm">
+              {t("settings.general.exportData")}
             </Button>
-            <Button variant="outline">
-              Import Data
+            <Button variant="outline" className="h-9 sm:h-10 text-sm">
+              {t("settings.general.importData")}
             </Button>
           </div>
           
           <Separator />
           
           <div className="space-y-2">
-            <h4 className="font-semibold text-sm text-destructive">Danger Zone</h4>
-            <p className="text-sm text-muted-foreground">
-              These actions cannot be undone. Please be careful.
+            <h4 className="font-semibold text-sm text-destructive">{t("settings.general.dangerZone")}</h4>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              {t("settings.general.dangerZoneDescription")}
             </p>
-            <Button variant="destructive" className="w-full">
-              Clear All Historical Data
+            <Button variant="destructive" className="w-full h-9 sm:h-10 text-sm">
+              {t("settings.general.clearAllHistoricalData")}
             </Button>
           </div>
         </CardContent>
@@ -349,75 +363,87 @@ export function SettingsPage() {
     )
   }
 
+  const navigationItems = [
+    { id: "general", label: t("settings.general.title"), icon: Settings },
+    { id: "pond-properties", label: "Vijver Eigenschappen", icon: Database },
+    { id: "koiot", label: "KOIoT", icon: Cpu },
+    { id: "maintenance", label: "Onderhoud Taken", icon: Timer },
+    ...(user?.role === 'admin' ? [{ id: "admin", label: "Admin Panel", icon: Shield }] : [])
+  ]
+
+  const handleSubmenuChange = (submenu: string) => {
+    setActiveSubmenu(submenu)
+    setIsMobileMenuOpen(false)
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Submenu Navigation */}
-      <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
-        <Button
-          variant={activeSubmenu === "general" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveSubmenu("general")}
-          className="flex items-center gap-2"
-        >
-          <Settings className="h-4 w-4" />
-          General
-        </Button>
-        <Button
-          variant={activeSubmenu === "pond-properties" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveSubmenu("pond-properties")}
-          className="flex items-center gap-2"
-        >
-          <Database className="h-4 w-4" />
-          Vijver Eigenschappen
-        </Button>
-        <Button
-          variant={activeSubmenu === "koiot" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveSubmenu("koiot")}
-          className="flex items-center gap-2"
-        >
-          <Cpu className="h-4 w-4" />
-          KOIoT
-        </Button>
-        <Button
-          variant={activeSubmenu === "ai-settings" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveSubmenu("ai-settings")}
-          className="flex items-center gap-2"
-        >
-          <Database className="h-4 w-4" />
-          AI Instellingen
-        </Button>
-        <Button
-          variant={activeSubmenu === "ai-learning" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveSubmenu("ai-learning")}
-          className="flex items-center gap-2"
-        >
-          <Database className="h-4 w-4" />
-          AI Learning
-        </Button>
-        <Button
-          variant={activeSubmenu === "recommendations-test" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setActiveSubmenu("recommendations-test")}
-          className="flex items-center gap-2"
-        >
-          <Database className="h-4 w-4" />
-          AI Test
-        </Button>
-        {user?.role === 'admin' && (
+    <div className="space-y-4 sm:space-y-6">
+      {/* Responsive Submenu Navigation */}
+      <div className="relative">
+        {/* Mobile Navigation (alles onder 1024px) */}
+        <div className="xl:hidden">
+          {/* Mobile Menu Button */}
           <Button
-            variant={activeSubmenu === "admin" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveSubmenu("admin")}
-            className="flex items-center gap-2"
+            variant="outline"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="w-full justify-between h-10 sm:h-9"
           >
-            <Shield className="h-4 w-4" />
-            Admin Panel
+            <span className="flex items-center gap-2">
+              {navigationItems.find(item => item.id === activeSubmenu)?.icon && (
+                <>
+                  {(() => {
+                    const Icon = navigationItems.find(item => item.id === activeSubmenu)?.icon
+                    return Icon ? <Icon className="h-4 w-4" /> : null
+                  })()}
+                  {navigationItems.find(item => item.id === activeSubmenu)?.label}
+                </>
+              )}
+            </span>
+            {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </Button>
-        )}
+
+          {/* Mobile Menu Dropdown */}
+          {isMobileMenuOpen && (
+            <div className="absolute top-full left-0 right-0 z-50 mt-1 sm:mt-2 bg-background border border-border rounded-lg shadow-lg">
+              <div className="p-1 sm:p-2 space-y-0.5 sm:space-y-1">
+                {navigationItems.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <Button
+                      key={item.id}
+                      variant={activeSubmenu === item.id ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => handleSubmenuChange(item.id)}
+                      className="w-full justify-start h-8 sm:h-9 text-sm"
+                    >
+                      <Icon className="h-4 w-4 mr-2" />
+                      {item.label}
+                    </Button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Navigation (alleen op zeer grote schermen) */}
+        <div className="hidden xl:flex space-x-1 bg-muted p-1 rounded-lg w-fit">
+          {navigationItems.map((item) => {
+            const Icon = item.icon
+            return (
+              <Button
+                key={item.id}
+                variant={activeSubmenu === item.id ? "default" : "ghost"}
+                size="sm"
+                onClick={() => handleSubmenuChange(item.id)}
+                className="flex items-center gap-2"
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Content */}

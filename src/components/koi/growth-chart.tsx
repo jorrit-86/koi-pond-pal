@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { TrendingUp, Calendar, Ruler, Download, Target, Award, Activity } from 'lucide-react';
 
 interface GrowthDataPoint {
@@ -22,18 +23,24 @@ interface GrowthChartProps {
 }
 
 export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement }: GrowthChartProps) {
+  const { user, session } = useAuth();
   const [growthData, setGrowthData] = useState<GrowthDataPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [koiData, setKoiData] = useState<any>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'all' | '6months' | '1year' | '2years'>('all');
 
   useEffect(() => {
-    if (isOpen && koiId) {
+    if (isOpen && koiId && user) {
       loadGrowthData();
     }
-  }, [isOpen, koiId]);
+  }, [isOpen, koiId, user]);
 
   const loadGrowthData = async () => {
+    if (!user || !koiId) {
+      setLoading(false);
+      return;
+    }
+
     try {
       console.log('loadGrowthData called with koiId:', koiId); // Debug log
       setLoading(true);
@@ -44,38 +51,106 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
         setLoading(false);
       }, 10000); // 10 second timeout
       
-      // Load koi basic data
-      const { data: koiData, error: koiError } = await supabase
-        .from('koi')
-        .select('name, length_at_purchase, purchase_date')
-        .eq('id', koiId)
-        .single();
+      // Check if Supabase has a session
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      let koiData: any = null;
+      let measurements: any[] = [];
+      
+      // If no Supabase session but we have React session, use direct fetch
+      if (!currentSession && session?.access_token) {
+        try {
+          console.log('Loading growth data using direct fetch with access token...');
+          
+          // Load koi basic data
+          const koiResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi?id=eq.${koiId}&select=name,length_at_purchase,purchase_date`,
+            {
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          if (koiResponse.ok) {
+            const koiDataArray = await koiResponse.json();
+            koiData = Array.isArray(koiDataArray) ? koiDataArray[0] : koiDataArray;
+            console.log('Koi data loaded (direct fetch):', koiData);
+          } else {
+            console.error('Error loading koi data (direct fetch):', koiResponse.status);
+          }
+          
+          // Load measurement data from logbook
+          const measurementsResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi_log_entries?koi_id=eq.${koiId}&entry_type=eq.measurement&select=entry_date,length_cm,description&order=entry_date.asc`,
+            {
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          if (measurementsResponse.ok) {
+            const measurementsData = await measurementsResponse.json();
+            measurements = Array.isArray(measurementsData) ? measurementsData : [measurementsData];
+            // Filter out null length_cm values
+            measurements = measurements.filter((m: any) => m.length_cm != null);
+            console.log('Measurements data loaded (direct fetch):', measurements.length, 'measurements');
+          } else {
+            console.error('Error loading measurements (direct fetch):', measurementsResponse.status);
+          }
+        } catch (error: any) {
+          console.error('Error loading growth data with direct fetch:', error);
+          // Fall through to try normal Supabase query
+        }
+      }
+      
+      // If we don't have data yet, try normal Supabase queries
+      if (!koiData) {
+        const { data: koiDataResult, error: koiError } = await supabase
+          .from('koi')
+          .select('name, length_at_purchase, purchase_date')
+          .eq('id', koiId)
+          .single();
 
-      console.log('Koi data loaded:', koiData); // Debug log
-      console.log('Koi error:', koiError); // Debug log
+        console.log('Koi data loaded (normal query):', koiDataResult);
+        console.log('Koi error:', koiError);
 
-      if (koiError) {
-        console.error('Error loading koi data:', koiError);
-        return;
+        if (koiError) {
+          console.error('Error loading koi data:', koiError);
+          clearTimeout(timeoutId);
+          setLoading(false);
+          return;
+        }
+
+        koiData = koiDataResult;
       }
 
       setKoiData(koiData);
 
-      // Load measurement data from logbook
-      const { data: measurements, error: measurementsError } = await supabase
-        .from('koi_log_entries')
-        .select('entry_date, length_cm, description')
-        .eq('koi_id', koiId)
-        .eq('entry_type', 'measurement')
-        .not('length_cm', 'is', null)
-        .order('entry_date', { ascending: true });
+      // If we don't have measurements yet, try normal Supabase query
+      if (measurements.length === 0) {
+        const { data: measurementsResult, error: measurementsError } = await supabase
+          .from('koi_log_entries')
+          .select('entry_date, length_cm, description')
+          .eq('koi_id', koiId)
+          .eq('entry_type', 'measurement')
+          .not('length_cm', 'is', null)
+          .order('entry_date', { ascending: true });
 
-      console.log('Measurements data loaded:', measurements); // Debug log
-      console.log('Measurements error:', measurementsError); // Debug log
+        console.log('Measurements data loaded (normal query):', measurementsResult);
+        console.log('Measurements error:', measurementsError);
 
-      if (measurementsError) {
-        console.error('Error loading measurements:', measurementsError);
-        return;
+        if (measurementsError) {
+          console.error('Error loading measurements:', measurementsError);
+          // Don't return - we might still have purchase data to show
+        } else {
+          measurements = measurementsResult || [];
+        }
       }
 
       // Combine purchase data and measurements

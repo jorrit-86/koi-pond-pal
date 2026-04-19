@@ -130,42 +130,43 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon" onClick={() => onNavigate("koi")}>
-            <ArrowLeft className="h-4 w-4" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          <Button variant="ghost" size="icon" onClick={() => onNavigate("koi")} className="h-8 w-8 sm:h-10 sm:w-10">
+            <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Nieuwe Koi Toevoegen</h1>
-            <p className="text-muted-foreground">Voeg een nieuwe koi toe aan je collectie</p>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Nieuwe Koi Toevoegen</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Voeg een nieuwe koi toe aan je collectie</p>
           </div>
         </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Koi Informatie</CardTitle>
-          <CardDescription>
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-lg sm:text-xl">Koi Informatie</CardTitle>
+          <CardDescription className="text-sm">
             Vul de details in voor je nieuwe koi vis.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="name">Naam *</Label>
+        <CardContent className="space-y-4 sm:space-y-6 pt-0">
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="name" className="text-xs sm:text-sm">Naam *</Label>
             <Input
               id="name"
               value={newKoi.name}
               onChange={(e) => setNewKoi(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Voer koi naam in"
+              className="h-8 sm:h-9 text-sm"
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="variety">Variëteit *</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="variety" className="text-xs sm:text-sm">Variëteit *</Label>
             <Select value={newKoi.variety} onValueChange={(value) => setNewKoi(prev => ({ ...prev, variety: value }))}>
-              <SelectTrigger>
+              <SelectTrigger className="h-8 sm:h-9 text-sm">
                 <SelectValue placeholder="Selecteer variëteit" />
               </SelectTrigger>
               <SelectContent>
@@ -185,32 +186,38 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="age">Leeftijd (jaren) *</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="age" className="text-xs sm:text-sm">Leeftijd (jaren) *</Label>
               <Input
                 id="age"
                 type="number"
                 value={newKoi.age}
                 onChange={(e) => setNewKoi(prev => ({ ...prev, age: e.target.value }))}
                 placeholder="0"
+                className="h-8 sm:h-9 text-sm"
+                inputMode="numeric"
+                pattern="[0-9]*"
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="length">Lengte (cm) *</Label>
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="length" className="text-xs sm:text-sm">Lengte (cm) *</Label>
               <Input
                 id="length"
                 type="number"
                 value={newKoi.length}
                 onChange={(e) => setNewKoi(prev => ({ ...prev, length: e.target.value }))}
                 placeholder="0"
+                className="h-8 sm:h-9 text-sm"
+                inputMode="numeric"
+                pattern="[0-9]*"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="weight">Gewicht (kg)</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="weight" className="text-xs sm:text-sm">Gewicht (kg)</Label>
             <Input
               id="weight"
               type="number"
@@ -218,13 +225,16 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
               value={newKoi.weight}
               onChange={(e) => setNewKoi(prev => ({ ...prev, weight: e.target.value }))}
               placeholder="0.0"
+              className="h-8 sm:h-9 text-sm"
+              inputMode="decimal"
+              pattern="[0-9]*[.,]?[0-9]*"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Locatie</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="location" className="text-xs sm:text-sm">Locatie</Label>
             <Select value={newKoi.location} onValueChange={(value) => setNewKoi(prev => ({ ...prev, location: value }))}>
-              <SelectTrigger>
+              <SelectTrigger className="h-8 sm:h-9 text-sm">
                 <SelectValue placeholder="Selecteer locatie" />
               </SelectTrigger>
               <SelectContent>
@@ -239,20 +249,21 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="color">Kleur</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="color" className="text-xs sm:text-sm">Kleur</Label>
             <Input
               id="color"
               value={newKoi.color}
               onChange={(e) => setNewKoi(prev => ({ ...prev, color: e.target.value }))}
               placeholder="Beschrijf het kleurpatroon"
+              className="h-8 sm:h-9 text-sm"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="health">Gezondheidsstatus</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="health" className="text-xs sm:text-sm">Gezondheidsstatus</Label>
             <Select value={newKoi.healthStatus} onValueChange={(value: any) => setNewKoi(prev => ({ ...prev, healthStatus: value }))}>
-              <SelectTrigger>
+              <SelectTrigger className="h-8 sm:h-9 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -263,30 +274,32 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="breeder">Kweker</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="breeder" className="text-xs sm:text-sm">Kweker</Label>
               <Input
                 id="breeder"
                 value={newKoi.breeder}
                 onChange={(e) => setNewKoi(prev => ({ ...prev, breeder: e.target.value }))}
                 placeholder="Naam van de kweker"
+                className="h-8 sm:h-9 text-sm"
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="dealer">Dealer</Label>
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="dealer" className="text-xs sm:text-sm">Dealer</Label>
               <Input
                 id="dealer"
                 value={newKoi.dealer}
                 onChange={(e) => setNewKoi(prev => ({ ...prev, dealer: e.target.value }))}
                 placeholder="Naam van de dealer"
+                className="h-8 sm:h-9 text-sm"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="purchase_price">Aankoopbedrag (€)</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="purchase_price" className="text-xs sm:text-sm">Aankoopbedrag (€)</Label>
             <Input
               id="purchase_price"
               type="number"
@@ -295,21 +308,25 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
               value={newKoi.purchase_price}
               onChange={(e) => setNewKoi(prev => ({ ...prev, purchase_price: e.target.value }))}
               placeholder="0.00"
+              className="h-8 sm:h-9 text-sm"
+              inputMode="decimal"
+              pattern="[0-9]*[.,]?[0-9]*"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="purchase_date">Datum Aanschaf</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="purchase_date" className="text-xs sm:text-sm">Datum Aanschaf</Label>
             <Input
               id="purchase_date"
               type="date"
               value={newKoi.purchase_date}
               onChange={(e) => setNewKoi(prev => ({ ...prev, purchase_date: e.target.value }))}
+              className="h-8 sm:h-9 text-sm"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="age_at_purchase">Leeftijd bij Aanschaf (jaar)</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="age_at_purchase" className="text-xs sm:text-sm">Leeftijd bij Aanschaf (jaar)</Label>
             <Input
               id="age_at_purchase"
               type="number"
@@ -317,11 +334,14 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
               value={newKoi.age_at_purchase}
               onChange={(e) => setNewKoi(prev => ({ ...prev, age_at_purchase: e.target.value }))}
               placeholder="0"
+              className="h-8 sm:h-9 text-sm"
+              inputMode="numeric"
+              pattern="[0-9]*"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="length_at_purchase">Lengte bij Aanschaf (cm)</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="length_at_purchase" className="text-xs sm:text-sm">Lengte bij Aanschaf (cm)</Label>
             <Input
               id="length_at_purchase"
               type="number"
@@ -329,54 +349,59 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
               value={newKoi.length_at_purchase}
               onChange={(e) => setNewKoi(prev => ({ ...prev, length_at_purchase: e.target.value }))}
               placeholder="0"
+              className="h-8 sm:h-9 text-sm"
+              inputMode="numeric"
+              pattern="[0-9]*"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notities</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="notes" className="text-xs sm:text-sm">Notities</Label>
             <Textarea
               id="notes"
               value={newKoi.notes}
               onChange={(e) => setNewKoi(prev => ({ ...prev, notes: e.target.value }))}
               placeholder="Aanvullende notities over deze koi"
               rows={3}
+              className="text-sm"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Foto</Label>
-            <div className="flex gap-2">
+          <div className="space-y-1 sm:space-y-2">
+            <Label className="text-xs sm:text-sm">Foto</Label>
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button 
                 type="button"
                 variant="outline" 
                 onClick={() => setShowPhotoUpload(true)}
-                className="flex-1"
+                className="flex-1 h-8 sm:h-9 text-xs sm:text-sm"
               >
-                <Image className="h-4 w-4 mr-2" />
-                Foto Toevoegen
+                <Image className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                <span className="hidden sm:inline">Foto Toevoegen</span>
+                <span className="sm:hidden">Foto</span>
               </Button>
               {newKoi.photo_url && (
                 <div className="flex-1">
                   <img 
                     src={newKoi.photo_url} 
                     alt="Koi preview" 
-                    className="w-full h-20 object-cover rounded-lg"
+                    className="w-full h-16 sm:h-20 object-cover rounded-lg"
                   />
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4">
             <Button 
               onClick={handleAddKoi} 
-              className="flex-1"
+              className="flex-1 h-9 sm:h-10 text-sm"
               disabled={saving || uploading}
             >
-              <Save className="h-4 w-4 mr-2" />
+              <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               {saving ? 'Opslaan...' : uploading ? 'Uploaden...' : 'Koi Toevoegen'}
             </Button>
-            <Button variant="outline" onClick={() => onNavigate("koi")}>
+            <Button variant="outline" onClick={() => onNavigate("koi")} className="h-9 sm:h-10 text-sm">
               Annuleren
             </Button>
           </div>

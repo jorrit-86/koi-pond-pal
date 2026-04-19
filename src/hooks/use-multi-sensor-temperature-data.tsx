@@ -49,25 +49,46 @@ export function useMultiSensorTemperatureData(timeRange: string = "7d") {
         startDate.setTime(now.getTime() - (24 * 60 * 60 * 1000))
         break
       case "7d":
-        // 7 days ago - use millisecond calculation for precision
-        startDate.setTime(now.getTime() - (7 * 24 * 60 * 60 * 1000))
-        // Set to start of day for consistent daily grouping
-        startDate.setHours(0, 0, 0, 0)
+        // 7 days ago - use date calculation for consistency
+        const sevenDaysAgo = new Date(now)
+        sevenDaysAgo.setDate(now.getDate() - 7)
+        sevenDaysAgo.setHours(0, 0, 0, 0) // Start of day 7 days ago
+        startDate.setTime(sevenDaysAgo.getTime())
         break
       case "14d":
-        startDate.setTime(now.getTime() - (14 * 24 * 60 * 60 * 1000))
+        // 14 days ago - use date calculation for consistency
+        const fourteenDaysAgo = new Date(now)
+        fourteenDaysAgo.setDate(now.getDate() - 14)
+        fourteenDaysAgo.setHours(0, 0, 0, 0) // Start of day 14 days ago
+        startDate.setTime(fourteenDaysAgo.getTime())
         break
       case "30d":
-        startDate.setTime(now.getTime() - (30 * 24 * 60 * 60 * 1000))
+        // 30 days ago - use date calculation for consistency
+        const thirtyDaysAgo = new Date(now)
+        thirtyDaysAgo.setDate(now.getDate() - 30)
+        thirtyDaysAgo.setHours(0, 0, 0, 0) // Start of day 30 days ago
+        startDate.setTime(thirtyDaysAgo.getTime())
         break
       case "90d":
-        startDate.setTime(now.getTime() - (90 * 24 * 60 * 60 * 1000))
+        // 90 days ago - use date calculation for consistency
+        const ninetyDaysAgo = new Date(now)
+        ninetyDaysAgo.setDate(now.getDate() - 90)
+        ninetyDaysAgo.setHours(0, 0, 0, 0) // Start of day 90 days ago
+        startDate.setTime(ninetyDaysAgo.getTime())
         break
       case "365d":
-        startDate.setTime(now.getTime() - (365 * 24 * 60 * 60 * 1000))
+        // 365 days ago - use date calculation for consistency
+        const threeSixtyFiveDaysAgo = new Date(now)
+        threeSixtyFiveDaysAgo.setDate(now.getDate() - 365)
+        threeSixtyFiveDaysAgo.setHours(0, 0, 0, 0) // Start of day 365 days ago
+        startDate.setTime(threeSixtyFiveDaysAgo.getTime())
         break
       default:
-        startDate.setTime(now.getTime() - (7 * 24 * 60 * 60 * 1000))
+        // Default to 7 days ago
+        const defaultDaysAgo = new Date(now)
+        defaultDaysAgo.setDate(now.getDate() - 7)
+        defaultDaysAgo.setHours(0, 0, 0, 0) // Start of day 7 days ago
+        startDate.setTime(defaultDaysAgo.getTime())
     }
     
     return startDate.toISOString()
@@ -108,7 +129,7 @@ export function useMultiSensorTemperatureData(timeRange: string = "7d") {
         console.log(`=== 7 DAYS DATA FETCHING ===`)
         
         // Get ALL temperature data for the user (no date filtering)
-        const { data: allData, error: allError } = await supabase
+        let allDataQuery = supabase
           .from('sensor_data')
           .select('*')
           .eq('user_id', user.id)
@@ -116,10 +137,18 @@ export function useMultiSensorTemperatureData(timeRange: string = "7d") {
           .order('created_at', { ascending: false })
           .limit(2000) // Get more data to ensure we have enough
 
-        if (allError) {
-          console.error('Error fetching all data:', allError)
-          sensorError = allError
-        } else {
+        // Race query against timeout
+        try {
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('7d query timeout')), 10000) // 10 second timeout
+          })
+          
+          const { data: allData, error: allError } = await Promise.race([allDataQuery, timeoutPromise]) as any
+
+          if (allError) {
+            console.error('Error fetching all data:', allError)
+            sensorError = allError
+          } else {
           console.log(`Fetched ${allData?.length || 0} total data points`)
           
           if (allData && allData.length > 0) {
@@ -153,9 +182,18 @@ export function useMultiSensorTemperatureData(timeRange: string = "7d") {
             console.log('No data found in database')
           }
         }
+        } catch (timeoutError: any) {
+          if (timeoutError.message === '7d query timeout') {
+            console.warn('7d query timed out after 10 seconds')
+            sensorData = []
+            sensorError = timeoutError
+          } else {
+            throw timeoutError
+          }
+        }
       } else {
         // Standard approach for other time ranges
-        const { data: standardData, error: standardError } = await supabase
+        let standardQuery = supabase
           .from('sensor_data')
           .select('*')
           .eq('user_id', user.id)
@@ -164,8 +202,25 @@ export function useMultiSensorTemperatureData(timeRange: string = "7d") {
           .order('created_at', { ascending: false })
           .limit(dataLimit)
 
-        sensorData = standardData || []
-        sensorError = standardError
+        // Race query against timeout
+        try {
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Standard query timeout')), 10000) // 10 second timeout
+          })
+          
+          const { data: standardData, error: standardError } = await Promise.race([standardQuery, timeoutPromise]) as any
+          
+          sensorData = standardData || []
+          sensorError = standardError
+        } catch (timeoutError: any) {
+          if (timeoutError.message === 'Standard query timeout') {
+            console.warn('Standard query timed out after 10 seconds')
+            sensorData = []
+            sensorError = timeoutError
+          } else {
+            throw timeoutError
+          }
+        }
       }
 
       if (sensorError) throw sensorError
@@ -197,36 +252,62 @@ export function useMultiSensorTemperatureData(timeRange: string = "7d") {
       let configData: any[] = []
       let configError: any = null
 
-      const { data: individualConfigs, error: individualError } = await supabase
-        .from('individual_sensor_configs')
-        .select('sensor_id, display_name, location, status')
-        .in('sensor_id', uniqueSensorIds)
+      // Load config with timeout
+      if (uniqueSensorIds.length > 0) {
+        try {
+          const configQueryPromise = supabase
+            .from('individual_sensor_configs')
+            .select('sensor_id, display_name')
+            .in('sensor_id', uniqueSensorIds)
+          
+          const configTimeout = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Config query timeout')), 5000) // 5 second timeout
+          })
+          
+          const { data: individualConfigs, error: individualError } = await Promise.race([configQueryPromise, configTimeout]) as any
 
-      if (individualError) {
-        console.error('Error loading individual_sensor_configs:', individualError)
-      }
-
-      if (individualConfigs && individualConfigs.length > 0) {
-        configData = individualConfigs
-        console.log('Found data in individual_sensor_configs:', configData)
-      } else {
-        console.log('No data in individual_sensor_configs, trying sensor_configurations...')
-        const { data: sensorConfigs, error: sensorError } = await supabase
-          .from('sensor_configurations')
-          .select('sensor_id, sensor_name, location, status')
-          .in('sensor_id', uniqueSensorIds)
-        
-        if (sensorError) {
-          console.error('Error loading sensor_configurations:', sensorError)
-          configError = sensorError
-        } else if (sensorConfigs && sensorConfigs.length > 0) {
-          console.log('Found data in sensor_configurations:', sensorConfigs)
-          configData = sensorConfigs.map(config => ({
-            sensor_id: config.sensor_id,
-            display_name: config.sensor_name,
-            location: config.location,
-            status: config.status
-          }))
+          if (individualError) {
+            console.error('Error loading individual_sensor_configs:', individualError)
+            configError = individualError
+          } else {
+            if (individualConfigs && individualConfigs.length > 0) {
+              configData = individualConfigs
+              console.log('Found data in individual_sensor_configs:', configData)
+            } else {
+              console.log('No data in individual_sensor_configs, trying sensor_configurations...')
+              try {
+                const sensorConfigQueryPromise = supabase
+                  .from('sensor_configurations')
+                  .select('sensor_id, sensor_name')
+                  .in('sensor_id', uniqueSensorIds)
+                
+                const sensorConfigTimeout = new Promise((_, reject) => {
+                  setTimeout(() => reject(new Error('Sensor config query timeout')), 5000) // 5 second timeout
+                })
+                
+                const { data: sensorConfigs, error: sensorError } = await Promise.race([sensorConfigQueryPromise, sensorConfigTimeout]) as any
+                
+                if (sensorError) {
+                  console.error('Error loading sensor_configurations:', sensorError)
+                  configError = sensorError
+                } else if (sensorConfigs && sensorConfigs.length > 0) {
+                  console.log('Found data in sensor_configurations:', sensorConfigs)
+                  configData = sensorConfigs.map((config: any) => ({
+                    sensor_id: config.sensor_id,
+                    display_name: config.sensor_name,
+                    location: config.location,
+                    status: config.status
+                  }))
+                }
+              } catch (sensorConfigError) {
+                console.warn('Sensor config query timed out or failed:', sensorConfigError)
+                // Continue without config data
+              }
+            }
+          }
+        } catch (configTimeoutError) {
+          console.warn('Config query timed out or failed:', configTimeoutError)
+          // Continue without config data
         }
       }
 
@@ -359,7 +440,11 @@ export function useMultiSensorTemperatureData(timeRange: string = "7d") {
     } catch (error) {
       console.error('Error loading multi-sensor temperature data:', error)
       setError(error instanceof Error ? error.message : 'Unknown error')
+      // Ensure data is set to empty arrays on error
+      setCombinedData([])
+      setHasDataInTimeRange(false)
     } finally {
+      // Always clear loading state, even if there was an error or early return
       setLoading(false)
     }
   }
@@ -367,8 +452,26 @@ export function useMultiSensorTemperatureData(timeRange: string = "7d") {
   useEffect(() => {
     if (user) {
       loadMultiSensorData()
+    } else if (!user) {
+      // If no user, clear loading state
+      setLoading(false)
     }
   }, [user, timeRange])
+
+  // Add timeout to prevent infinite loading
+  useEffect(() => {
+    if (loading && user) {
+      const timeout = setTimeout(() => {
+        console.warn('Multi-sensor temperature data loading timeout - forcing loading to false')
+        setLoading(false)
+        setError('Loading timeout - please try again')
+        setCombinedData([])
+        setHasDataInTimeRange(false)
+      }, 15000) // 15 second timeout
+      
+      return () => clearTimeout(timeout)
+    }
+  }, [loading, user])
 
   return {
     combinedData,

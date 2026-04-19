@@ -50,10 +50,10 @@ export const TemperatureSensorPage = ({ onNavigate, sensorId }: TemperatureSenso
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-48 sm:h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading temperature data...</p>
+          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary mx-auto mb-3 sm:mb-4"></div>
+          <p className="text-xs sm:text-sm text-muted-foreground">Loading temperature data...</p>
         </div>
       </div>
     )
@@ -64,9 +64,9 @@ export const TemperatureSensorPage = ({ onNavigate, sensorId }: TemperatureSenso
       {/* Error State */}
       {error && (
         <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center gap-2 text-red-800">
-              <span className="text-sm">⚠️ Error loading temperature data: {error}</span>
+              <span className="text-xs sm:text-sm">⚠️ Error loading temperature data: {error}</span>
             </div>
           </CardContent>
         </Card>
@@ -85,6 +85,7 @@ export const TemperatureSensorPage = ({ onNavigate, sensorId }: TemperatureSenso
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
         hasDataInTimeRange={hasDataInTimeRange}
+        hasAnyDataInDatabase={hasDataInTimeRange}
         timeRangeInfo={timeRangeInfo}
         sensorData={{
           value: currentValue,
@@ -109,13 +110,13 @@ export const TemperatureSensorPage = ({ onNavigate, sensorId }: TemperatureSenso
         customContent={
           sensors.length > 0 && (
             <Card>
-              <CardContent className="pt-6">
-                <h3 className="text-lg font-semibold mb-4">Sensor Selectie</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <CardContent className="pt-4 sm:pt-6">
+                <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Sensor Selectie</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {sensors.map((sensor) => (
                     <div
                       key={sensor.sensor_id}
-                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                      className={`p-2 sm:p-3 rounded-lg border cursor-pointer transition-colors ${
                         selectedSensors.includes(sensor.sensor_id)
                           ? 'bg-blue-100 border-blue-300'
                           : 'bg-white border-gray-200 hover:bg-gray-50'
@@ -130,11 +131,11 @@ export const TemperatureSensorPage = ({ onNavigate, sensorId }: TemperatureSenso
                     >
                       <div className="flex items-center space-x-2">
                         <div 
-                          className="w-4 h-4 rounded-full"
+                          className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
                           style={{ backgroundColor: sensor.color }}
                         />
                         <div>
-                          <p className="font-medium text-sm">{sensor.display_name}</p>
+                          <p className="font-medium text-xs sm:text-sm">{sensor.display_name}</p>
                           {sensor.location && (
                             <p className="text-xs text-muted-foreground">{sensor.location}</p>
                           )}

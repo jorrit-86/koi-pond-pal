@@ -3,8 +3,136 @@
     "dashboard": "Dashboard",
     "waterParameters": "Waterparameters",
     "koiManagement": "Koi Beheer",
+    "khCalculator": "KH Calculator",
     "settings": "Instellingen",
     "signOut": "Uitloggen"
+  },
+  "khCalculator": {
+    "title": "KH Calculator",
+    "subtitle": "Bereken hoeveel natriumbicarbonaat nodig is om KH veilig te verhogen.",
+    "recommendationText": "Een KH rond 6 dKH is voor veel koivijvers een praktisch doel om de biologische filtratie stabiel te houden.",
+    "enterValidValues": "Vul geldige waarden in om KH-advies en een doseerschema te zien.",
+    "quickCheckPrefix": "Snelle check: gemeten KH",
+    "quickCheckTarget": "doel-KH",
+    "quickCheckTotal": "totaal benodigd natriumbicarbonaat",
+    "validation": {
+      "measuredKh": "Voer een geldige KH-waarde in",
+      "targetKh": "Voer een geldige doel-KH in",
+      "pondVolume": "Voer een geldig vijvervolume in"
+    },
+    "form": {
+      "title": "Invoer",
+      "description": "Vul je huidige KH, doel-KH en vijvervolume in.",
+      "measuredKhLabel": "Gemeten KH (dKH)",
+      "measuredKhPlaceholder": "3.0",
+      "useRecommendedTarget": "Gebruik aanbevolen doel-KH (6 dKH)",
+      "targetKhLabel": "Doel-KH (dKH)",
+      "targetKhPlaceholder": "6.0",
+      "pondVolumeLabel": "Vijvervolume in liters",
+      "pondVolumePlaceholder": "13000"
+    },
+    "result": {
+      "title": "Resultaat",
+      "baseInfo": "Voor een vijver van 13.000 liter is ongeveer 390 g natriumbicarbonaat nodig om KH met 1 dKH te verhogen.",
+      "recommendedTargetKh": "Aanbevolen doel-KH",
+      "measuredKh": "Gemeten KH",
+      "targetKh": "Doel-KH",
+      "khDifference": "KH-verschil",
+      "totalRequiredDose": "Totaal benodigde dosis",
+      "maxDailyDose": "Maximale dagelijkse dosis"
+    },
+    "schedule": {
+      "title": "Doseerschema",
+      "description": "Verdeel de dosis per dag en overschrijd de daglimiet niet.",
+      "empty": "Met de huidige KH en doelwaarde is geen doseerschema nodig.",
+      "dayLabel": "Dag {{day}}"
+    },
+    "messages": {
+      "belowTarget": "Je KH ligt onder de gekozen doelwaarde. Verhoog KH geleidelijk met natriumbicarbonaat.",
+      "atTarget": "Je KH ligt op de gekozen doelwaarde. Correctie is nu niet nodig.",
+      "aboveTarget": "Je KH ligt boven de gekozen doelwaarde. Voeg nu geen natriumbicarbonaat toe.",
+      "safetyAdvice": "Doseer geleidelijk, niet alles in één keer. Los elke dosis eerst op in een emmer vijverwater en voeg dit toe op een plek met goede doorstroming. Meet opnieuw na de laatste dosis.",
+      "maintenanceAdvice": "KH daalt vaak geleidelijk door biologische activiteit. Met wekelijkse metingen leer je hoeveel KH je vijver verbruikt."
+    },
+    "advice": {
+      "title": "Advies",
+      "maintenanceLead": "KH daalt vaak geleidelijk door biologische activiteit. Met wekelijkse metingen leer je hoeveel KH je vijver verbruikt.",
+      "belowTargetBullet1": "Verhoog KH geleidelijk met natriumbicarbonaat.",
+      "belowTargetBullet2": "Los elke dosis eerst op in een emmer vijverwater.",
+      "belowTargetBullet3": "Voeg dit toe op een plek met goede doorstroming.",
+      "belowTargetBullet4": "Voeg nooit de volledige hoeveelheid in één keer toe.",
+      "belowTargetBullet5": "Meet KH opnieuw na de laatste dosis.",
+      "atTargetFollowup": "Blijf wekelijks meten om het verbruik in de tijd te volgen.",
+      "aboveTargetFollowup": "KH verlagen is meestal niet nodig als de waarde stabiel blijft. Blijf KH in de tijd monitoren.",
+      "safetyTitle": "Veiligheidsadvies",
+      "maintenanceTitle": "Onderhoudsadvies",
+      "maintenanceExample": "Voorbeeld: verhoog je KH naar 6 dKH en meet je een week later 4 dKH, dan verbruikt je vijver ongeveer 2 dKH per week."
+    }
+  },
+  "maintenance": {
+    "title": "Onderhoud Taken",
+    "todos": "To-Do's",
+    "taskTypes": {
+      "water_change": "Waterwissel",
+      "clean_brushes": "Reinigen Borstels",
+      "filter_check": "Controle Filter",
+      "water_parameters": "Waterparameters Meten",
+      "custom": "Aangepast"
+    },
+    "frequencyTypes": {
+      "daily": "Dagelijks",
+      "weekly": "Wekelijks",
+      "x_days": "Na X Dagen",
+      "monthly": "Maandelijks",
+      "four_weeks": "1x per Vier Weken"
+    },
+    "status": {
+      "pending": "In Behandeling",
+      "completed": "Voltooid",
+      "overdue": "Te Laat"
+    },
+    "weekDays": {
+      "sunday": "Zondag",
+      "monday": "Maandag",
+      "tuesday": "Dinsdag",
+      "wednesday": "Woensdag",
+      "thursday": "Donderdag",
+      "friday": "Vrijdag",
+      "saturday": "Zaterdag"
+    },
+    "form": {
+      "taskName": "Taak Naam",
+      "taskType": "Taak Type",
+      "frequency": "Frequentie",
+      "frequencyValue": "Waarde",
+      "advanceNotice": "Dagen van Tevoren",
+      "advanceNoticeDesc": "Hoeveel dagen van tevoren moet de taak verschijnen",
+      "isActive": "Actief",
+      "createTask": "Nieuwe Taak",
+      "editTask": "Taak Bewerken",
+      "deleteTask": "Taak Verwijderen",
+      "completeTask": "Taak Voltooien",
+      "addNotes": "Notities Toevoegen"
+    },
+    "dashboard": {
+      "upcomingTasks": "Aankomende Taken",
+      "overdueTasks": "Te Late Taken",
+      "noTasks": "Geen taken gepland",
+      "dueToday": "Vandaag",
+      "dueTomorrow": "Morgen",
+      "dueInDays": "Over {{days}} dagen",
+      "overdueByDays": "{{days}} dagen te laat"
+    },
+    "messages": {
+      "taskCreated": "Taak succesvol aangemaakt",
+      "taskUpdated": "Taak succesvol bijgewerkt",
+      "taskDeleted": "Taak succesvol verwijderd",
+      "taskCompleted": "Taak gemarkeerd als voltooid",
+      "createError": "Fout bij het aanmaken van taak",
+      "updateError": "Fout bij het bijwerken van taak",
+      "deleteError": "Fout bij het verwijderen van taak",
+      "completeError": "Fout bij het voltooien van taak"
+    }
   },
   "photoUpload": {
     "previewPhoto": "Foto Voorvertoning",
@@ -58,7 +186,7 @@
       },
       "koiManagement": {
         "title": "Koi Beheer",
-        "description": "Houd je koi collectie bij, inclusief gezondheidsstatus, voeding en groei tracking."
+        "description": "Houd je koi collectie bij, inclusief gezondheidsstatus en groei tracking."
       },
       "analytics": {
         "title": "Geavanceerde Analytics",
@@ -137,6 +265,7 @@
     "lowTempWarning": "Watertemperatuur is gevaarlijk laag. Koi kunnen gestrest raken of in winterslaap gaan.",
     "highTempWarning": "Watertemperatuur is gevaarlijk hoog. Dit kan zuurstoftekort en stress veroorzaken.",
     "elevatedTemperature": "Verhoogde Temperatuur",
+    "lowTemperature": "Lage Temperatuur",
     "temperatureWarning": "Watertemperatuur is buiten het optimale bereik. Monitor koi-gedrag nauwlettend.",
     "dangerousNitriteLevel": "Gevaarlijke Nitrietwaarde",
     "nitriteDangerWarning": "Nitrietwaarden zijn gevaarlijk hoog! Dit is giftig voor koi. Onmiddellijke waterverversing vereist.",
@@ -155,11 +284,12 @@
     "title": "Waterparameters",
     "ph": "pH Waarde",
     "temperature": "Temperatuur",
-    "kh": "KH (Carbonaathardheid)",
+    "kh": "kH (Carbonaathardheid)",
     "gh": "GH (Totale Hardheid)",
     "nitrite": "Nitriet (NO₂)",
     "nitrate": "Nitraat (NO₃)",
     "phosphate": "Fosfaat (PO₄)",
+    "ammonia": "NH₃/NH₄ (Ammonia)",
     "addReading": "Meting Toevoegen",
     "lastReading": "Laatste Meting",
     "optimal": "Optimaal",
@@ -186,8 +316,6 @@
     "healthy": "Gezond",
     "sick": "Ziek",
     "recovering": "Herstellend",
-    "lastFeeding": "Laatste Voeding",
-    "feedingSchedule": "Voedingsschema",
     "notes": "Notities"
   },
   "settings": {
@@ -309,7 +437,46 @@
     "saveBackupCodes": "Bewaar deze backup codes op een veilige plek",
     "backupCodeUsed": "Backup code gebruikt",
     "invalidCode": "Ongeldige verificatiecode",
-    "2FASetupComplete": "2FA setup succesvol voltooid"
+    "2FASetupComplete": "2FA setup succesvol voltooid",
+    "general": {
+      "title": "Algemene Instellingen",
+      "subtitle": "Configureer je koi vijver beheer voorkeuren",
+      "appearance": "Uiterlijk",
+      "appearanceDescription": "Pas het uiterlijk van je dashboard aan",
+      "darkMode": "Donkere Modus",
+      "darkModeDescription": "Schakel tussen licht en donker thema",
+      "chooseLanguage": "Kies je voorkeurstaal",
+      "selectLanguage": "Selecteer taal",
+      "homeAssistantIntegration": "Home Assistant Integratie",
+      "homeAssistantDescription": "Verbind met je Home Assistant instantie voor geautomatiseerde data logging",
+      "homeAssistantUrl": "Home Assistant URL",
+      "homeAssistantUrlPlaceholder": "https://your-homeassistant.local:8123",
+      "longLivedAccessToken": "Langlevende Toegangstoken",
+      "accessTokenPlaceholder": "Je Home Assistant toegangstoken",
+      "autoLoggingFromHA": "Auto-logging van HA",
+      "autoLoggingDescription": "Automatisch waterparameters loggen vanuit Home Assistant sensoren",
+      "testConnection": "Verbinding Testen",
+      "parameterTestingTimers": "Parameter Test Timers",
+      "parameterTimersDescription": "Stel afteltimers in voor regelmatige waterparameter tests",
+      "timerDuration": "Timer Duur (minuten)",
+      "enableTimerReminders": "Schakel timer herinneringen in voor {parameter} tests",
+      "notificationsAlerts": "Notificaties & Waarschuwingen",
+      "notificationsDescription": "Configureer wanneer en hoe je waarschuwingen ontvangt",
+      "parameterAlerts": "Parameter Waarschuwingen",
+      "parameterAlertsDescription": "Krijg notificaties wanneer waterparameters buiten ideale bereiken zijn",
+      "alertThresholds": "Waarschuwingsdrempels",
+      "phWarningLevel": "pH Waarschuwingsniveau",
+      "phDangerLevel": "pH Gevaarniveau",
+      "nitrateWarning": "Nitraat Waarschuwing (mg/l)",
+      "nitrateDanger": "Nitraat Gevaar (mg/l)",
+      "dataManagement": "Data Beheer",
+      "dataManagementDescription": "Beheer je vijver data en geschiedenis",
+      "exportData": "Data Exporteren",
+      "importData": "Data Importeren",
+      "dangerZone": "Gevaarzone",
+      "dangerZoneDescription": "Deze acties kunnen niet ongedaan worden gemaakt. Wees voorzichtig.",
+      "clearAllHistoricalData": "Alle Historische Data Wissen"
+    }
   },
   "recommendations": {
     "title": "Slimme Aanbevelingen",

@@ -179,10 +179,6 @@ export class AIChatService {
       return this.generateKoiCareResponse(context)
     }
 
-    // Feeding questions
-    if (lowerMessage.includes('voeding') || lowerMessage.includes('eten') || lowerMessage.includes('voer')) {
-      return this.generateFeedingResponse(context)
-    }
 
     // Filter questions
     if (lowerMessage.includes('filter') || lowerMessage.includes('filtratie') || lowerMessage.includes('biologisch')) {
@@ -209,6 +205,11 @@ export class AIChatService {
       return this.generateHelpResponse(context)
     }
 
+    // System prompt/knowledge questions
+    if (lowerMessage.includes('kennis') || lowerMessage.includes('system') || lowerMessage.includes('briefing') || lowerMessage.includes('master')) {
+      return this.generateSystemPromptResponse(context)
+    }
+
     // Default response
     return this.generateDefaultResponse(context)
   }
@@ -227,7 +228,7 @@ Voor een gezonde koi-vijver is het belangrijk om te weten:
 • Filtercapaciteit
 • Diepte van de vijver
 
-Met deze informatie kan ik je veel specifiekere adviezen geven over voeding, filtratie en onderhoud!`
+Met deze informatie kan ik je veel specifiekere adviezen geven over filtratie en onderhoud!`
     }
 
     const litersPerKoi = pondSize > 0 ? Math.round(pondSize / koiCount) : 0
@@ -287,10 +288,30 @@ Ik zie dat je nog geen waterparameters hebt ingevoerd. Om je beter te kunnen hel
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 **pH**: 7.0-8.5
 ☠️ **Ammoniak**: 0 mg/l
-⚠️ **Nitriet**: 0 mg/l  
+⚠️ **Nitriet**: <0.1 mg/l  
 📈 **Nitraat**: <50 mg/l
-🛡️ **KH**: 4-8 dH
+🛡️ **KH**: ≥6°dH
 💎 **GH**: 6-12 dH
+🌡️ **Temperatuur**: 18-24°C
+💨 **Zuurstof**: >6 mg/l
+🧪 **Fosfaat**: <1.0 mg/l
+
+🧠 **Waterkwaliteit Kennis**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**Ammoniak (NH₃/NH₄⁺)**: 0 mg/l - Giftig → direct actie bij detectie
+**Nitriet (NO₂⁻)**: <0.1 mg/l - Giftig → filter verbeteren  
+**Nitraat (NO₃⁻)**: <50 mg/l - Hoog → algengroei
+**Fosfaat (PO₄³⁻)**: <1.0 mg/l - Algenvoeding, indirect schadelijk
+**Zuurstof (O₂)**: >6 mg/l - Onder deze waarde: direct actie
+**KH**: ≥6°dH - Buffer tegen pH-schommelingen
+**Temperatuur**: 18-24°C - Optimale bacteriële activiteit
+
+**Belangrijke relaties:**
+• Ammoniak → Nitriet → Nitraat (biologische cyclus)
+• Fosfaat voedt algen → water verversen bij hoge waarden
+• Zuurstoftekort → stress en sterfte
+• KH buffer → pH stabiliteit
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💬 **Wat wil je specifiek weten over waterkwaliteit?**`
@@ -391,8 +412,8 @@ Ik zie dat je nog geen waterparameters hebt ingevoerd. Om je beter te kunnen hel
           if (value > 1) {
             statusIcon = '⚠️'
             hasIssues = true
-            advice = 'Te hoog! Streefwaarde: <0.5-1 mg/l. Voedt algenexplosie en veroorzaakt indirect stress. Beperk voer en verhoog waterverversing.'
-            recommendations.push('Voer beperken en waterverversing verhogen')
+            advice = 'Te hoog! Streefwaarde: <0.5-1 mg/l. Voedt algenexplosie en veroorzaakt indirect stress. Verhoog waterverversing.'
+            recommendations.push('Waterverversing verhogen')
           } else if (value > 0.5) {
             statusIcon = '⚠️'
             advice = 'Aan de hoge kant! Streefwaarde: <0.5-1 mg/l. Houd in de gaten voor algen.'
@@ -508,10 +529,7 @@ ${isWellStocked ? '✅ **Uitstekende bezetting** - Ruim voldoende ruimte per koi
     if (pondSize > 0) {
       response += `
 
-**Voeding voor je ${pondSize.toLocaleString('nl-NL')} liter vijver:**
-• Zomer: ${koiCount * 2}-${koiCount * 3} gram per dag
-• Lente/herfst: ${koiCount * 1}-${koiCount * 2} gram per dag
-• Winter: Geen voeding onder 10°C`
+`
     }
 
     response += `
@@ -527,135 +545,6 @@ Wat wil je specifiek weten over je koi?`
     return response
   }
 
-  private static generateFeedingResponse(context: ChatContext): string {
-    const season = context.season || 'spring'
-    const koiCount = context.koiCount || 0
-    const pondSize = context.pondSize || 0
-    const experience = context.userExperience || 'beginner'
-    const waterParameters = context.waterParameters || []
-    
-    // Check for water quality issues that limit feeding
-    const hasAmmonia = waterParameters.some(p => p.name.toLowerCase() === 'ammoniak' && p.value > 0)
-    const hasNitrite = waterParameters.some(p => p.name.toLowerCase() === 'nitriet' && p.value > 0.1)
-    const hasHighNitrate = waterParameters.some(p => p.name.toLowerCase() === 'nitraat' && p.value > 50)
-    const hasHighPhosphate = waterParameters.some(p => p.name.toLowerCase() === 'fosfaat' && p.value > 1)
-    const hasLowOxygen = waterParameters.some(p => p.name.toLowerCase() === 'zuurstof' && p.value < 6)
-    
-    let response = `🍽️ **Voeding Advies**
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🌡️ **Temperatuur & Voeding**
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
-
-    // Temperature-based feeding advice
-    if (season === 'winter') {
-      response += `
-❄️ **Winter (< 8°C)**: Niet voeren
-🌡️ **8-12°C**: Licht voeren (tarwekiemen)
-🌡️ **12-18°C**: Matig voeren, groeivoer beperkt
-🌡️ **18-24°C**: Optimale temperatuur (1-2% lichaamsgewicht/dag)
-🌡️ **> 24°C**: Voer beperken, zuurstofstress`
-    } else if (season === 'spring') {
-      response += `
-🌸 **Lente**: Start met lichte voeding en bouw langzaam op
-🌡️ **12-18°C**: Matig voeren, groeivoer beperkt
-🌡️ **18-24°C**: Optimale temperatuur (1-2% lichaamsgewicht/dag)`
-    } else if (season === 'summer') {
-      response += `
-☀️ **Zomer**: Koi zijn het meest actief
-🌡️ **18-24°C**: Optimale temperatuur (1-2% lichaamsgewicht/dag)
-🌡️ **> 24°C**: Voer beperken, zuurstofstress`
-    } else if (season === 'autumn') {
-      response += `
-🍂 **Herfst**: Bereid koi voor op winter, verminder voeding
-🌡️ **12-18°C**: Matig voeren, groeivoer beperkt
-🌡️ **8-12°C**: Licht voeren (tarwekiemen)`
-    }
-
-    // Water quality limitations
-    if (hasAmmonia || hasNitrite || hasHighNitrate || hasHighPhosphate || hasLowOxygen) {
-      response += `
-
-🚨 **Waterkwaliteit Beperkingen**
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️ **Belangrijk**: Waterkwaliteit is leidend - voer nooit meer dan de filter aankan!`
-      
-      if (hasAmmonia || hasNitrite) {
-        response += `
-☠️ **Ammoniak/Nitriet aanwezig**: Direct minder voeren!`
-      }
-      if (hasHighNitrate || hasHighPhosphate) {
-        response += `
-📈 **Nitraat >50 mg/l of Fosfaat >1 mg/l**: Voer beperken + water verversen`
-      }
-      if (hasLowOxygen) {
-        response += `
-💨 **Zuurstof laag**: Voergift verminderen, extra beluchten`
-      }
-    }
-
-    // Specific feeding amounts based on koi count and size
-    if (koiCount > 0) {
-      response += `
-
-🐟 **Specifiek voor je ${koiCount} koi**
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
-      
-      // Estimate koi sizes and feeding amounts
-      const avgKoiSize = 50 // cm, estimate
-      const avgKoiWeight = 2 // kg, estimate
-      const totalWeight = koiCount * avgKoiWeight
-      const dailyAmount = Math.round(totalWeight * 0.02 * 1000) // 2% of body weight in grams
-      
-      response += `
-📏 **Geschatte lichaamslengte**: ${avgKoiSize} cm per koi
-⚖️ **Geschat gewicht**: ${avgKoiWeight} kg per koi
-🍽️ **Dagelijkse hoeveelheid**: ${dailyAmount} gram (1-2% lichaamsgewicht)
-📅 **Voermomenten**: ${season === 'summer' ? '4-6x per dag' : season === 'winter' ? 'Niet voeren' : '2-3x per dag'}`
-      
-      if (season === 'summer') {
-        response += `
-🤖 **Automatische voeder**: Tot 6-8x per dag mogelijk`
-      }
-    }
-
-    // Pond size considerations
-    if (pondSize > 0) {
-      response += `
-
-🏊 **Voor je ${pondSize.toLocaleString('nl-NL')} liter vijver**
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
-      
-      if (pondSize < 1000) {
-        response += `
-🔍 **Kleine vijver**: Extra aandacht voor waterkwaliteit na voeding
-⚠️ **Risico**: Snelle waterkwaliteit verslechtering`
-      } else if (pondSize < 5000) {
-        response += `
-📊 **Medium vijver**: Normale voeding routine
-✅ **Stabiel**: Goede buffer capaciteit`
-      } else {
-        response += `
-🌊 **Grote vijver**: Zeer stabiel, minder risico op problemen
-✅ **Veilig**: Ruime buffer voor voeding`
-      }
-    }
-
-    response += `
-
-💡 **Kernboodschap**
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 **Meerdere kleine porties** = gezonder voor koi én minder piekbelasting voor filter
-🌡️ **Temperatuur + lichaamslengte** geven voerbehoefte aan, maar **waterwaarden begrenzen** maximale voergift
-📊 **Fosfaat is belangrijk** omdat het algengroei voedt → voer beperken en water verversen bij te hoge waarden
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💬 **Wat wil je specifiek weten over voeding?**`
-
-    return response
-  }
-
   private static generateFilterResponse(context: ChatContext): string {
     const pondSize = context.pondSize || 0
     const koiCount = context.koiCount || 0
@@ -665,13 +554,33 @@ Wat wil je specifiek weten over je koi?`
     
     
     if (!filterData || !filterData.filtration_type) {
-      return `Ik zie dat je nog geen filtergegevens hebt ingevoerd. Om je specifieke feedback te kunnen geven over je filtersysteem, voeg je filtergegevens toe via de 'Instellingen' pagina.
+      return `🔍 **Filtratie Systeem Analyse**
 
-Voor een complete filteranalyse heb ik nodig:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ **Geen Filtergegevens**
+Ik zie dat je nog geen filtergegevens hebt ingevoerd. Om je specifieke feedback te kunnen geven over je filtersysteem, voeg je filtergegevens toe via de 'Instellingen' pagina.
+
+📋 **Voor een complete filteranalyse heb ik nodig:**
 • Type filtratie (mechanisch/biologisch/natuurlijk)
 • Filter media (sponsen, keramiek, bio-ballen, etc.)
 • UV-sterilisator, protein skimmer, etc.
 • Water features (waterval, fontein, beluchting)
+
+🧠 **Kennis: Filtratie Principes**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**Een goed filtersysteem bestaat uit meerdere complementaire stappen:**
+🔧 **Mechanische filtering** - Verwijdert vaste en zwevende deeltjes
+🧬 **Biologische filtering** - Breekt giftige stoffen af (ammoniak → nitriet → nitraat)
+🧪 **Chemische filtering** - Optioneel, voor tijdelijke correcties
+💡 **UV-C en plantenfiltering** - Ondersteunend, geen vervanging van hoofdfilter
+
+**Beluchting is een prestatieversterker van biologische filtering:**
+• Zuurstofvoorziening - bacteriën zijn aeroob; meer O₂ = snellere omzetting
+• Verbeterde doorstroming - lucht voorkomt dode zones
+• Preventie van anaerobe zones - voorkomt H₂S en andere giftige gassen
+• Gasuitwisseling - CO₂ eruit, O₂ erin → stabielere pH
 
 Met deze informatie kan ik je concrete feedback geven over je huidige opstelling!`
     }
@@ -735,6 +644,70 @@ ${filterData.filter_segments.map((segment, index) => {
 
 📊 **Mijn Analyse**
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+
+    // Add detailed filtration knowledge
+    response += `
+
+🧠 **Filtratie Kennis**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 **Mechanische Filtering**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Verwijdert vaste en zwevende deeltjes (uitwerpselen, bladeren):
+
+**Vortex** - Eenvoudig, goedkoop, maar vangt alleen grof vuil
+**Borstels** - Betaalbaar, effectief tegen grove vervuiling, veel onderhoud
+**Mattenfilter** - Vangt vuil + wat biofunctie, kan dichtslibben
+**Zeefbochtfilter (sieve)** - Compact, weinig onderhoud, dagelijks afspoelen
+**Trommelfilter** - Automatisch, zeer efficiënt, duur, afhankelijk van techniek
+**Beadfilter** - Compact, combineert mech/bio, kan verstopt raken, backwash nodig
+
+🧬 **Biologische Filtering**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Hier vindt omzetting van giftige stoffen plaats (ammoniak → nitriet → nitraat) door bacteriën:
+
+**Japanse matten** - Veel oppervlak, maar onderhoudsgevoelig
+**Moving Bed (K1/K3)** - Belucht, zelfreinigend, hoge capaciteit
+**Trickle/Shower filter** - Zuurstofrijk, stabiel, zeer effectief
+**Beadfilter** - Compact, deels biologisch
+**Glasfoam/keramisch** - Poreus, duurzaam, ideaal in trickles of beluchte kamers
+
+🧪 **Chemische Filtering (optioneel)**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Gebruik van absorberende materialen:
+• Actief kool, zeoliet, fosfaatbinders
+• Effectief bij tijdelijke problemen (verkleuring, ammoniakpieken)
+• Niet permanent toepasbaar; materiaal verzadigt en moet vervangen worden
+
+💡 **UV-C en Plantenfiltering**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• UV-C doodt zweefalgen en ziektekiemen, maar vervangt geen filter
+• Plantenfilters/moerasfilters nemen nitraat en fosfaat op, maar zijn seizoensgebonden
+• Niet geschikt als hoofdfilter voor koi-vijvers
+
+🌬️ **Beluchting en Filterprestatie**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Beluchting is een prestatieversterker van biologische filtering:
+
+**Waarom beluchting essentieel is:**
+• Zuurstofvoorziening - bacteriën zijn aeroob; meer O₂ = snellere omzetting
+• Verbeterde doorstroming - lucht voorkomt dode zones, benut meer bio-oppervlak
+• Preventie van anaerobe zones - voorkomt vorming van H₂S en andere giftige gassen
+• Gasuitwisseling - CO₂ eruit, O₂ erin → stabielere pH en minder verzuring
+
+**Invloed per filtertype:**
+• Japanse matten: 60% → 80% (minder slib, beter O₂)
+• Statisch media: 70% → 90% (sterke winst door beluchting)
+• Moving bed: 0-40% → 100% (essentieel voor werking)
+• Trickle/Shower: 100% (reeds natuurlijk belucht)
+• Beadfilter: 60% → 70% (lichte winst mogelijk)
+
+**Praktische aandachtspunten:**
+• Lucht verdelen met fijne luchtstenen of schijven onder het medium
+• Matige, constante beluchting voorkomt biofilmverlies
+• In winter: beluchting reduceren om warmteverlies te beperken
+
+*"Een biologisch filter zonder beluchting werkt, maar met beluchting leeft het."*`
 
     // Filtration type analysis
     const filtrationScore = this.analyzeFiltrationType(filterData.filtration_type, pondSize, koiCount)
@@ -1032,8 +1005,8 @@ ${overallEmoji} **Algemene Beoordeling**: ${overallScore}/10
 
 **Temperatuur zones:**
 • **Onder 10°C**: Koi eten weinig tot niets, minimale activiteit
-• **10-15°C**: Lichte voeding, weinig activiteit, voorzichtig voeren
-• **15-20°C**: Normale voeding, matige activiteit, regelmatig voeren
+• **10-15°C**: Lichte activiteit, weinig beweging, voorzichtig opbouwen
+• **15-20°C**: Normale activiteit, matige beweging, regelmatig observeren
 • **20-25°C**: Optimale temperatuur, actieve koi, maximale groei
 • **Boven 25°C**: Extra zuurstof en schaduw nodig, stress gevaar`
 
@@ -1042,7 +1015,7 @@ ${overallEmoji} **Algemene Beoordeling**: ${overallScore}/10
       spring: `
 **Lente temperatuur management:**
 • Temperatuur stijgt langzaam (10-18°C)
-• Start met voeding bij 12°C
+• Start met activiteit bij 12°C
 • Filter opstarten en bacteriën activeren
 • Voorzichtig met plotselinge temperatuurschommelingen`,
       summer: `
@@ -1054,13 +1027,13 @@ ${overallEmoji} **Algemene Beoordeling**: ${overallScore}/10
       autumn: `
 **Herfst temperatuur management:**
 • Temperatuur daalt (15-10°C)
-• Verminder voeding bij dalende temperatuur
+• Verminder activiteit bij dalende temperatuur
 • Voorbereiden op winter
 • Filter beschermen tegen kou`,
       winter: `
 **Winter temperatuur management:**
 • Lage temperatuur (onder 10°C)
-• Geen voeding onder 10°C
+• Minimale activiteit onder 10°C
 • Filter beschermen tegen vorst
 • Minimale doorstroming, ijsvrij houden`
     }
@@ -1090,7 +1063,7 @@ ${overallEmoji} **Algemene Beoordeling**: ${overallScore}/10
 **Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} vijverhouder:**
 • ${experience === 'beginner' ? 'Investeer in een goede thermometer' : 'Overweeg geavanceerde temperatuur monitoring'}
 • Monitor temperatuur dagelijks
-• Pas voeding aan op temperatuur
+• Pas activiteit aan op temperatuur
 • Voorzie schaduw en zuurstof bij warm weer
 
 Wat wil je specifiek weten over temperatuurbeheer?`
@@ -1103,10 +1076,10 @@ Wat wil je specifiek weten over temperatuurbeheer?`
     const experience = context.userExperience || 'beginner'
     
     const seasonalTasks = {
-      spring: 'Lente: Vijver opstarten, filter controleren, eerste voeding, waterkwaliteit testen',
-      summer: 'Zomer: Regelmatig voeren, waterkwaliteit monitoren, schaduw voorzien, zuurstof controleren',
-      autumn: 'Herfst: Bladeren verwijderen, wintervoer, vijver voorbereiden op winter',
-      winter: 'Winter: Minimale voeding, ijsvrij houden, filter onderhoud, koi observeren'
+      spring: 'Lente: Vijver opstarten, filter controleren, waterkwaliteit testen',
+      summer: 'Zomer: Waterkwaliteit monitoren, schaduw voorzien, zuurstof controleren',
+      autumn: 'Herfst: Bladeren verwijderen, vijver voorbereiden op winter',
+      winter: 'Winter: Ijsvrij houden, filter onderhoud, koi observeren'
     }
 
     return `In de ${season} zijn er specifieke taken voor je vijver:
@@ -1171,6 +1144,120 @@ Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} vijverhouder geef ik j
 • Probleemoplossing
 
 Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} vijverhouder geef ik je gepersonaliseerd advies. Kun je je vraag wat specifieker stellen? Dan kan ik je het beste advies geven!`
+  }
+
+  private static generateSystemPromptResponse(context: ChatContext): string {
+    return `🧠 **Koi Sensei - Master Kennis Base**
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 **Doel van de AI**
+Je bent een deskundige koi-vijverspecialist met uitgebreide kennis van waterkwaliteit en biochemie, filtratietechniek en visgezondheid. Je taak is om koi-houders te voorzien van feitelijk correcte, onderbouwde en praktische adviezen over het beheer van hun vijver, afgestemd op hun filtertype, waterwaarden, temperatuur en bezetting.
+
+🧩 **1. Filtratiesystemen in koi-vijvers**
+
+Een goed filtersysteem bestaat uit meerdere complementaire stappen: mechanisch, biologisch, chemisch, en ondersteunend (UV/planten).
+
+🔹 **Mechanische filtering**
+Verwijdert vaste en zwevende deeltjes (uitwerpselen, bladeren).
+
+**Vortex** - Eenvoudig, goedkoop, maar vangt alleen grof vuil
+**Borstels** - Betaalbaar, effectief tegen grove vervuiling, veel onderhoud
+**Mattenfilter** - Vangt vuil + wat biofunctie, kan dichtslibben
+**Zeefbochtfilter (sieve)** - Compact, weinig onderhoud, dagelijks afspoelen
+**Trommelfilter** - Automatisch, zeer efficiënt, duur, afhankelijk van techniek
+**Beadfilter** - Compact, combineert mech/bio, kan verstopt raken, backwash nodig
+
+🔹 **Biologische filtering**
+Hier vindt omzetting van giftige stoffen plaats (ammoniak → nitriet → nitraat) door bacteriën.
+
+**Japanse matten** – veel oppervlak, maar onderhoudsgevoelig
+**Moving Bed (K1/K3)** – belucht, zelfreinigend, hoge capaciteit
+**Trickle/Shower filter** – zuurstofrijk, stabiel, zeer effectief
+**Beadfilter** – compact, deels biologisch
+**Glasfoam/keramisch** – poreus, duurzaam, ideaal in trickles of beluchte kamers
+
+🔹 **Chemische filtering (optioneel)**
+Gebruik van absorberende materialen: Actief kool, zeoliet, fosfaatbinders. Effectief bij tijdelijke problemen (verkleuring, ammoniakpieken). Niet permanent toepasbaar; materiaal verzadigt en moet vervangen worden.
+
+🔹 **UV-C en plantenfiltering**
+UV-C doodt zweefalgen en ziektekiemen, maar vervangt geen filter. Plantenfilters/moerasfilters nemen nitraat en fosfaat op, maar zijn seizoensgebonden en niet geschikt als hoofdfilter.
+
+🌬️ **2. Beluchting en filterprestatie**
+
+Beluchting is een prestatieversterker van biologische filtering.
+
+🔹 **Waarom beluchting essentieel is**
+• Zuurstofvoorziening – bacteriën zijn aeroob; meer O₂ = snellere omzetting
+• Verbeterde doorstroming – lucht voorkomt dode zones, benut meer bio-oppervlak
+• Preventie van anaerobe zones – voorkomt vorming van H₂S en andere giftige gassen
+• Gasuitwisseling – CO₂ eruit, O₂ erin → stabielere pH en minder verzuring
+
+🔹 **Invloed per filtertype**
+• Japanse matten: 60% → 80% (minder slib, beter O₂)
+• Statisch media: 70% → 90% (sterke winst door beluchting)
+• Moving bed: 0-40% → 100% (essentieel voor werking)
+• Trickle/Shower: 100% (reeds natuurlijk belucht)
+• Beadfilter: 60% → 70% (lichte winst mogelijk)
+
+🔹 **Praktische aandachtspunten**
+• Lucht verdelen met fijne luchtstenen of schijven onder het medium
+• Matige, constante beluchting voorkomt biofilmverlies
+• In winter: beluchting reduceren om warmteverlies te beperken
+
+*"Een biologisch filter zonder beluchting werkt, maar met beluchting leeft het."*
+
+💧 **3. Waterparameters en streefwaarden**
+
+| Parameter | Streefwaarde | Betekenis |
+|-----------|--------------|-----------|
+| Ammoniak (NH₃/NH₄⁺) | 0 mg/l | Giftig → direct actie bij detectie |
+| Nitriet (NO₂⁻) | <0.1 mg/l | Giftig → filter verbeteren |
+| Nitraat (NO₃⁻) | <50 mg/l | Hoog → algengroei |
+| Fosfaat (PO₄³⁻) | <1.0 mg/l | Algenvoeding, indirect schadelijk |
+| Zuurstof (O₂) | >6 mg/l | Onder deze waarde: direct actie |
+| KH | ≥6°dH | Buffer tegen pH-schommelingen |
+| Temperatuur | 18-24°C | Optimale bacteriële activiteit |
+
+🌡️ **4. Temperatuur en koi activiteit**
+
+🔹 **Temperatuur zones**
+• <8°C: Koi in winterslaap, minimale activiteit
+• 8-12°C: Koi worden wakker, lichte activiteit
+• 12-18°C: Normale activiteit, matige beweging
+• 18-24°C: Optimale temperatuur, actieve koi
+• >24°C: Extra aandacht voor zuurstof, stress gevaar
+
+🔹 **Waterkwaliteit als limiterende factor**
+• Elke meetbare hoeveelheid ammoniak of nitriet → direct actie vereist
+• Nitraat >50 mg/l of fosfaat >1 mg/l → water verversen
+• Zuurstoftekort → extra beluchting
+
+*Temperatuur bepaalt de activiteit van koi en filter bacteriën.*
+
+🧭 **5. AI-gedragsinstructies**
+
+De AI moet:
+• Antwoorden geven met technische nauwkeurigheid én praktische toepasbaarheid
+• Uitleg structureren in 3-4 logische secties (uitleg, oorzaak, effect, advies)
+• Altijd de relatie leggen tussen temperatuur, waterkwaliteit en filtering
+• Bij vragen over filterprestaties altijd beluchting meenemen als factor
+• Begrippen als "filterscore" kunnen toelichten op basis van bio-oppervlak, doorstroming, zuurstofvoorziening, stabiliteit
+• Toon: deskundig, rustig en adviserend
+• Stijl: technisch onderbouwd, begrijpelijk voor hobbyisten én professionals
+
+🔑 **6. Kernboodschap**
+
+• Mechanische filtering verwijdert vuil
+• Biologische filtering breekt afvalstoffen af
+• Beluchting versterkt biologische werking
+• Waterkwaliteit bepaalt koi gezondheid
+• Fosfaat is een essentiële indicator voor balans in het systeem
+
+*"Een goed koifilter is geen apparaat, maar een ecosysteem. Hoe beter de zuurstof, hoe stabieler het leven erin."*
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 **Dit is mijn complete kennis base. Wat wil je specifiek weten?**`
   }
 
   // Save chat history to database

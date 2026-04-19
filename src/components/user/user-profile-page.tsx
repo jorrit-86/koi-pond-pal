@@ -18,7 +18,7 @@ interface UserProfilePageProps {
 
 export function UserProfilePage({ onNavigate }: UserProfilePageProps) {
   const { t } = useTranslation()
-  const { user, updateProfile } = useAuth()
+  const { user, updateProfile, session } = useAuth()
   const { toast } = useToast()
   
   // User profile state
@@ -188,7 +188,7 @@ export function UserProfilePage({ onNavigate }: UserProfilePageProps) {
 
   // Upload profile photo
   const handleUploadPhoto = async () => {
-    if (!user || !fileInputRef.current?.files?.[0]) return
+    if (!user || !fileInputRef.current?.files?.[0] || !session?.access_token) return
 
     const file = fileInputRef.current.files[0]
     setIsUploadingPhoto(true)
@@ -199,6 +199,79 @@ export function UserProfilePage({ onNavigate }: UserProfilePageProps) {
       const fileName = `${user.id}-${Date.now()}.${fileExt}`
       const filePath = fileName
 
+      // Check if Supabase has a session
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      
+      // Use direct fetch if no Supabase session but we have React session
+      if (!currentSession && session?.access_token) {
+        try {
+          console.log('Uploading profile photo using direct fetch with access token...')
+          
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'
+          const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4'
+          
+          // Upload file using direct fetch (Supabase Storage expects binary data)
+          // Use PUT for upsert, or POST for new uploads
+          const uploadResponse = await fetch(
+            `${supabaseUrl}/storage/v1/object/profile-photos/${filePath}?upsert=true`,
+            {
+              method: 'POST',
+              headers: {
+                'apikey': supabaseAnonKey,
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': file.type || 'image/jpeg',
+                'Cache-Control': '3600'
+              },
+              body: file
+            }
+          )
+          
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json().catch(() => ({}))
+            throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText} - ${JSON.stringify(errorData)}`)
+          }
+          
+          // Get public URL
+          const publicUrl = `${supabaseUrl}/storage/v1/object/public/profile-photos/${filePath}`
+          
+          // Update user profile with new photo URL
+          const { error: updateError } = await updateProfile({
+            profile_photo_url: publicUrl
+          })
+
+          if (updateError) {
+            throw updateError
+          }
+
+          // Update local state - use user from context to ensure consistency
+          // The updateProfile function already updates the user in AuthContext
+          // So we can use that updated user state
+          if (user) {
+            setProfileData(prev => ({
+              ...prev,
+              profile_photo_url: publicUrl
+            }))
+          }
+
+          // Clear preview and file input
+          setPreviewUrl(null)
+          if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+          }
+
+          toast({
+            title: t("settings.photoUpdated"),
+            description: t("settings.photoUpdateSuccess"),
+          })
+          
+          return
+        } catch (directFetchError: any) {
+          console.error('Error uploading photo with direct fetch:', directFetchError)
+          throw directFetchError
+        }
+      }
+      
+      // Fallback to normal Supabase upload if session is available
       // Upload file to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('profile-photos')
@@ -225,11 +298,15 @@ export function UserProfilePage({ onNavigate }: UserProfilePageProps) {
         throw updateError
       }
 
-      // Update local state
-      setProfileData(prev => ({
-        ...prev,
-        profile_photo_url: data.publicUrl
-      }))
+      // Update local state - use user from context to ensure consistency
+      // The updateProfile function already updates the user in AuthContext
+      // So we can use that updated user state
+      if (user) {
+        setProfileData(prev => ({
+          ...prev,
+          profile_photo_url: data.publicUrl
+        }))
+      }
 
       // Clear preview and file input
       setPreviewUrl(null)
@@ -337,7 +414,7 @@ export function UserProfilePage({ onNavigate }: UserProfilePageProps) {
               {/* Avatar Display */}
               <Avatar className="h-20 w-20">
                 <AvatarImage 
-                  src={previewUrl || profileData.profile_photo_url || undefined} 
+                  src={previewUrl || profileData.profile_photo_url || user?.profile_photo_url || undefined} 
                   alt="Profile photo" 
                 />
                 <AvatarFallback className="text-lg">
@@ -395,7 +472,7 @@ export function UserProfilePage({ onNavigate }: UserProfilePageProps) {
                   </div>
                 )}
 
-                {profileData.profile_photo_url && !previewUrl && (
+                {(profileData.profile_photo_url || user?.profile_photo_url) && !previewUrl && (
                   <Button
                     variant="outline"
                     onClick={handleRemovePhoto}
