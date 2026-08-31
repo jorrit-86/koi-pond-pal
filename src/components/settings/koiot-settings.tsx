@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
+import { SensorQrScanner } from "./sensor-qr-scanner"
 // import { SensorTransferDialog } from "./sensor-transfer-dialog"
 // import { SensorStatusCard } from "./sensor-status-card"
 
@@ -50,6 +51,7 @@ export function KOIoTSettings() {
   const [newSensorName, setNewSensorName] = useState("")
   const [isAddingSensor, setIsAddingSensor] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [qrScanActive, setQrScanActive] = useState(false)
   const [editingSensor, setEditingSensor] = useState<UserSensor | null>(null)
   const [editingName, setEditingName] = useState("")
   const [showTransferDialog, setShowTransferDialog] = useState(false)
@@ -335,12 +337,18 @@ export function KOIoTSettings() {
       </div>
 
       {/* Add Sensor Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      <Dialog
+        open={showAddDialog}
+        onOpenChange={(open) => {
+          setShowAddDialog(open)
+          if (!open) setQrScanActive(false)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Nieuwe Sensor Toevoegen</DialogTitle>
             <DialogDescription>
-              Voer de unieke sensor ID in die op je ESP32 staat geprogrammeerd.
+              Voer de sensor ID handmatig in of scan de QR-code op de sensor.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -361,6 +369,25 @@ export function KOIoTSettings() {
                 Voer de 6 tekens in na "KOIoT-" (letters, cijfers, leestekens)
               </p>
             </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">of</span>
+              </div>
+            </div>
+
+            <SensorQrScanner
+              active={qrScanActive}
+              onActiveChange={setQrScanActive}
+              onScan={(id) => {
+                setNewSensorId(id)
+                toast.success("Sensor ID gescand")
+              }}
+            />
+
             <div>
               <Label htmlFor="sensorName">Sensor Naam (optioneel)</Label>
               <Input
@@ -372,7 +399,13 @@ export function KOIoTSettings() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setQrScanActive(false)
+                setShowAddDialog(false)
+              }}
+            >
               Annuleren
             </Button>
             <Button onClick={handleAddSensor} disabled={isAddingSensor}>
@@ -479,7 +512,7 @@ export function KOIoTSettings() {
                     <div className="text-sm text-muted-foreground">
                       Device: {device.sensor_id}
                       {device.individual_sensors && device.individual_sensors.length > 0 && (
-                        <span> • {device.individual_sensors.length} sensor(s) gekoppeld</span>
+                        <span> ÔÇó {device.individual_sensors.length} sensor(s) gekoppeld</span>
                       )}
                     </div>
                   </CardContent>
@@ -619,7 +652,7 @@ export function KOIoTSettings() {
                         </h5>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label htmlFor={`temperature_offset_${device.sensor_id}`}>Temperatuur Offset (°C)</Label>
+                            <Label htmlFor={`temperature_offset_${device.sensor_id}`}>Temperatuur Offset (┬░C)</Label>
                             <Input
                               id={`temperature_offset_${device.sensor_id}`}
                               type="number"
@@ -765,7 +798,7 @@ export function KOIoTSettings() {
                         <div>
                           <span className="font-medium">Temperatuur Offset:</span>
                           <p className="text-muted-foreground">
-                            {device?.temperature_offset || 0}°C
+                            {device?.temperature_offset || 0}┬░C
                           </p>
                         </div>
                         <div>
