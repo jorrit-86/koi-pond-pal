@@ -4,11 +4,8 @@
  * Provides comprehensive, educational advice for koi pond management
  */
 
-import { NitrogenBalanceService } from './nitrogen-balance-service'
-import { FilterEfficiencyService } from './filter-efficiency-service'
 import { SeasonalLogicService } from './seasonal-logic-service'
 import { WaterSafetyService } from './water-safety-service'
-import { EducationalAdviceService } from './educational-advice-service'
 
 export interface StructuredAdvice {
   summary: AdviceSection
@@ -234,8 +231,8 @@ export class StructuredAdviceService {
    */
   private static generateEducationalContext(
     pondData: PondData,
-    seasonalAdvice: any,
-    waterSafety: any
+    _seasonalAdvice: any,
+    _waterSafety: any
   ): string {
     let context = `\n🧬 **Biologische Processen Uitleg**\n\n`
     
@@ -275,9 +272,9 @@ export class StructuredAdviceService {
    * Generate system thinking explanation
    */
   private static generateSystemThinking(
-    pondData: PondData,
-    seasonalAdvice: any,
-    waterSafety: any
+    _pondData: PondData,
+    _seasonalAdvice: any,
+    _waterSafety: any
   ): string {
     let thinking = `\n🌐 **Systeemdenken - Alles is Verbonden**\n\n`
     

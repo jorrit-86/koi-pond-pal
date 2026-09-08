@@ -88,7 +88,7 @@ export class EducationalAdviceService {
   private static generateSummary(
     pondSummary: PondSummary,
     waterSummary: WaterSummary,
-    feedingSummary: FeedingSummary
+    _feedingSummary: FeedingSummary
   ): string {
     return `**Vijver**: ${pondSummary.volume}L | ${pondSummary.koiCount} koi (gem. ${pondSummary.averageLength}cm, ${pondSummary.averageAge}jr)
 **Water**: ${waterSummary.temperature}°C | Ammoniak ${waterSummary.ammonia}mg/L | Nitriet ${waterSummary.nitrite}mg/L
@@ -171,8 +171,8 @@ export class EducationalAdviceService {
    */
   private static generateEducationalExplanation(
     waterSummary: WaterSummary,
-    feedingSummary: FeedingSummary,
-    seasonalPhase: string
+    _feedingSummary: FeedingSummary,
+    _seasonalPhase: string
   ): string {
     let explanation = `\n🧬 **Biologische Processen Uitleg**\n\n`
     
@@ -212,9 +212,9 @@ export class EducationalAdviceService {
    * Generate system thinking explanation
    */
   private static generateSystemThinking(
-    pondSummary: PondSummary,
-    waterSummary: WaterSummary,
-    feedingSummary: FeedingSummary
+    _pondSummary: PondSummary,
+    _waterSummary: WaterSummary,
+    _feedingSummary: FeedingSummary
   ): string {
     let thinking = `\n🌐 **Systeemdenken - Alles is Verbonden**\n\n`
     
@@ -277,7 +277,7 @@ export class EducationalAdviceService {
   /**
    * Get seasonal feeding advice
    */
-  private static getSeasonalFeedingAdvice(seasonalPhase: string, temperature: number): string {
+  private static getSeasonalFeedingAdvice(seasonalPhase: string, _temperature: number): string {
     if (seasonalPhase.includes('winter')) {
       return 'niet voeren - filter inactief'
     } else if (seasonalPhase.includes('voorjaar')) {

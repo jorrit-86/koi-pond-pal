@@ -5,9 +5,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { PhotoUpload } from "@/components/ui/photo-upload"
 import { useState } from "react"
-import { Droplets, Save, History, Camera, ArrowLeft, Timer, Play, Pause, RotateCcw } from "lucide-react"
+import { Droplets, Save, History, Camera, ArrowLeft, Play, Pause, RotateCcw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase"
+import { supabase, createSupabaseHeaders } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
 import { usePhotoUpload } from "@/hooks/use-photo-upload"
 import { useSensorManagement } from "@/hooks/use-sensor-management"
@@ -144,29 +144,22 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
               const vijverSensor = sensorData.find((item: any) => item.sensor_id?.endsWith('-01'))
               if (vijverSensor && vijverSensor.temperature != null) {
                 sensorTemperature = parseFloat(vijverSensor.temperature)
-                console.log('Latest sensor temperature found:', sensorTemperature)
               } else {
                 // Fallback: use the most recent sensor reading if no -01 sensor found
                 const latestSensor = sensorData[0]
                 if (latestSensor && latestSensor.temperature != null) {
                   sensorTemperature = parseFloat(latestSensor.temperature)
-                  console.log('Using latest sensor temperature (fallback):', sensorTemperature)
                 }
               }
             }
           } else if (session?.access_token) {
             // Use direct fetch if no Supabase session
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'
-            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4'
-            
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+
             const response = await fetch(
               `${supabaseUrl}/rest/v1/sensor_data?user_id=eq.${user.id}&sensor_type=eq.temperatuurmeter&select=temperature,sensor_id,created_at&order=created_at.desc&limit=50`,
               {
-                headers: {
-                  'apikey': supabaseAnonKey,
-                  'Authorization': `Bearer ${session.access_token}`,
-                  'Content-Type': 'application/json'
-                }
+                headers: createSupabaseHeaders(session.access_token)
               }
             )
             
@@ -177,20 +170,17 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
                 const vijverSensor = sensorData.find((item: any) => item.sensor_id?.endsWith('-01'))
                 if (vijverSensor && vijverSensor.temperature != null) {
                   sensorTemperature = parseFloat(vijverSensor.temperature)
-                  console.log('Latest sensor temperature found (direct fetch):', sensorTemperature)
                 } else {
                   // Fallback: use the most recent sensor reading if no -01 sensor found
                   const latestSensor = sensorData[0]
                   if (latestSensor && latestSensor.temperature != null) {
                     sensorTemperature = parseFloat(latestSensor.temperature)
-                    console.log('Using latest sensor temperature (fallback, direct fetch):', sensorTemperature)
                   }
                 }
               }
             }
           }
-        } catch (error) {
-          console.warn('Error fetching sensor temperature:', error)
+        } catch (_error) {
           // Continue without sensor temperature if fetch fails
         }
       }
@@ -215,11 +205,9 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Saving water parameters using direct fetch with access token...')
           
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'
-          const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4'
-          
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+
           // Insert each parameter one by one via direct fetch
           const insertPromises = parametersToSave.map(async (param) => {
             const insertData = {
@@ -236,12 +224,7 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
               `${supabaseUrl}/rest/v1/water_parameters`,
               {
                 method: 'POST',
-                headers: {
-                  'apikey': supabaseAnonKey,
-                  'Authorization': `Bearer ${session.access_token}`,
-                  'Content-Type': 'application/json',
-                  'Prefer': 'return=representation'
-                },
+                headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
                 body: JSON.stringify(insertData)
               }
             )
@@ -277,7 +260,7 @@ export function ParameterForm({ onNavigate, onDataSaved }: ParameterFormProps) {
           }
           
           // Success - continue with task completion and form reset
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error saving water parameters with direct fetch:', error)
           toast({
             title: "Opslag fout",

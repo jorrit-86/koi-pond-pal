@@ -49,7 +49,7 @@ export class AIChatService {
   static async getPondContext(userId: string): Promise<ChatContext> {
     try {
       // Get user preferences including filter data
-      const { data: preferences, error: preferencesError } = await supabase
+      const { data: preferences, error: _preferencesError } = await supabase
         .from('user_preferences')
         .select(`
           experience_level, 
@@ -217,7 +217,7 @@ export class AIChatService {
   private static generatePondSizeResponse(context: ChatContext): string {
     const pondSize = context.pondSize || 0
     const koiCount = context.koiCount || 0
-    const experience = context.userExperience || 'beginner'
+    const _experience = context.userExperience || 'beginner'
     
     if (pondSize === 0) {
       return `Ik zie dat je nog geen vijvergrootte hebt ingevoerd in je profiel. Om je beter te kunnen helpen, voeg je vijvergegevens toe via de 'Instellingen' pagina.
@@ -548,7 +548,7 @@ Wat wil je specifiek weten over je koi?`
   private static generateFilterResponse(context: ChatContext): string {
     const pondSize = context.pondSize || 0
     const koiCount = context.koiCount || 0
-    const experience = context.userExperience || 'beginner'
+    const _experience = context.userExperience || 'beginner'
     const season = context.season || 'spring'
     const filterData = context.filterData
     
@@ -819,7 +819,7 @@ ${overallEmoji} **Algemene Beoordeling**: ${overallScore}/10
     return types[type] || type
   }
 
-  private static analyzeFiltrationType(type: string, pondSize: number, koiCount: number): { score: number, feedback: string } {
+  private static analyzeFiltrationType(type: string, _pondSize: number, _koiCount: number): { score: number, feedback: string } {
     switch (type) {
       case 'mechanical_biological':
         return { 
@@ -854,7 +854,7 @@ ${overallEmoji} **Algemene Beoordeling**: ${overallScore}/10
     }
   }
 
-  private static analyzeFilterMedia(media: string[], pondSize: number, koiCount: number): { score: number, feedback: string } {
+  private static analyzeFilterMedia(media: string[], _pondSize: number, _koiCount: number): { score: number, feedback: string } {
     if (media.length === 0) {
       return { 
         score: 3, 
@@ -940,7 +940,7 @@ ${overallEmoji} **Algemene Beoordeling**: ${overallScore}/10
     return { score: Math.min(score, 10), feedback: feedback.trim() }
   }
 
-  private static analyzeEquipment(filterData: any, pondSize: number, koiCount: number): { score: number, feedback: string } {
+  private static analyzeEquipment(filterData: any, _pondSize: number, _koiCount: number): { score: number, feedback: string } {
     let score = 5
     let feedback = ''
 
@@ -972,7 +972,7 @@ ${overallEmoji} **Algemene Beoordeling**: ${overallScore}/10
     return { score: Math.min(score, 10), feedback: feedback.trim() }
   }
 
-  private static getMaintenanceAdvice(filterData: any, season: string): string {
+  private static getMaintenanceAdvice(filterData: any, _season: string): string {
     const advice = []
     
     if (filterData.filter_media?.includes('sponges') || filterData.filter_media?.includes('sponsen')) {
@@ -1146,7 +1146,7 @@ Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} vijverhouder geef ik j
 Als ${experience === 'beginner' ? 'beginner' : 'ervaren'} vijverhouder geef ik je gepersonaliseerd advies. Kun je je vraag wat specifieker stellen? Dan kan ik je het beste advies geven!`
   }
 
-  private static generateSystemPromptResponse(context: ChatContext): string {
+  private static generateSystemPromptResponse(_context: ChatContext): string {
     return `🧠 **Koi Sensei - Master Kennis Base**
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -91,7 +91,7 @@ export function useSensorStatus() {
       setSensorStatuses(statuses)
       setError(null)
 
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error checking sensor statuses:', err.message)
       setError(err.message)
     } finally {
@@ -118,7 +118,7 @@ export function useSensorStatus() {
 
       return { success: true, data }
 
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error pinging sensor:', err.message)
       return { success: false, error: err.message }
     }

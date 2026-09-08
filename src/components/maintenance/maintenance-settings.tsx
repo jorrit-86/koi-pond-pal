@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useTranslation } from 'react-i18next'
@@ -79,7 +78,7 @@ export function MaintenanceSettings() {
         can_skip: false
       })
       toast.success(t('maintenance.messages.taskCreated'))
-    } catch (err) {
+    } catch (_err) {
       toast.error(t('maintenance.messages.createError'))
     }
   }
@@ -111,7 +110,7 @@ export function MaintenanceSettings() {
         can_skip: false
       })
       toast.success(t('maintenance.messages.taskUpdated'))
-    } catch (err) {
+    } catch (_err) {
       toast.error(t('maintenance.messages.updateError'))
     }
   }
@@ -121,7 +120,7 @@ export function MaintenanceSettings() {
       try {
         await deleteTemplate(id)
         toast.success(t('maintenance.messages.taskDeleted'))
-      } catch (err) {
+      } catch (_err) {
         toast.error(t('maintenance.messages.deleteError'))
       }
     }
@@ -188,7 +187,7 @@ export function MaintenanceSettings() {
                   try {
                     await forceRegenerateTasks()
                     toast.success('Taken opnieuw gegenereerd')
-                  } catch (err) {
+                  } catch (_err) {
                     toast.error('Fout bij regenereren van taken')
                   }
                 }}
@@ -201,7 +200,7 @@ export function MaintenanceSettings() {
                   try {
                     await resetRecentCompletedTasks()
                     toast.success('Recente voltooide taken zijn gereset')
-                  } catch (err) {
+                  } catch (_err) {
                     toast.error('Fout bij resetten van taken')
                   }
                 }}
@@ -214,7 +213,7 @@ export function MaintenanceSettings() {
                   try {
                     await cleanupOldTasks()
                     toast.success('Oude taken opgeruimd')
-                  } catch (err) {
+                  } catch (_err) {
                     toast.error('Fout bij opruimen oude taken')
                   }
                 }}

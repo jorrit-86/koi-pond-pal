@@ -279,8 +279,8 @@ export class WaterSafetyService {
    */
   private static getEducationalExplanation(
     overallStatus: 'safe' | 'warning' | 'danger',
-    criticalIssues: string[],
-    warnings: string[]
+    _criticalIssues: string[],
+    _warnings: string[]
   ): string {
     let explanation = `\n🧬 **Waterkwaliteit Uitleg**\n\n`
     

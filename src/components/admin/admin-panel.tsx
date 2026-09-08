@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Users, UserCheck, UserX, Shield, Trash2, Search, Filter, RefreshCw } from "lucide-react"
+import { Users, UserCheck, UserX, Shield, Trash2, Search, RefreshCw } from "lucide-react"
 import { EmailService } from "@/lib/email-service"
 
 interface User {
@@ -259,7 +259,6 @@ export function AdminPanel() {
       // Send approval email
       const emailResult = await EmailService.sendApprovalEmail(userEmail, userName)
       if (!emailResult.success) {
-        console.warn('Failed to send approval email:', emailResult.error)
       }
 
       await logAdminAction('user_approve', userId, { email: userEmail })
@@ -296,7 +295,6 @@ export function AdminPanel() {
       // Send rejection email
       const emailResult = await EmailService.sendRejectionEmail(userEmail, userName, reason)
       if (!emailResult.success) {
-        console.warn('Failed to send rejection email:', emailResult.error)
       }
 
       await logAdminAction('user_reject', userId, { email: userEmail, reason })

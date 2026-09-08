@@ -17,9 +17,7 @@ import { TemperatureSensorPage } from "@/components/water-parameters/temperature
 import { AmmoniaPage } from "@/components/water-parameters/ammonia-page"
 import { WaterChangePage } from "@/components/water-parameters/water-change-page"
 import { KhPage, GhPage, NitritePage, NitratePage, PhosphatePage } from "@/components/water-parameters/all-parameters"
-import { AuthModal } from "@/components/auth/AuthModal"
 import { LandingPage } from "@/pages/LandingPage"
-import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/hooks/use-language"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "@/contexts/AuthContext"
@@ -28,7 +26,6 @@ import { SensorTransferNotification } from "@/components/settings/sensor-transfe
 import { WaterChangeForm } from "@/components/water-changes/water-change-form"
 import { WaterChangeHistory } from "@/components/water-changes/water-change-history"
 import { EnhancedServicesDemo } from "@/components/demo/enhanced-services-demo"
-import { FeedAdvisor } from "@/components/feed-advisor/feed-advisor"
 import { EnhancedFeedAdvisor } from "@/components/feed-advisor/enhanced-feed-advisor"
 import { FeedAdvisorSettings } from "@/components/feed-advisor/feed-advisor-settings"
 import { MaintenanceHistory } from "@/components/maintenance/maintenance-history"
@@ -36,13 +33,13 @@ import { KhCalculatorPage } from "@/components/kh-calculator/kh-calculator-page"
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard")
-  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [_showAuthModal, _setShowAuthModal] = useState(false)
   const [dashboardRefreshTrigger, setDashboardRefreshTrigger] = useState(0)
   const [editingKoiId, setEditingKoiId] = useState<string | null>(null)
   const [editingKoiName, setEditingKoiName] = useState<string>('')
   const [selectedSensorId, setSelectedSensorId] = useState<string | null>(null)
-  const { t } = useTranslation()
-  const { user, loading, session } = useAuth()
+  const { _t } = useTranslation()
+  const { user, loading, _session } = useAuth()
   useLanguage() // Initialize language hook
 
   const handleDataSaved = () => {

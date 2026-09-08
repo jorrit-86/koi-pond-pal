@@ -78,24 +78,20 @@ export function use3DayAverage(): Use3DayAverageResult {
         for (const [sensorId, records] of sensorGroups) {
           if (sensorId.endsWith('-01')) {
             targetSensor = records
-            console.log('Using sensor -01 for 3-day pond temperature average:', sensorId)
             break
           }
         }
         if (!targetSensor) {
-          console.warn('Sensor -01 (vijverwatertemperatuur) not found for 3-day average')
         }
       } else if (sensorType === 'ambient') {
         // ALWAYS use sensor ending in -02 for buitentemperatuur
         for (const [sensorId, records] of sensorGroups) {
           if (sensorId.endsWith('-02')) {
             targetSensor = records
-            console.log('Using sensor -02 for 3-day ambient temperature average:', sensorId)
             break
           }
         }
         if (!targetSensor) {
-          console.warn('Sensor -02 (buitentemperatuur) not found for 3-day average')
         }
       }
 

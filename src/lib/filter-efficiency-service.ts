@@ -251,8 +251,8 @@ export class FilterEfficiencyService {
   private static generateRecommendations(
     efficiency: number,
     conditions: FilterConditions,
-    specs: FilterSpecs,
-    bacterialActivity: BacterialActivity
+    _specs: FilterSpecs,
+    _bacterialActivity: BacterialActivity
   ): string[] {
     const recommendations: string[] = []
     

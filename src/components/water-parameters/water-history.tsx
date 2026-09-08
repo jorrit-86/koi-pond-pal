@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Lightbox } from '@/components/ui/lightbox'
 import { ArrowLeft, Calendar, Droplets, Thermometer, TestTube, Image as ImageIcon, Filter, ChevronDown, ChevronRight, Paperclip, Edit, Save, X, Waves, Trash2 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { supabase, createSupabaseHeaders } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 
@@ -77,52 +77,38 @@ export function WaterHistory({ onNavigate }: WaterHistoryProps) {
       let waterChanges: WaterChange[] = []
 
       // Check if Supabase has a session
-      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      const { data: { session: _currentSession } } = await supabase.auth.getSession()
       
       // Try direct fetch first if we have session token
       if (session?.access_token) {
         try {
-          console.log('Loading water parameters using direct fetch with access token...')
           
           // Fetch water parameters using direct fetch
           const waterParamsResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/water_parameters?user_id=eq.${user.id}&select=*&order=measured_at.desc`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/water_parameters?user_id=eq.${user.id}&select=*&order=measured_at.desc`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
           if (waterParamsResponse.ok) {
             waterParameters = await waterParamsResponse.json()
-            console.log('Water parameters loaded via direct fetch:', waterParameters?.length || 0, 'records')
           } else {
-            console.warn(`Direct fetch for water parameters returned ${waterParamsResponse.status}`)
           }
 
           // Fetch water changes using direct fetch
           const waterChangesResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/water_changes?user_id=eq.${user.id}&select=*&order=changed_at.desc`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/water_changes?user_id=eq.${user.id}&select=*&order=changed_at.desc`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
           if (waterChangesResponse.ok) {
             waterChanges = await waterChangesResponse.json()
-            console.log('Water changes loaded via direct fetch:', waterChanges?.length || 0, 'records')
           } else {
-            console.warn(`Direct fetch for water changes returned ${waterChangesResponse.status}`)
           }
-        } catch (error) {
-          console.warn('Direct fetch failed, trying Supabase client:', error)
+        } catch (_error) {
         }
       }
 
@@ -145,7 +131,6 @@ export function WaterHistory({ onNavigate }: WaterHistoryProps) {
         }
 
         waterParameters = data || []
-        console.log('Water parameters loaded via Supabase client:', waterParameters.length, 'records')
       }
 
       if (waterChanges.length === 0) {
@@ -166,7 +151,6 @@ export function WaterHistory({ onNavigate }: WaterHistoryProps) {
         }
 
         waterChanges = data || []
-        console.log('Water changes loaded via Supabase client:', waterChanges.length, 'records')
       }
 
       // If filtering for water changes only, only show water changes
@@ -355,7 +339,7 @@ export function WaterHistory({ onNavigate }: WaterHistoryProps) {
     }
   }
 
-  const formatDate = (dateString: string) => {
+  const _formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('nl-NL', {
       weekday: 'long',
@@ -365,7 +349,7 @@ export function WaterHistory({ onNavigate }: WaterHistoryProps) {
     })
   }
 
-  const formatTime = (dateString: string) => {
+  const _formatTime = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleTimeString('nl-NL', {
       hour: '2-digit',
@@ -402,7 +386,6 @@ export function WaterHistory({ onNavigate }: WaterHistoryProps) {
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
     const dateTimeString = `${year}-${month}-${day}T${hours}:${minutes}`
-    console.log('Setting edit date/time:', dateTimeString, 'from:', measurement.measured_at, 'UTC date:', date.toISOString())
     setEditDateTime(dateTimeString)
   }
 
@@ -451,14 +434,13 @@ export function WaterHistory({ onNavigate }: WaterHistoryProps) {
         return
       }
       const newDateTime = localDate.toISOString()
-      console.log('Saving group edit with date/time:', newDateTime, 'from input (local):', editGroupDateTime, 'local date object:', localDate.toString())
       
       // Update all measurements in this group
       const group = measurements.find(m => m.timestamp === groupTimestamp)
       if (!group) return
 
       // Check if Supabase has a session
-      const { data: { session: currentSession } = {} } = await supabase.auth.getSession()
+      const { data: { session: _currentSession } = {} } = await supabase.auth.getSession()
       
       let allUpdatesSuccessful = true
       const errors: any[] = []
@@ -466,21 +448,15 @@ export function WaterHistory({ onNavigate }: WaterHistoryProps) {
       // Try direct fetch first if we have session token
       if (session?.access_token) {
         try {
-          console.log('Updating group measurements using direct fetch with access token...')
           
           // Update each measurement using direct fetch
           const updatePromises = group.measurements.map(async (measurement) => {
             try {
               const response = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/water_parameters?id=eq.${measurement.id}`,
+                `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/water_parameters?id=eq.${measurement.id}`,
                 {
                   method: 'PATCH',
-                  headers: {
-                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                  },
+                  headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
                   body: JSON.stringify({ measured_at: newDateTime })
                 }
               )
@@ -491,8 +467,7 @@ export function WaterHistory({ onNavigate }: WaterHistoryProps) {
               }
               
               return { success: true }
-            } catch (error) {
-              console.warn(`Direct fetch failed for measurement ${measurement.id}, trying Supabase client:`, error)
+            } catch (_error) {
               // Fall back to Supabase client for this measurement
               const { error: supabaseError } = await supabase
                 .from('water_parameters')
@@ -514,8 +489,7 @@ export function WaterHistory({ onNavigate }: WaterHistoryProps) {
           if (!allUpdatesSuccessful) {
             console.error('Some updates failed:', results.filter(r => !r.success))
           }
-        } catch (error) {
-          console.warn('Direct fetch failed for group, trying Supabase client:', error)
+        } catch (_error) {
           allUpdatesSuccessful = false
         }
       }
@@ -581,7 +555,6 @@ export function WaterHistory({ onNavigate }: WaterHistoryProps) {
         return
       }
       const newDateTime = localDate.toISOString()
-      console.log('Saving edit with date/time:', newDateTime, 'from input (local):', editDateTime, 'local date object:', localDate.toString())
       
       const updateData = {
         value: parseFloat(editValue),
@@ -590,38 +563,29 @@ export function WaterHistory({ onNavigate }: WaterHistoryProps) {
       }
 
       // Check if Supabase has a session
-      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      const { data: { session: _currentSession } } = await supabase.auth.getSession()
       
       let updateSuccess = false
       
       // Try direct fetch first if we have session token
       if (session?.access_token) {
         try {
-          console.log('Updating measurement using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/water_parameters?id=eq.${measurementId}`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/water_parameters?id=eq.${measurementId}`,
             {
               method: 'PATCH',
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
+              headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
               body: JSON.stringify(updateData)
             }
           )
           
           if (response.ok) {
-            const data = await response.json()
-            console.log('Measurement updated via direct fetch:', data)
+            const _data = await response.json()
             updateSuccess = true
           } else {
-            const errorText = await response.text()
-            console.warn(`Direct fetch returned ${response.status}:`, errorText)
+            const _errorText = await response.text()
           }
-        } catch (error) {
-          console.warn('Direct fetch failed, trying Supabase client:', error)
+        } catch (_error) {
         }
       }
 

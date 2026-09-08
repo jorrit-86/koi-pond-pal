@@ -7,15 +7,14 @@ import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Thermometer, 
-  Settings, 
-  Save, 
-  RotateCcw, 
-  Clock, 
-  TrendingUp, 
+import {
+  Thermometer,
+  Settings,
+  Save,
+  RotateCcw,
+  Clock,
+  TrendingUp,
   AlertTriangle,
-  CheckCircle,
   Target,
   Zap
 } from "lucide-react"
@@ -107,10 +106,8 @@ export function EnhancedTemperatureCalibration({
           calibration_offset: data.calibration_offset || 0.0
         }
         setLocalConfig(dbConfig)
-        console.log('Loaded enhanced config from database:', dbConfig)
       } else {
         setLocalConfig(config)
-        console.log('No database config found, using default config:', config)
       }
     } catch (error) {
       console.error('Error loading config:', error)
@@ -128,12 +125,11 @@ export function EnhancedTemperatureCalibration({
         .from('sensor_data')
         .select('temperature, created_at, sensor_type')
         .eq('sensor_id', sensorId)
-        .eq('sensor_type', sensorType)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error loading latest reading:', error)
         return
       }
@@ -211,7 +207,6 @@ export function EnhancedTemperatureCalibration({
     if (!user) return
 
     setSaving(true)
-    console.log('Starting enhanced save process...')
 
     try {
       const upsertData: any = {
@@ -232,7 +227,7 @@ export function EnhancedTemperatureCalibration({
         updated_at: new Date().toISOString()
       }
 
-      const { data, error } = await supabase
+      const { _data, error } = await supabase
         .from('individual_sensor_configs')
         .upsert(upsertData, {
           onConflict: 'sensor_id,sensor_type'
@@ -243,8 +238,6 @@ export function EnhancedTemperatureCalibration({
         console.error('Supabase Error:', error)
         throw new Error(`Database error: ${error.message}`)
       }
-
-      console.log('Enhanced save result:', data)
 
       await loadConfigFromDatabase()
       onConfigUpdate(sensorId, sensorType, localConfig)
@@ -274,9 +267,12 @@ export function EnhancedTemperatureCalibration({
   const getSensorIcon = (sensorType: string) => {
     switch (sensorType) {
       case 'vijver_water':
+      case 'watertemperatuur':
         return <Thermometer className="h-4 w-4 text-blue-500" />
       case 'filter_inlaat':
-        return <Thermometer className="h-4 w-4 text-green-500" />
+      case 'omgevingstemperatuur':
+      case 'ambient':
+        return <Thermometer className="h-4 w-4 text-orange-500" />
       default:
         return <Thermometer className="h-4 w-4 text-gray-500" />
     }
@@ -311,7 +307,7 @@ export function EnhancedTemperatureCalibration({
           <div className="flex items-center gap-2">
             {getSensorIcon(sensorType)}
             <span className="text-xl font-semibold">
-              {sensorId.endsWith('-01') ? 'Sensor 1' : 'Sensor 2'} - Verbeterde Kalibratie
+              {sensorId.endsWith('-01') ? 'Watertemperatuur' : sensorId.endsWith('-02') ? 'Omgevingstemperatuur' : 'Sensor'} - Verbeterde Kalibratie
             </span>
           </div>
           <div className="text-right">
@@ -595,5 +591,4 @@ export function EnhancedTemperatureCalibration({
     </Card>
   )
 }
-
 

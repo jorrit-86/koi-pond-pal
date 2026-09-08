@@ -6,8 +6,8 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/AuthContext"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase"
-import { User, Mail, Lock, Save, ArrowLeft, Camera, Upload, X, Shield } from "lucide-react"
+import { supabase, createSupabaseHeaders } from "@/lib/supabase"
+import { User, Mail, Lock, Save, ArrowLeft, Upload, X, Shield } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { TwoFactorSetup } from "@/components/auth/TwoFactorSetup"
 import { useTranslation } from "react-i18next"
@@ -88,7 +88,7 @@ export function UserProfilePage({ onNavigate }: UserProfilePageProps) {
           description: t("settings.profileUpdateSuccess"),
         })
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Update Error",
         description: "An unexpected error occurred",
@@ -145,7 +145,7 @@ export function UserProfilePage({ onNavigate }: UserProfilePageProps) {
           confirmPassword: ""
         }))
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Password Update Error",
         description: "An unexpected error occurred",
@@ -205,23 +205,19 @@ export function UserProfilePage({ onNavigate }: UserProfilePageProps) {
       // Use direct fetch if no Supabase session but we have React session
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Uploading profile photo using direct fetch with access token...')
           
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'
-          const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4'
-          
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+
           // Upload file using direct fetch (Supabase Storage expects binary data)
           // Use PUT for upsert, or POST for new uploads
           const uploadResponse = await fetch(
             `${supabaseUrl}/storage/v1/object/profile-photos/${filePath}?upsert=true`,
             {
               method: 'POST',
-              headers: {
-                'apikey': supabaseAnonKey,
-                'Authorization': `Bearer ${session.access_token}`,
+              headers: createSupabaseHeaders(session.access_token, {
                 'Content-Type': file.type || 'image/jpeg',
                 'Cache-Control': '3600'
-              },
+              }),
               body: file
             }
           )
@@ -265,7 +261,7 @@ export function UserProfilePage({ onNavigate }: UserProfilePageProps) {
           })
           
           return
-        } catch (directFetchError: any) {
+        } catch (directFetchError) {
           console.error('Error uploading photo with direct fetch:', directFetchError)
           throw directFetchError
         }
@@ -319,7 +315,7 @@ export function UserProfilePage({ onNavigate }: UserProfilePageProps) {
         description: t("settings.photoUpdateSuccess"),
       })
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error uploading photo:', error)
       toast({
         title: t("settings.uploadError"),
@@ -360,7 +356,7 @@ export function UserProfilePage({ onNavigate }: UserProfilePageProps) {
         description: t("settings.photoRemoveSuccess"),
       })
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error removing photo:', error)
       toast({
         title: t("settings.removeError"),

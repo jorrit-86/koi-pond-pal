@@ -3,29 +3,25 @@
  * Demonstrates the new enhanced services for koi pond management
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Fish, 
-  Droplets, 
-  Thermometer, 
-  Filter, 
-  Leaf, 
+import {
+  Fish,
+  Droplets,
+  Thermometer,
+  Leaf,
   AlertTriangle,
   CheckCircle,
   Info
 } from 'lucide-react'
 import { NitrogenBalanceService } from '@/lib/nitrogen-balance-service'
-import { FilterEfficiencyService } from '@/lib/filter-efficiency-service'
 import { SeasonalLogicService } from '@/lib/seasonal-logic-service'
 import { WaterSafetyService } from '@/lib/water-safety-service'
-import { EducationalAdviceService } from '@/lib/educational-advice-service'
 import { StructuredAdviceService } from '@/lib/structured-advice-service'
-import { ConservativeSafetyService } from '@/lib/conservative-safety-service'
 
 interface EnhancedServicesDemoProps {
   onNavigate: (tab: string) => void

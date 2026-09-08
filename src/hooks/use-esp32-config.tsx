@@ -45,23 +45,35 @@ export function useKOIoTConfig() {
         .order('created_at', { ascending: false })
 
       if (devicesError) throw devicesError
-      // Fetch individual sensor configurations for each device
-      const deviceIds = devicesData?.map(d => d.sensor_id) || []
-      
-      const { data: individualConfigs, error: individualError } = await supabase
-        .from('individual_sensor_configs')
-        .select('*')
-        .in('device_id', deviceIds)
-        .order('created_at', { ascending: false })
 
-      if (individualError) throw individualError
+      const deviceIds = devicesData?.map((d) => d.sensor_id) || []
+
+      // Fetch individual sensor configs linked to these devices.
+      // Source of truth = sensor_id prefix (KOIoT-XXXXXX-NN), not only device_id
+      // (device_id can be wrong/outdated after failed deletes).
+      let individualConfigs: any[] = []
+      if (deviceIds.length > 0) {
+        const { data, error: individualError } = await supabase
+          .from('individual_sensor_configs')
+          .select('*')
+          .or(
+            [
+              ...deviceIds.map((id) => `device_id.eq.${id}`),
+              ...deviceIds.map((id) => `sensor_id.like.${id}-%`),
+            ].join(',')
+          )
+          .order('created_at', { ascending: false })
+
+        if (individualError) throw individualError
+        individualConfigs = data || []
+      }
 
       // Fetch latest temperature readings for individual sensors
       const individualSensorIds = individualConfigs?.map(config => config.sensor_id) || []
       const { data: latestReadings, error: readingsError } = await supabase
         .from('sensor_data')
-        .select('sensor_id, temperature, sensor_type, created_at')
-        .in('sensor_id', individualSensorIds)
+        .select('sensor_id, temperature, humidity, ph, sensor_type, created_at, flow_rate, flow_total')
+        .in('sensor_id', individualSensorIds.length > 0 ? individualSensorIds : ['__none__'])
         .order('created_at', { ascending: false })
 
       if (readingsError) throw readingsError
@@ -76,8 +88,16 @@ export function useKOIoTConfig() {
 
       // Combine device configs with individual sensor configs and latest readings
       const combinedSensors: KOIoTSensorConfig[] = devicesData?.map(device => {
-        // Get individual sensors for this device
-        const deviceIndividualConfigs = individualConfigs?.filter(config => config.device_id === device.sensor_id) || []
+        // Prefer sensor_id prefix; also accept correct device_id matches
+        const deviceIndividualConfigs = (individualConfigs || []).filter((config) => {
+          const belongsByPrefix = config.sensor_id?.startsWith(`${device.sensor_id}-`)
+          const belongsByDeviceId = config.device_id === device.sensor_id
+          // Never attach another device's prefixed sensors via a wrong device_id
+          if (config.sensor_id?.match(/^KOIoT-[^-]+-\d{2}$/) && !belongsByPrefix) {
+            return false
+          }
+          return belongsByPrefix || belongsByDeviceId
+        })
         
         // Get latest readings for this device's individual sensors
         const deviceReadings = deviceIndividualConfigs.map(config => {
@@ -107,7 +127,7 @@ export function useKOIoTConfig() {
       }) || []
 
       setSensors(combinedSensors)
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading KOIoT sensors:', err.message)
       setError(err.message)
     } finally {
@@ -145,7 +165,7 @@ export function useKOIoTConfig() {
 
       // Reload sensors
       await loadSensors()
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating sensor configuration:', err.message)
       throw err
     }
@@ -162,7 +182,7 @@ export function useKOIoTConfig() {
 
       if (error) throw error
       return data
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error getting configuration for sensor:', err.message)
       throw err
     }
@@ -181,7 +201,7 @@ export function useKOIoTConfig() {
         .eq('sensor_id', sensorId)
 
       if (error) throw error
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error marking configuration as applied:', err.message)
       throw err
     }
@@ -204,7 +224,7 @@ export function useKOIoTConfig() {
 
       // Reload sensors to show updated status
       await loadSensors()
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error requesting sensor restart:', err.message)
       throw err
     }
@@ -236,10 +256,17 @@ export function useKOIoTConfig() {
     switch (sensorType) {
       case 'sensor_1':
       case 'vijver_water':
-        return 'Sensor 1'
+      case 'watertemperatuur':
+        return 'Watertemperatuur'
       case 'sensor_2':
       case 'filter_inlaat':
-        return 'Sensor 2'
+      case 'omgevingstemperatuur':
+      case 'ambient':
+        return 'Omgevingstemperatuur'
+      case 'ph_meter':
+        return 'pH'
+      case 'waterflowmeter':
+        return 'Waterdebiet'
       default:
         return 'Sensor'
     }
@@ -263,7 +290,7 @@ export function useKOIoTConfig() {
       
       const diffDays = Math.floor(diffHours / 24)
       return `${diffDays} dagen geleden`
-    } catch (error) {
+    } catch (_error) {
       return 'Ongeldige datum'
     }
   }

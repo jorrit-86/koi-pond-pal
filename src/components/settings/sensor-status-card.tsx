@@ -28,7 +28,7 @@ export function SensorStatusCard({ sensorId, sensorName }: SensorStatusCardProps
       } else {
         toast.error(`Ping mislukt: ${result.error}`)
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("Er is een fout opgetreden bij het pingen")
     } finally {
       setPinging(false)

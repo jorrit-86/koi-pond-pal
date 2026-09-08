@@ -5,13 +5,8 @@
  */
 
 import { supabase } from './supabase'
-import { NitrogenBalanceService } from './nitrogen-balance-service'
-import { FilterEfficiencyService } from './filter-efficiency-service'
-import { SeasonalLogicService } from './seasonal-logic-service'
 import { WaterSafetyService } from './water-safety-service'
-import { EducationalAdviceService } from './educational-advice-service'
 import { StructuredAdviceService } from './structured-advice-service'
-import { ConservativeSafetyService } from './conservative-safety-service'
 
 export interface EnhancedChatContext {
   currentPage: string
@@ -66,7 +61,7 @@ export class EnhancedAIChatService {
   static async getEnhancedPondContext(userId: string): Promise<EnhancedChatContext> {
     try {
       // Get user preferences including filter data
-      const { data: preferences, error: preferencesError } = await supabase
+      const { data: preferences, error: _preferencesError } = await supabase
         .from('user_preferences')
         .select(`
           experience_level, 
@@ -105,7 +100,7 @@ export class EnhancedAIChatService {
         .eq('user_id', userId)
 
       // Get koi data for calculations
-      const { data: koiData } = await supabase
+      const { data: _koiData } = await supabase
         .from('koi')
         .select('*')
         .eq('user_id', userId)
@@ -386,7 +381,7 @@ Voer deze waarden in via het waterparameters scherm om een volledig advies te kr
   /**
    * Generate seasonal response
    */
-  private static generateSeasonalResponse(context: EnhancedChatContext, structuredAdvice: any): string {
+  private static generateSeasonalResponse(context: EnhancedChatContext, _structuredAdvice: any): string {
     const temperature = this.extractWaterParameters(context).temperature
     const season = context.season || 'spring'
     
@@ -434,7 +429,7 @@ Voer deze waarden in via het waterparameters scherm om een volledig advies te kr
   /**
    * Generate default response
    */
-  private static generateDefaultResponse(context: EnhancedChatContext, structuredAdvice: any): string {
+  private static generateDefaultResponse(_context: EnhancedChatContext, _structuredAdvice: any): string {
     return `Hallo! Ik ben je koi vijver assistent. Ik kan je helpen met:\n\n• 🍽️ Voeradvies\n• 🧪 Waterkwaliteit\n• 🔧 Filter onderhoud\n• 📅 Seizoensadvies\n• 🧬 Biologische processen\n\nWat wil je weten?`
   }
 
@@ -458,7 +453,7 @@ Voer deze waarden in via het waterparameters scherm om een volledig advies te kr
     return `\n🧬 **Volledige Uitleg**\n\n${structuredAdvice.educationalContext}\n\n${structuredAdvice.systemThinking}`
   }
 
-  private static generateDefaultEducationalContent(context: EnhancedChatContext, structuredAdvice: any): string {
+  private static generateDefaultEducationalContent(_context: EnhancedChatContext, _structuredAdvice: any): string {
     return `\n🎯 **Koi Vijver Management**\n\nIk help je met wetenschappelijk onderbouwde adviezen voor je koi vijver. Alles draait om balans tussen filter en waterkwaliteit.`
   }
 }

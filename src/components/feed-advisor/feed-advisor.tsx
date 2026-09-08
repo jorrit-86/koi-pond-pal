@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Thermometer, Calendar, Filter, Info, Settings } from 'lucide-react'
+import { Thermometer, Calendar, Filter, Settings } from 'lucide-react'
 import { useFeedLogic, KoiFish } from '@/hooks/use-feed-logic'
 import { FeedAdvisorTable } from './feed-advisor-table'
 import { FeedPlanner } from './feed-planner'
@@ -15,7 +15,7 @@ interface FeedAdvisorProps {
 }
 
 export function FeedAdvisor({ onNavigate }: FeedAdvisorProps) {
-  const { koiList, loading, error, loadKoiData, calculateTotalFeed } = useFeedLogic()
+  const { koiList, loading, error, _loadKoiData, calculateTotalFeed } = useFeedLogic()
   
   // Input states
   const [pondTemp, setPondTemp] = useState<number>(20)

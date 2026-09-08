@@ -1,7 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
 import { useTranslation } from 'react-i18next'
 import { useMaintenanceTasks } from '@/hooks/use-maintenance-tasks'
 import { MaintenanceTask } from '@/types/maintenance'
@@ -96,7 +95,7 @@ export function MaintenanceTodos({ onNavigate }: MaintenanceTodosProps) {
       await completeTask(taskId, { notes })
       setTaskNotes(prev => ({ ...prev, [taskId]: '' }))
       toast.success(t('maintenance.messages.taskCompleted'))
-    } catch (err) {
+    } catch (_err) {
       toast.error(t('maintenance.messages.completeError'))
     } finally {
       setCompletingTask(null)
@@ -110,7 +109,7 @@ export function MaintenanceTodos({ onNavigate }: MaintenanceTodosProps) {
       await completeTask(waterChangePopup.taskId, { notes })
       setTaskNotes(prev => ({ ...prev, [waterChangePopup.taskId]: '' }))
       toast.success(t('maintenance.messages.taskCompleted'))
-    } catch (err) {
+    } catch (_err) {
       toast.error(t('maintenance.messages.completeError'))
     } finally {
       setCompletingTask(null)
@@ -124,7 +123,7 @@ export function MaintenanceTodos({ onNavigate }: MaintenanceTodosProps) {
       await completeTask(waterParametersPopup.taskId, { notes })
       setTaskNotes(prev => ({ ...prev, [waterParametersPopup.taskId]: '' }))
       toast.success(t('maintenance.messages.taskCompleted'))
-    } catch (err) {
+    } catch (_err) {
       toast.error(t('maintenance.messages.completeError'))
     } finally {
       setCompletingTask(null)
@@ -174,7 +173,7 @@ export function MaintenanceTodos({ onNavigate }: MaintenanceTodosProps) {
     }
   }
 
-  const getStatusBadge = (task: MaintenanceTask) => {
+  const _getStatusBadge = (task: MaintenanceTask) => {
     if (task.status === 'overdue') {
       return (
         <Badge variant="destructive" className="flex items-center gap-1">

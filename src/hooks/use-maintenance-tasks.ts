@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, createSupabaseHeaders } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { calculateNextDueDate, calculateNextDueDateForDate, getNextOccurrenceDate } from '@/lib/maintenance-schedule'
 import { 
   MaintenanceTaskTemplate, 
   MaintenanceTask, 
@@ -28,33 +29,27 @@ export function useMaintenanceTasks() {
       // Check if Supabase has a session
       const { data: { session: currentSession } } = await supabase.auth.getSession()
       
-      let templatesData: any[] = []
-      
+      let templatesData: MaintenanceTaskTemplate[] = []
+
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading maintenance templates using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/maintenance_task_templates?user_id=eq.${user.id}&select=*&order=created_at.desc`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/maintenance_task_templates?user_id=eq.${user.id}&select=*&order=created_at.desc`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
           if (response.ok) {
             const data = await response.json()
             templatesData = Array.isArray(data) ? data : [data]
-            console.log('Loaded maintenance templates (direct fetch):', templatesData.length, 'templates')
           } else if (response.status === 406 || response.status === 404) {
             // Table doesn't exist or not accessible - silently ignore
             setTemplates([])
             return
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error loading templates with direct fetch:', error)
           // Fall through to try normal Supabase query
         }
@@ -76,7 +71,6 @@ export function useMaintenanceTasks() {
               error.message.includes('does not exist') ||
               error.code === 'PGRST301' ||
               error.message.includes('permission denied')) {
-            console.warn('Maintenance task templates table does not exist or RLS issues')
             setTemplates([])
             return
           }
@@ -87,7 +81,6 @@ export function useMaintenanceTasks() {
       }
       
       setTemplates(templatesData)
-      console.log('Loaded', templatesData.length, 'maintenance templates')
     } catch (err) {
       console.error('Error loading templates:', err)
       setError(err instanceof Error ? err.message : 'Failed to load templates')
@@ -102,33 +95,27 @@ export function useMaintenanceTasks() {
       // Check if Supabase has a session
       const { data: { session: currentSession } } = await supabase.auth.getSession()
       
-      let tasksData: any[] = []
-      
+      let tasksData: MaintenanceTask[] = []
+
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading maintenance tasks using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/maintenance_tasks?user_id=eq.${user.id}&select=*&order=due_date.asc`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/maintenance_tasks?user_id=eq.${user.id}&select=*&order=due_date.asc`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
           if (response.ok) {
             const data = await response.json()
             tasksData = Array.isArray(data) ? data : [data]
-            console.log('Loaded maintenance tasks (direct fetch):', tasksData.length, 'tasks')
           } else if (response.status === 406 || response.status === 404) {
             // Table doesn't exist or not accessible - silently ignore
             setTasks([])
             return
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error loading tasks with direct fetch:', error)
           // Fall through to try normal Supabase query
         }
@@ -150,7 +137,6 @@ export function useMaintenanceTasks() {
               error.message.includes('does not exist') ||
               error.code === 'PGRST301' ||
               error.message.includes('permission denied')) {
-            console.warn('Maintenance tasks table does not exist or RLS issues')
             setTasks([])
             return
           }
@@ -161,7 +147,6 @@ export function useMaintenanceTasks() {
       }
       
       setTasks(tasksData)
-      console.log('Loaded', tasksData.length, 'maintenance tasks')
     } catch (err) {
       console.error('Error loading tasks:', err)
       setError(err instanceof Error ? err.message : 'Failed to load tasks')
@@ -176,22 +161,16 @@ export function useMaintenanceTasks() {
       // Check if Supabase has a session
       const { data: { session: currentSession } } = await supabase.auth.getSession()
       
-      let newTemplate: any = null
-      
+      let newTemplate: MaintenanceTaskTemplate | null = null
+
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Creating maintenance template using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/maintenance_task_templates`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/maintenance_task_templates`,
             {
               method: 'POST',
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
+              headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
               body: JSON.stringify({
                 ...templateData,
                 user_id: user.id
@@ -211,7 +190,7 @@ export function useMaintenanceTasks() {
             }
             throw new Error(errorData.message || 'Failed to create template')
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error creating template with direct fetch:', error)
           throw error
         }
@@ -256,17 +235,11 @@ export function useMaintenanceTasks() {
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Updating maintenance template using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/maintenance_task_templates?id=eq.${id}`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/maintenance_task_templates?id=eq.${id}`,
             {
               method: 'PATCH',
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
+              headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
               body: JSON.stringify(templateData)
             }
           )
@@ -279,7 +252,7 @@ export function useMaintenanceTasks() {
             const errorData = await response.json()
             throw new Error(errorData.message || 'Failed to update template')
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error updating template with direct fetch:', error)
           throw error
         }
@@ -312,22 +285,17 @@ export function useMaintenanceTasks() {
           // If no Supabase session but we have React session, use direct fetch
           if (!currentSession && session?.access_token) {
             try {
-              const response = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/maintenance_tasks?template_id=eq.${id}&status=eq.pending`,
+              const _response = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/maintenance_tasks?template_id=eq.${id}&status=eq.pending`,
                 {
                   method: 'PATCH',
-                  headers: {
-                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                  },
+                  headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
                   body: JSON.stringify(updateData)
                 }
               )
               
               // Silently ignore errors for task updates
-            } catch (error) {
+            } catch (_error) {
               // Silently ignore errors
             }
           } else {
@@ -337,7 +305,7 @@ export function useMaintenanceTasks() {
               .eq('template_id', id)
               .eq('status', 'pending')
           }
-        } catch (error) {
+        } catch (_error) {
           // Silently ignore errors
         }
         
@@ -370,16 +338,11 @@ export function useMaintenanceTasks() {
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Deleting maintenance template using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/maintenance_task_templates?id=eq.${id}`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/maintenance_task_templates?id=eq.${id}`,
             {
               method: 'DELETE',
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -389,7 +352,7 @@ export function useMaintenanceTasks() {
             const errorData = await response.json()
             throw new Error(errorData.message || 'Failed to delete template')
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error deleting template with direct fetch:', error)
           throw error
         }
@@ -448,13 +411,9 @@ export function useMaintenanceTasks() {
       if (!currentSession && session?.access_token) {
         try {
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/water_changes?user_id=eq.${user.id}&changed_at=gte.${startTime.toISOString()}&changed_at=lte.${endTime.toISOString()}&order=changed_at.desc&limit=1`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/water_changes?user_id=eq.${user.id}&changed_at=gte.${startTime.toISOString()}&changed_at=lte.${endTime.toISOString()}&order=changed_at.desc&limit=1`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -519,13 +478,9 @@ export function useMaintenanceTasks() {
       if (!currentSession && session?.access_token) {
         try {
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/water_parameters?user_id=eq.${user.id}&measured_at=gte.${startTime.toISOString()}&measured_at=lte.${endTime.toISOString()}&order=measured_at.desc`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/water_parameters?user_id=eq.${user.id}&measured_at=gte.${startTime.toISOString()}&measured_at=lte.${endTime.toISOString()}&order=measured_at.desc`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -647,17 +602,11 @@ export function useMaintenanceTasks() {
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Completing maintenance task using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/maintenance_tasks?id=eq.${id}`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/maintenance_tasks?id=eq.${id}`,
             {
               method: 'PATCH',
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
+              headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
               body: JSON.stringify(updateData)
             }
           )
@@ -670,7 +619,7 @@ export function useMaintenanceTasks() {
             const errorData = await response.json()
             throw new Error(errorData.message || 'Failed to complete task')
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error completing task with direct fetch:', error)
           throw error
         }
@@ -708,14 +657,12 @@ export function useMaintenanceTasks() {
     
     // Prevent multiple simultaneous generation calls
     if (isGenerating) {
-      console.log('Task generation already in progress, skipping...')
       return
     }
     
     // Check if we have a valid Supabase session or React session before proceeding
     const { data: { session: currentSession } } = await supabase.auth.getSession()
     if (!currentSession && !session?.access_token) {
-      console.log('No session available for task generation, skipping... (tasks will be generated when session is restored)')
       return
     }
     
@@ -756,13 +703,9 @@ export function useMaintenanceTasks() {
           if (!currentSession && session?.access_token) {
             try {
               const response = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/maintenance_tasks?template_id=eq.${template.id}&due_date=eq.${encodeURIComponent(nextDueDate.toISOString())}&select=id,due_date,advance_notice_days`,
+                `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/maintenance_tasks?template_id=eq.${template.id}&due_date=eq.${encodeURIComponent(nextDueDate.toISOString())}&select=id,due_date,advance_notice_days`,
                 {
-                  headers: {
-                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                  }
+                  headers: createSupabaseHeaders(session.access_token)
                 }
               )
               
@@ -770,7 +713,7 @@ export function useMaintenanceTasks() {
                 const data = await response.json()
                 existingTasks = Array.isArray(data) ? data : [data]
               }
-            } catch (error) {
+            } catch (_error) {
               // Silently ignore errors
             }
           } else {
@@ -784,7 +727,6 @@ export function useMaintenanceTasks() {
           }
 
           if (existingTasks && existingTasks.length > 0) {
-            // console.log('Task already exists, updating if needed')
             const existingTask = existingTasks[0]
             // Update existing task if advance notice changed
             if (existingTask.advance_notice_days !== template.advance_notice_days) {
@@ -798,19 +740,14 @@ export function useMaintenanceTasks() {
                 if (!currentSession && session?.access_token) {
                   try {
                     await fetch(
-                      `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/maintenance_tasks?id=eq.${existingTask.id}`,
+                      `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/maintenance_tasks?id=eq.${existingTask.id}`,
                       {
                         method: 'PATCH',
-                        headers: {
-                          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                          'Authorization': `Bearer ${session.access_token}`,
-                          'Content-Type': 'application/json',
-                          'Prefer': 'return=representation'
-                        },
+                        headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
                         body: JSON.stringify(updateData)
                       }
                     )
-                  } catch (error) {
+                  } catch (_error) {
                     // Silently ignore errors
                   }
                 } else {
@@ -819,12 +756,11 @@ export function useMaintenanceTasks() {
                     .update(updateData)
                     .eq('id', existingTask.id)
                 }
-              } catch (error) {
+              } catch (_error) {
                 // Silently ignore errors
               }
             }
           } else {
-            // console.log('Creating new task for:', nextDueDate.toISOString())
             try {
               const newTaskData = {
                 user_id: user.id,
@@ -840,15 +776,10 @@ export function useMaintenanceTasks() {
               if (!currentSession && session?.access_token) {
                 try {
                   const response = await fetch(
-                    `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/maintenance_tasks`,
+                    `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/maintenance_tasks`,
                     {
                       method: 'POST',
-                      headers: {
-                        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                        'Authorization': `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=representation'
-                      },
+                      headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
                       body: JSON.stringify(newTaskData)
                     }
                   )
@@ -858,7 +789,7 @@ export function useMaintenanceTasks() {
                     // Silently skip this task
                     continue
                   }
-                } catch (error) {
+                } catch (_error) {
                   // Silently ignore errors
                   continue
                 }
@@ -891,7 +822,7 @@ export function useMaintenanceTasks() {
                   }
                 }
               }
-            } catch (insertError) {
+            } catch (_insertError) {
               // Silently ignore errors and continue with next task
               continue
             }
@@ -908,114 +839,16 @@ export function useMaintenanceTasks() {
 
       // Always reload tasks after generation
       await loadTasks()
-      console.log('Task generation completed')
       
       // Check if we have enough visible tasks
       const visibleTasks = getVisibleTasks()
       if (visibleTasks.length === 0) {
-        console.log('No visible tasks found after generation')
       }
     } catch (err) {
       console.error('Error generating tasks:', err)
       setError(err instanceof Error ? err.message : 'Failed to generate tasks')
     } finally {
       setIsGenerating(false)
-    }
-  }
-
-  // Calculate next due date for a template
-  const calculateNextDueDate = (template: MaintenanceTaskTemplate): Date | null => {
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-
-    switch (template.frequency_type) {
-      case 'daily':
-        return new Date(today.getTime() + 24 * 60 * 60 * 1000)
-
-      case 'weekly':
-        if (template.frequency_value === undefined) return null
-        const targetDay = template.frequency_value // 0 = Sunday, 1 = Monday, etc.
-        const currentDay = today.getDay()
-        const daysUntilTarget = (targetDay - currentDay + 7) % 7
-        return new Date(today.getTime() + daysUntilTarget * 24 * 60 * 60 * 1000)
-
-      case 'x_days':
-        if (template.frequency_value === undefined) return null
-        return new Date(today.getTime() + template.frequency_value * 24 * 60 * 60 * 1000)
-
-      case 'four_weeks':
-        return new Date(today.getTime() + 28 * 24 * 60 * 60 * 1000)
-
-      case 'monthly':
-        if (template.frequency_value === undefined) return null
-        const nextMonth = new Date(today)
-        nextMonth.setMonth(nextMonth.getMonth() + 1)
-        nextMonth.setDate(template.frequency_value)
-        return nextMonth
-
-      default:
-        return null
-    }
-  }
-
-  // Calculate next due date for a template from a specific date
-  const calculateNextDueDateForDate = (template: MaintenanceTaskTemplate, fromDate: Date): Date | null => {
-    const today = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate())
-
-    switch (template.frequency_type) {
-      case 'daily':
-        return new Date(today.getTime() + 24 * 60 * 60 * 1000)
-
-      case 'weekly':
-        if (template.frequency_value === undefined) return null
-        const targetDay = template.frequency_value // 0 = Sunday, 1 = Monday, etc.
-        const currentDay = today.getDay()
-        const daysUntilTarget = (targetDay - currentDay + 7) % 7
-        const nextDate = new Date(today.getTime() + daysUntilTarget * 24 * 60 * 60 * 1000)
-        return nextDate
-
-      case 'x_days':
-        if (template.frequency_value === undefined) return null
-        return new Date(today.getTime() + template.frequency_value * 24 * 60 * 60 * 1000)
-
-      case 'four_weeks':
-        return new Date(today.getTime() + 28 * 24 * 60 * 60 * 1000)
-
-      case 'monthly':
-        if (template.frequency_value === undefined) return null
-        const nextMonth = new Date(today)
-        nextMonth.setMonth(nextMonth.getMonth() + 1)
-        nextMonth.setDate(template.frequency_value)
-        return nextMonth
-
-      default:
-        return null
-    }
-  }
-
-  // Calculate next occurrence date for a template from a specific date
-  const getNextOccurrenceDate = (template: MaintenanceTaskTemplate, fromDate: Date): Date => {
-    switch (template.frequency_type) {
-      case 'daily':
-        return new Date(fromDate.getTime() + 24 * 60 * 60 * 1000)
-
-      case 'weekly':
-        return new Date(fromDate.getTime() + 7 * 24 * 60 * 60 * 1000)
-
-      case 'x_days':
-        if (template.frequency_value === undefined) return new Date(fromDate.getTime() + 24 * 60 * 60 * 1000)
-        return new Date(fromDate.getTime() + template.frequency_value * 24 * 60 * 60 * 1000)
-
-      case 'four_weeks':
-        return new Date(fromDate.getTime() + 28 * 24 * 60 * 60 * 1000)
-
-      case 'monthly':
-        const nextMonth = new Date(fromDate)
-        nextMonth.setMonth(nextMonth.getMonth() + 1)
-        return nextMonth
-
-      default:
-        return new Date(fromDate.getTime() + 24 * 60 * 60 * 1000)
     }
   }
 
@@ -1164,7 +997,6 @@ export function useMaintenanceTasks() {
         if (error) {
           console.error('Error cleaning up old tasks:', error)
         } else {
-          console.log('Cleaned up old completed tasks')
           await loadTasks()
         }
       } catch (err) {
@@ -1225,54 +1057,25 @@ export function useMaintenanceTasks() {
           })
         
         await loadTasks()
-        console.log('Test taak aangemaakt:', {
-          dueDate: tomorrow.toISOString(),
-          advanceNoticeDays: 2,
-          shouldBeVisible: true
-        })
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to create test task')
       }
     },
     debugTasks: () => {
-      console.log('=== DEBUG TASKS ===')
-      console.log('Templates:', templates)
-      console.log('Tasks:', tasks)
-      console.log('Visible tasks:', getVisibleTasks())
-      console.log('Overdue tasks:', getOverdueTasks())
       
       // Debug each task individually
-      tasks.forEach((task, index) => {
+      tasks.forEach((task, _index) => {
         const dueDate = new Date(task.due_date)
         const now = new Date()
-        const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
-        const advanceNoticeDays = task.advance_notice_days || 1
+        const _daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+        const _advanceNoticeDays = task.advance_notice_days || 1
         
-        console.log(`Task ${index + 1}:`, {
-          name: task.task_name,
-          dueDate: task.due_date,
-          daysUntilDue,
-          advanceNoticeDays,
-          shouldBeVisible: daysUntilDue <= advanceNoticeDays,
-          status: task.status,
-          currentTime: now.toISOString(),
-          dueTime: dueDate.toISOString(),
-          templateId: task.template_id
-        })
       })
       
       // Debug templates
-      templates.forEach((template, index) => {
-        console.log(`Template ${index + 1}:`, {
-          name: template.task_name,
-          frequency: template.frequency_type,
-          frequencyValue: template.frequency_value,
-          advanceNotice: template.advance_notice_days,
-          isActive: template.is_active
-        })
+      templates.forEach((_template, _index) => {
       })
       
-      console.log('==================')
     }
   }
 }

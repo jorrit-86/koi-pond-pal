@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from "react"
-import { ArrowLeft, Waves, TrendingUp, Calendar, Droplets, BarChart3, PieChart } from "lucide-react"
+import { ArrowLeft, Waves, TrendingUp, Calendar, Droplets, BarChart3 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
 import { useToast } from "@/hooks/use-toast"

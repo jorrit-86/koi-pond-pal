@@ -97,10 +97,9 @@ export function useParameterData(config: ParameterConfig): ParameterData {
         setCurrentValue(0)
         setStatus("optimal")
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error(`Error in loadParameterData for ${config.parameterType}:`, error)
       if (error?.message === 'Query timeout') {
-        console.warn(`loadParameterData for ${config.parameterType} timed out after 10 seconds`)
       }
       setHistoricData([])
       setCurrentValue(0)

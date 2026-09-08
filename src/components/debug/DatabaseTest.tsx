@@ -8,7 +8,7 @@ export function DatabaseTest() {
     const testDatabase = async () => {
       try {
         // Test basic connection
-        const { data, error } = await supabase
+        const { _data, error } = await supabase
           .from('users')
           .select('count')
           .limit(1)

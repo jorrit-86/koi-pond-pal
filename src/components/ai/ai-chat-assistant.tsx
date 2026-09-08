@@ -8,21 +8,15 @@ import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { AIChatService, ChatMessage, ChatContext } from '@/lib/ai-chat-service'
-import { EnhancedAIChatService, EnhancedChatMessage, EnhancedChatContext } from '@/lib/enhanced-ai-chat-service'
-import { 
-  MessageCircle, 
-  X, 
-  Send, 
-  User, 
-  Loader2,
-  Sparkles,
-  Droplets,
-  Fish,
-  Thermometer
+import { EnhancedAIChatService, EnhancedChatContext } from '@/lib/enhanced-ai-chat-service'
+import {
+  X,
+  Send,
+  User,
+  Loader2
 } from 'lucide-react'
 import koiSenseiLogo from '@/assets/koi-sensei-logo.svg'
 import { cn } from '@/lib/utils'
-
 
 interface AIChatAssistantProps {
   currentPage?: string
@@ -40,8 +34,8 @@ export function AIChatAssistant({ currentPage = 'dashboard' }: AIChatAssistantPr
   const { user } = useAuth()
   const { toast } = useToast()
   // Get all water parameters for AI context
-  const [allParameters, setAllParameters] = useState<any[]>([])
-  const [paramsLoading, setParamsLoading] = useState(true)
+  const [_allParameters, setAllParameters] = useState<any[]>([])
+  const [_paramsLoading, setParamsLoading] = useState(true)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

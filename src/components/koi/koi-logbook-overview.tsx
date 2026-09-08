@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase, createSupabaseHeaders } from '../../lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { ArrowLeft, Plus, Calendar, FileText, Activity, Pill, Utensils, Heart, Stethoscope, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, FileText, Activity, Pill, Utensils, Heart, Stethoscope, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface KoiLogEntry {
@@ -92,7 +92,6 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
 
     try {
       setLoading(true);
-      console.log('Loading log entries for koi:', koiId);
       
       // Check if Supabase has a session
       const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -100,15 +99,10 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading log entries using direct fetch with access token...');
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi_log_entries?koi_id=eq.${koiId}&select=*&order=entry_date.desc`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi_log_entries?koi_id=eq.${koiId}&select=*&order=entry_date.desc`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           );
           
@@ -117,10 +111,9 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
           }
           
           const data = await response.json();
-          console.log('Loaded log entries (direct fetch):', data?.length || 0, 'records');
           setLogEntries(data || []);
           return;
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error loading log entries with direct fetch:', error);
           // Fall through to try normal Supabase query
         }
@@ -138,9 +131,8 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
         throw error;
       }
       
-      console.log('Loaded log entries (normal query):', data?.length || 0, 'records');
       setLogEntries(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading log entries:', error);
       
       if (error?.code === '42P01') {
@@ -180,7 +172,6 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
         insertData.length_cm = parseInt(newEntry.length_cm);
       }
 
-      console.log('Inserting log entry:', insertData);
 
       // Check if Supabase has a session
       const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -188,17 +179,11 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Inserting log entry using direct fetch with access token...');
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi_log_entries`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi_log_entries`,
             {
               method: 'POST',
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
+              headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
               body: JSON.stringify(insertData)
             }
           );
@@ -211,7 +196,6 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
           const data = await response.json();
           const insertedData = Array.isArray(data) ? data[0] : data;
           
-          console.log('Inserted log entry (direct fetch):', insertedData);
           setLogEntries(prev => [insertedData, ...prev]);
           setNewEntry({
             entry_date: new Date().toISOString().split('T')[0],
@@ -227,7 +211,7 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
             onMeasurementAdded();
           }
           return;
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error inserting log entry with direct fetch:', error);
           throw error;
         }
@@ -259,7 +243,7 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
       if (newEntry.entry_type === 'measurement' && onMeasurementAdded) {
         onMeasurementAdded();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error adding log entry:', error);
       
       // More specific error messages
@@ -302,16 +286,11 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Deleting log entry using direct fetch with access token...');
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi_log_entries?id=eq.${entryId}`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi_log_entries?id=eq.${entryId}`,
             {
               method: 'DELETE',
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           );
           
@@ -328,7 +307,7 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
             onMeasurementAdded();
           }
           return;
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error deleting log entry with direct fetch:', error);
           throw error;
         }
@@ -349,7 +328,7 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
       if (onMeasurementAdded) {
         onMeasurementAdded();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting log entry:', error);
       toast.error(`Fout bij verwijderen: ${error?.message || 'Onbekende fout'}`);
     } finally {
@@ -393,17 +372,11 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Updating log entry using direct fetch with access token...');
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi_log_entries?id=eq.${editingEntry.id}`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi_log_entries?id=eq.${editingEntry.id}`,
             {
               method: 'PATCH',
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
+              headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
               body: JSON.stringify(updateData)
             }
           );
@@ -416,7 +389,6 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
           const data = await response.json();
           const updatedData = Array.isArray(data) ? data[0] : data;
           
-          console.log('Updated log entry (direct fetch):', updatedData);
           setLogEntries(prev => prev.map(entry => 
             entry.id === editingEntry.id ? updatedData : entry
           ));
@@ -436,7 +408,7 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
             onMeasurementAdded();
           }
           return;
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error updating log entry with direct fetch:', error);
           throw error;
         }
@@ -473,7 +445,7 @@ export function KoiLogbookOverview({ koiId, koiName, onNavigate, onMeasurementAd
       if (newEntry.entry_type === 'measurement' && onMeasurementAdded) {
         onMeasurementAdded();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating log entry:', error);
       toast.error(`Fout bij bijwerken: ${error?.message || 'Onbekende fout'}`);
     } finally {

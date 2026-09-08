@@ -22,7 +22,7 @@ export function SensorTransferDialog({ isOpen, onClose }: SensorTransferDialogPr
     try {
       await handleTransferRequest(request.id, true)
       toast.success("Sensor transfer geaccepteerd!")
-    } catch (error) {
+    } catch (_error) {
       toast.error("Er is een fout opgetreden bij het accepteren van de transfer")
     } finally {
       setProcessingRequest(null)
@@ -34,7 +34,7 @@ export function SensorTransferDialog({ isOpen, onClose }: SensorTransferDialogPr
     try {
       await handleTransferRequest(request.id, false)
       toast.success("Sensor transfer geweigerd!")
-    } catch (error) {
+    } catch (_error) {
       toast.error("Er is een fout opgetreden bij het weigeren van de transfer")
     } finally {
       setProcessingRequest(null)

@@ -16,9 +16,8 @@ export function useSensorData() {
   try {
     const authContext = useAuth()
     user = authContext?.user || null
-  } catch (error) {
+  } catch (_error) {
     // AuthProvider not available, continue without user
-    console.log('AuthProvider not available for useSensorData, using fallback')
   }
 
   const [sensorData, setSensorData] = useState<SensorData>({
@@ -53,7 +52,7 @@ export function useSensorData() {
       }
 
       // Get sensor configurations
-      const { data: configData, error: configError } = await supabase
+      const { data: _configData, error: configError } = await supabase
         .from('sensor_configurations')
         .select('sensor_id, display_name, location, status')
         .eq('user_id', user.id)

@@ -26,7 +26,7 @@ export function PhotoUpload({
   const { toast } = useToast()
 
   const compressImage = useCallback((file: File, maxSizeMB: number = 1): Promise<File> => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _reject) => {
       try {
         // Check if file is already small enough
         if (file.size <= maxSizeMB * 1024 * 1024) {
@@ -38,7 +38,6 @@ export function PhotoUpload({
         const ctx = canvas.getContext('2d')
         
         if (!ctx) {
-          console.warn('Canvas context not available, using original file')
           resolve(file)
           return
         }
@@ -47,7 +46,6 @@ export function PhotoUpload({
         
         // Add timeout to prevent hanging
         const timeout = setTimeout(() => {
-          console.warn('Image loading timeout, using original file')
           resolve(file)
         }, 10000) // 10 second timeout
         
@@ -68,7 +66,6 @@ export function PhotoUpload({
 
             // Ensure dimensions are valid
             if (width <= 0 || height <= 0) {
-              console.warn('Invalid dimensions after resize, using original file')
               resolve(file)
               return
             }
@@ -79,8 +76,7 @@ export function PhotoUpload({
             // Draw image with error handling
             try {
               ctx.drawImage(img, 0, 0, width, height)
-            } catch (drawError) {
-              console.warn('Error drawing image to canvas:', drawError)
+            } catch (_drawError) {
               resolve(file)
               return
             }
@@ -90,7 +86,6 @@ export function PhotoUpload({
               try {
                 canvas.toBlob((blob) => {
                   if (!blob) {
-                    console.warn('Failed to create blob, using original file')
                     resolve(file)
                     return
                   }
@@ -110,31 +105,27 @@ export function PhotoUpload({
                     tryCompress(nextQuality)
                   }
                 }, 'image/jpeg', quality)
-              } catch (blobError) {
-                console.warn('Error creating blob:', blobError)
+              } catch (_blobError) {
                 resolve(file)
               }
             }
 
             // Start with 0.8 quality
             tryCompress(0.8)
-          } catch (error) {
-            console.warn('Error in image processing:', error)
+          } catch (_error) {
             resolve(file)
           }
         }
 
-        img.onerror = (error) => {
+        img.onerror = (_error) => {
           clearTimeout(timeout)
-          console.warn('Error loading image:', error)
           resolve(file) // Fallback to original
         }
 
         // Set crossOrigin to handle CORS issues
         img.crossOrigin = 'anonymous'
         img.src = URL.createObjectURL(file)
-      } catch (error) {
-        console.warn('Error in compressImage:', error)
+      } catch (_error) {
         resolve(file)
       }
     })

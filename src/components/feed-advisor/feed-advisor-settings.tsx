@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Settings, Thermometer, RefreshCw, Utensils } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
+import { createSupabaseHeaders } from '@/lib/supabase'
 
 interface SensorData {
   pondTemp: number | null
@@ -22,7 +22,7 @@ interface FeedAdvisorSettingsProps {
 }
 
 export function FeedAdvisorSettings({ onNavigate }: FeedAdvisorSettingsProps) {
-  const { t } = useTranslation()
+  const { _t } = useTranslation()
   const { user, session } = useAuth()
   const [sensorData, setSensorData] = useState<SensorData>({
     pondTemp: null,
@@ -66,11 +66,9 @@ export function FeedAdvisorSettings({ onNavigate }: FeedAdvisorSettingsProps) {
 
       // If no data from database, use local fallback
       if (!data || data.length === 0) {
-        console.log('No data from database, using local fallback')
         const { FEED_BRAND_DATABASE } = await import('@/lib/feed-brand-database')
         setAvailableFeedBrands(FEED_BRAND_DATABASE)
       } else {
-        console.log('Loaded feed brands from database:', data.length, 'brands')
         setAvailableFeedBrands(data)
       }
     } catch (error) {
@@ -103,24 +101,18 @@ export function FeedAdvisorSettings({ onNavigate }: FeedAdvisorSettingsProps) {
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading sensor data for settings using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/sensor_data?user_id=eq.${user.id}&sensor_type=eq.temperatuurmeter&select=sensor_id,temperature,measurement_time,sensor_name,sensor_type&order=measurement_time.desc&limit=20`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/sensor_data?user_id=eq.${user.id}&sensor_type=eq.temperatuurmeter&select=sensor_id,temperature,measurement_time,sensor_name,sensor_type&order=measurement_time.desc&limit=20`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
           if (response.ok) {
             const data = await response.json()
             tempData = Array.isArray(data) ? data : [data]
-            console.log('Loaded sensor data (direct fetch):', tempData.length, 'records')
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error loading sensor data with direct fetch:', error)
           // Fall through to try normal Supabase query
         }
@@ -177,12 +169,6 @@ export function FeedAdvisorSettings({ onNavigate }: FeedAdvisorSettingsProps) {
       let ambientSensorConnected = false
       let lastUpdate = null
 
-      console.log('Available sensors for selection:', uniqueSensors.map(s => ({
-        id: s.sensor_id,
-        name: s.sensor_name,
-        temp: s.temperature,
-        time: s.measurement_time
-      })))
 
       // Get saved preferences from localStorage (they should be loaded by now)
       const savedPondSensor = localStorage.getItem('feed-advisor-pond-sensor')
@@ -197,19 +183,15 @@ export function FeedAdvisorSettings({ onNavigate }: FeedAdvisorSettingsProps) {
         pondSensor = uniqueSensors.find(s => s.sensor_id === pondSensorId)
         // Verify it's actually a pond sensor (ends with -01)
         if (pondSensor && !pondSensor.sensor_id.endsWith('-01')) {
-          console.warn('Selected pond sensor is not sensor -01, using sensor -01 instead')
           pondSensor = null
         }
-        console.log('Pond sensor found by selection:', pondSensor, 'ID:', pondSensorId)
       }
       
       // If no selected sensor or selected sensor is not -01, ALWAYS use sensor -01
       if (!pondSensor) {
         pondSensor = uniqueSensors.find(s => s.sensor_id.endsWith('-01'))
         if (pondSensor) {
-          console.log('Using sensor -01 for vijverwatertemperatuur:', pondSensor.sensor_id)
         } else {
-          console.warn('Sensor -01 (vijverwatertemperatuur) not found')
         }
       }
 
@@ -217,19 +199,15 @@ export function FeedAdvisorSettings({ onNavigate }: FeedAdvisorSettingsProps) {
         ambientSensor = uniqueSensors.find(s => s.sensor_id === ambientSensorId)
         // Verify it's actually an ambient sensor (ends with -02)
         if (ambientSensor && !ambientSensor.sensor_id.endsWith('-02')) {
-          console.warn('Selected ambient sensor is not sensor -02, using sensor -02 instead')
           ambientSensor = null
         }
-        console.log('Ambient sensor found by selection:', ambientSensor, 'ID:', ambientSensorId)
       }
       
       // If no selected sensor or selected sensor is not -02, ALWAYS use sensor -02
       if (!ambientSensor) {
         ambientSensor = uniqueSensors.find(s => s.sensor_id.endsWith('-02'))
         if (ambientSensor) {
-          console.log('Using sensor -02 for buitentemperatuur:', ambientSensor.sensor_id)
         } else {
-          console.warn('Sensor -02 (buitentemperatuur) not found')
         }
       }
 
@@ -240,7 +218,6 @@ export function FeedAdvisorSettings({ onNavigate }: FeedAdvisorSettingsProps) {
         pondTemp = pondSensor.temperature
         pondSensorConnected = true
         lastUpdate = pondSensor.measurement_time
-        console.log('Pond sensor data:', { temp: pondTemp, connected: pondSensorConnected })
       }
 
       if (ambientSensor) {
@@ -249,12 +226,10 @@ export function FeedAdvisorSettings({ onNavigate }: FeedAdvisorSettingsProps) {
         if (!lastUpdate || new Date(ambientSensor.measurement_time) > new Date(lastUpdate)) {
           lastUpdate = ambientSensor.measurement_time
         }
-        console.log('Ambient sensor data:', { temp: ambientTemp, connected: ambientSensorConnected })
       }
 
       // Only use same sensor as fallback if we truly have only one sensor
       if (uniqueSensors.length === 1 && pondSensorConnected && !ambientSensorConnected) {
-        console.log('Using single sensor for both pond and ambient')
         ambientTemp = pondTemp
         ambientSensorConnected = true
       }
@@ -271,7 +246,6 @@ export function FeedAdvisorSettings({ onNavigate }: FeedAdvisorSettingsProps) {
       if (!selectedPondSensor && !savedPondSensor && pondSensor) {
         setSelectedPondSensor(pondSensor.sensor_id)
         localStorage.setItem('feed-advisor-pond-sensor', pondSensor.sensor_id)
-        console.log('Auto-selected pond sensor:', pondSensor.sensor_id)
       } else if (savedPondSensor && !selectedPondSensor) {
         // Restore saved preference
         setSelectedPondSensor(savedPondSensor)
@@ -280,7 +254,6 @@ export function FeedAdvisorSettings({ onNavigate }: FeedAdvisorSettingsProps) {
       if (!selectedAmbientSensor && !savedAmbientSensor && ambientSensor) {
         setSelectedAmbientSensor(ambientSensor.sensor_id)
         localStorage.setItem('feed-advisor-ambient-sensor', ambientSensor.sensor_id)
-        console.log('Auto-selected ambient sensor:', ambientSensor.sensor_id)
       } else if (savedAmbientSensor && !selectedAmbientSensor) {
         // Restore saved preference
         setSelectedAmbientSensor(savedAmbientSensor)
@@ -550,7 +523,6 @@ export function FeedAdvisorSettings({ onNavigate }: FeedAdvisorSettingsProps) {
               {/* Show feed properties */}
               {(() => {
                 const selectedBrand = availableFeedBrands.find(brand => brand.merk === selectedFeedBrand)
-                console.log('Selected brand:', selectedBrand, 'Available brands:', availableFeedBrands)
                 if (selectedBrand) {
                   return (
                     <div className="space-y-3">

@@ -90,7 +90,7 @@ export class EmailService {
 
   static async sendApprovalEmail(userEmail: string, userName?: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const template = this.getApprovalEmailTemplate(userName || '')
+      const _template = this.getApprovalEmailTemplate(userName || '')
       
       // In a real implementation, you would integrate with an email service like:
       // - SendGrid
@@ -99,8 +99,6 @@ export class EmailService {
       // - Resend
       // For now, we'll simulate the email sending
       
-      console.log('Sending approval email to:', userEmail)
-      console.log('Email template:', template)
       
       // Simulate email sending delay
       await new Promise(resolve => setTimeout(resolve, 1000))
@@ -123,10 +121,8 @@ export class EmailService {
 
   static async sendRejectionEmail(userEmail: string, userName?: string, reason: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const template = this.getRejectionEmailTemplate(userName || '', reason)
+      const _template = this.getRejectionEmailTemplate(userName || '', reason)
       
-      console.log('Sending rejection email to:', userEmail)
-      console.log('Email template:', template)
       
       // Simulate email sending delay
       await new Promise(resolve => setTimeout(resolve, 1000))
@@ -161,11 +157,10 @@ export class EmailService {
       }
 
       if (!admins || admins.length === 0) {
-        console.log('No admin users found to notify')
         return { success: true }
       }
 
-      const template = {
+      const _template = {
         subject: 'New User Registration - Approval Required',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -197,8 +192,7 @@ export class EmailService {
       }
 
       // Send notification to all admins
-      for (const admin of admins) {
-        console.log('Sending new user notification to admin:', admin.email)
+      for (const _admin of admins) {
         // In production, send actual email here
       }
 

@@ -19,7 +19,7 @@ export function WaterParametersPopup({
   onNavigateToParameters, 
   taskName 
 }: WaterParametersPopupProps) {
-  const { t } = useTranslation()
+  const { _t } = useTranslation()
 
   const handleYes = () => {
     onComplete()

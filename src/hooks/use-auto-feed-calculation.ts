@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, createSupabaseHeaders } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface AutoCalculationResult {
@@ -49,13 +49,9 @@ export function useAutoFeedCalculation() {
         if (!currentSession && session?.access_token) {
           try {
             const response = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/auto_feed_calculations?user_id=eq.${user.id}&select=*&order=calculation_date.desc&limit=1`,
+              `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/auto_feed_calculations?user_id=eq.${user.id}&select=*&order=calculation_date.desc&limit=1`,
               {
-                headers: {
-                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                  'Authorization': `Bearer ${session.access_token}`,
-                  'Content-Type': 'application/json'
-                }
+                headers: createSupabaseHeaders(session.access_token)
               }
             )
             
@@ -66,7 +62,7 @@ export function useAutoFeedCalculation() {
               // Table doesn't exist or not accessible - silently ignore
               return
             }
-          } catch (error) {
+          } catch (_error) {
             // Silently ignore errors for this optional table
             return
           }
@@ -86,7 +82,6 @@ export function useAutoFeedCalculation() {
             }
             // Only log non-critical errors
             if (calcError.code !== '42501') {
-              console.warn('Error loading last calculation:', calcError.code)
             }
           } else {
             lastCalc = data
@@ -96,7 +91,7 @@ export function useAutoFeedCalculation() {
         if (lastCalc) {
           setLastCalculation(lastCalc)
         }
-      } catch (err) {
+      } catch (_err) {
         // Silently ignore errors for optional table
       }
 
@@ -108,13 +103,9 @@ export function useAutoFeedCalculation() {
         if (!currentSession && session?.access_token) {
           try {
             const response = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/feed_calculation_schedule?user_id=eq.${user.id}&select=*`,
+              `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/feed_calculation_schedule?user_id=eq.${user.id}&select=*`,
               {
-                headers: {
-                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                  'Authorization': `Bearer ${session.access_token}`,
-                  'Content-Type': 'application/json'
-                }
+                headers: createSupabaseHeaders(session.access_token)
               }
             )
             
@@ -125,7 +116,7 @@ export function useAutoFeedCalculation() {
               // Table doesn't exist or not accessible - silently ignore
               return
             }
-          } catch (error) {
+          } catch (_error) {
             // Silently ignore errors for this optional table
             return
           }
@@ -143,7 +134,6 @@ export function useAutoFeedCalculation() {
             }
             // Only log non-critical errors
             if (scheduleError.code !== '42501') {
-              console.warn('Error loading schedule:', scheduleError.code)
             }
           } else {
             scheduleData = data
@@ -153,10 +143,10 @@ export function useAutoFeedCalculation() {
         if (scheduleData) {
           setSchedule(scheduleData)
         }
-      } catch (err) {
+      } catch (_err) {
         // Silently ignore errors for optional table
       }
-    } catch (err) {
+    } catch (_err) {
       // Silently ignore errors for optional tables
     }
   }, [user, session])
@@ -232,7 +222,7 @@ export function useAutoFeedCalculation() {
       }
 
       // Get water parameters
-      const { data: waterData, error: waterError } = await supabase
+      const { data: waterData, error: _waterError } = await supabase
         .from('water_parameters')
         .select('parameter_type, value, created_at')
         .eq('user_id', user.id)
@@ -442,7 +432,6 @@ export function useAutoFeedCalculation() {
         }
         // Only log non-critical errors
         if (saveError.code !== '42501') {
-          console.warn('Error saving calculation:', saveError.code)
         }
         return
       }
@@ -465,15 +454,10 @@ export function useAutoFeedCalculation() {
           if (!currentSession && session?.access_token) {
             try {
               const response = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/feed_calculation_schedule?id=eq.${schedule.id}`,
+                `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/feed_calculation_schedule?id=eq.${schedule.id}`,
                 {
                   method: 'PATCH',
-                  headers: {
-                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                  },
+                  headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
                   body: JSON.stringify(updateData)
                 }
               )
@@ -481,7 +465,7 @@ export function useAutoFeedCalculation() {
               if (!response.ok && response.status !== 406 && response.status !== 404 && response.status !== 42501) {
                 // Silently ignore errors for optional table
               }
-            } catch (error) {
+            } catch (_error) {
               // Silently ignore errors for optional table
             }
           } else {
@@ -497,11 +481,10 @@ export function useAutoFeedCalculation() {
               }
               // Only log non-critical errors
               if (updateError.code !== '42501') {
-                console.warn('Error updating schedule:', updateError.code)
               }
             }
           }
-        } catch (err) {
+        } catch (_err) {
           // Silently ignore errors for optional table
         }
       }

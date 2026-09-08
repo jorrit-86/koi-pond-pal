@@ -69,8 +69,7 @@ export function KhCalculatorPage({ onNavigate: _onNavigate }: KhCalculatorPagePr
       if (typeof parsed.pondVolumeLiters === "number" && parsed.pondVolumeLiters > 0) {
         setPondVolumeLiters(Math.round(parsed.pondVolumeLiters).toString());
       }
-    } catch (error) {
-      console.warn("Unable to restore KH calculator preferences:", error);
+    } catch (_error) {
     }
   }, []);
 

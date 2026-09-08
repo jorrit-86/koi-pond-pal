@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useTranslation } from 'react-i18next'
-import { supabase } from '@/lib/supabase'
+import { supabase, createSupabaseHeaders } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 
@@ -18,7 +18,7 @@ interface WaterChangePopupProps {
 }
 
 export function WaterChangePopup({ isOpen, onClose, onComplete, taskName }: WaterChangePopupProps) {
-  const { t } = useTranslation()
+  const { _t } = useTranslation()
   const { user, session } = useAuth()
   const [liters, setLiters] = useState<string>('')
   const [waterType, setWaterType] = useState<string>('tap_water')
@@ -53,17 +53,11 @@ export function WaterChangePopup({ isOpen, onClose, onComplete, taskName }: Wate
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Saving water change using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/water_changes`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/water_changes`,
             {
               method: 'POST',
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
+              headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
               body: JSON.stringify(waterChangeData)
             }
           )
@@ -85,7 +79,7 @@ export function WaterChangePopup({ isOpen, onClose, onComplete, taskName }: Wate
             toast.error('Fout bij opslaan waterwissel')
             return
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error saving water change with direct fetch:', error)
           toast.error('Fout bij opslaan waterwissel')
           return

@@ -13,7 +13,7 @@ interface FeedAdvisorTableProps {
   baseBiomass?: number
 }
 
-export function FeedAdvisorTable({ koiList, calculations, totalFeed, noFeeding, noFeedingMessage, baseBiomass }: FeedAdvisorTableProps) {
+export function FeedAdvisorTable({ koiList, _calculations, totalFeed, noFeeding, noFeedingMessage, baseBiomass: _baseBiomass }: FeedAdvisorTableProps) {
   
   // Calculate individual weights and daily feeds
   const koiData = koiList.map(koi => {
@@ -84,7 +84,7 @@ export function FeedAdvisorTable({ koiList, calculations, totalFeed, noFeeding, 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {koiData.map((koi, index) => (
+                  {koiData.map((koi, _index) => (
                     <TableRow key={koi.id} className={noFeeding ? 'opacity-50' : ''}>
                       <TableCell>
                         <div className="space-y-1">

@@ -1,14 +1,13 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PhotoUpload } from "@/components/ui/photo-upload"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, Image, Save, Pencil, Check, X, Trash2, Plus, Star, BarChart3, Archive, Printer } from "lucide-react"
+import { ArrowLeft, Save, Pencil, Check, X, Trash2, Plus, Star, BarChart3, Archive, Printer } from "lucide-react"
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
+import { supabase, createSupabaseHeaders } from '@/lib/supabase'
 import { useAuth } from "@/contexts/AuthContext"
 import { usePhotoUpload } from "@/hooks/use-photo-upload"
 import { useToast } from "@/hooks/use-toast"
@@ -100,15 +99,10 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading koi data using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi?id=eq.${koiId}&user_id=eq.${user?.id}&select=*`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi?id=eq.${koiId}&user_id=eq.${user?.id}&select=*`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -126,13 +120,9 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
           // Continue with photo loading and transformation...
           // Load koi photos using direct fetch
           const photosResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi_photos?koi_id=eq.${koiId}&select=*&order=display_order.asc`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi_photos?koi_id=eq.${koiId}&select=*&order=display_order.asc`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -265,23 +255,17 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading current length using direct fetch with access token...')
           // Fetch all measurements and filter in JavaScript to avoid REST API syntax issues
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi_log_entries?koi_id=eq.${koiId}&entry_type=eq.measurement&select=length_cm,entry_date&order=entry_date.desc`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi_log_entries?koi_id=eq.${koiId}&entry_type=eq.measurement&select=length_cm,entry_date&order=entry_date.desc`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
           if (!response.ok) {
             // If 404 or no data, that's okay - just means no measurements yet
             if (response.status === 404 || response.status === 406) {
-              console.log('No measurements found for current length')
               return
             }
             throw new Error(`HTTP error! status: ${response.status}`)
@@ -294,13 +278,11 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
           const measurement = measurements.find((m: any) => m.length_cm != null)
           
           if (measurement?.length_cm) {
-            console.log('Loaded current length (direct fetch):', measurement.length_cm, 'cm')
             setCurrentLength(measurement.length_cm)
           } else {
-            console.log('No measurements with length found for current length')
           }
           return
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error loading current length with direct fetch:', error)
           // Don't throw - just return, we'll fall back to length_at_purchase
           return
@@ -324,7 +306,6 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
       }
 
       if (data?.length_cm) {
-        console.log('Loaded current length (normal query):', data.length_cm, 'cm')
         setCurrentLength(data.length_cm)
       } else {
         // Reset to null if no measurement found, so it falls back to length_at_purchase
@@ -479,7 +460,6 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
       
       // Save healthStatus to notes field in database
       if (field === 'healthStatus') {
-        console.log(`Updating healthStatus to: ${tempValue}`)
         // Update notes field with healthStatus
         const currentNotes = koi.notes || ''
         const healthStatusNote = `[HealthStatus: ${tempValue}]`
@@ -503,7 +483,7 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
         } : null)
         
         // Skip the rest of the function to avoid healthStatus column error
-        const { data, error } = await supabase
+        const { _data, error } = await supabase
           .from('koi')
           .update(updateData)
           .eq('id', koi.id)
@@ -526,7 +506,6 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
         })
         return
       } else if (field === 'location') {
-        console.log(`Updating location to: ${tempValue}`)
         updateData['location'] = tempValue || null
       }
       
@@ -1782,9 +1761,7 @@ export function KoiEditPage({ onNavigate, koiId, onKoiUpdated }: KoiEditPageProp
           isOpen={showGrowthChart}
           onClose={() => setShowGrowthChart(false)}
           onAddMeasurement={() => {
-            console.log('onAddMeasurement called from koi-edit'); // Debug log
             setShowGrowthChart(false)
-            console.log('User is already on edit page, can add measurements directly'); // Debug log
             // The user is already on the edit page, so they can add measurements directly
           }}
         />

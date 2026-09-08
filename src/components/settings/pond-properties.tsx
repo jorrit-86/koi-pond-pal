@@ -6,14 +6,12 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/lib/supabase'
+import { supabase, createSupabaseHeaders } from '@/lib/supabase'
 import { useTranslation } from 'react-i18next'
-import { 
-  Droplets, 
-  Fish, 
-  Thermometer, 
+import {
+  Droplets,
+  Fish,
   Calendar,
-  MapPin,
   RefreshCw,
   Plus,
   X,
@@ -188,7 +186,7 @@ const getMediaOptions = (type: string) => {
 }
 
 export function PondProperties() {
-  const { t } = useTranslation()
+  const { _t } = useTranslation()
   const { user, session } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
@@ -355,13 +353,11 @@ export function PondProperties() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-
   const loadPondProperties = async () => {
     if (!user) return
 
     try {
       setLoading(true)
-      console.log('Loading pond properties for user:', user.id)
       
       // Check if Supabase has a session
       const { data: { session: currentSession } } = await supabase.auth.getSession()
@@ -372,15 +368,10 @@ export function PondProperties() {
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading pond properties using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?user_id=eq.${user.id}&select=*`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_preferences?user_id=eq.${user.id}&select=*`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -388,15 +379,13 @@ export function PondProperties() {
             const responseData = await response.json()
             // maybeSingle() returns a single object or null, so we need to handle array response
             data = Array.isArray(responseData) ? (responseData.length > 0 ? responseData[0] : null) : responseData
-            console.log('Loaded pond properties (direct fetch):', data ? 'found' : 'none')
           } else if (response.status === 406 || response.status === 404) {
             // Table doesn't exist or not accessible - silently ignore
-            console.log('Table not accessible (406/404), using defaults')
             data = null
           } else {
             throw new Error(`HTTP error! status: ${response.status}`)
           }
-        } catch (fetchError: any) {
+        } catch (fetchError) {
           console.error('Error loading pond properties with direct fetch:', fetchError)
           error = fetchError
           // Fall through to try normal Supabase query
@@ -415,12 +404,6 @@ export function PondProperties() {
         error = queryResult.error
       }
 
-      console.log('Database query result:', { data, error })
-      console.log('Data type:', typeof data)
-      console.log('Data is null?', data === null)
-      console.log('Data is undefined?', data === undefined)
-      console.log('Data length/keys:', data ? Object.keys(data) : 'no data')
-
       if (error) {
         console.error('Error loading pond properties:', error)
         console.error('Error details:', JSON.stringify(error, null, 2))
@@ -434,9 +417,6 @@ export function PondProperties() {
 
       if (data) {
         // Debug: log all loaded data
-        console.log('Loaded data from database:', data)
-        console.log('pond_size_liters:', data.pond_size_liters, 'type:', typeof data.pond_size_liters)
-        console.log('pond_depth_cm:', data.pond_depth_cm, 'type:', typeof data.pond_depth_cm)
         
         // Ensure filter_segments is properly parsed
         let filterSegments = data.filter_segments
@@ -454,7 +434,6 @@ export function PondProperties() {
         
         // Ensure filter_segments is an array
         if (!Array.isArray(filterSegments)) {
-          console.warn('filter_segments is not an array, using defaults')
           filterSegments = [
             { id: '1', type: 'mechanical', media: ['vortex_chamber'], description: 'Vortexkamer - grove filtering' },
             { id: '2', type: 'biological', media: ['moving_bed_k1'], description: 'Moving Bed K1 - biologische filtering' }
@@ -500,10 +479,8 @@ export function PondProperties() {
           plant_types: data.plant_types || []
         }
 
-        console.log('Setting pond properties state:', loadedProperties)
         setPondProperties(loadedProperties)
       } else {
-        console.log('No data found in database for user, using defaults')
       }
     } catch (error) {
       console.error('Error in loadPondProperties:', error)
@@ -531,13 +508,9 @@ export function PondProperties() {
       if (!currentSession && session?.access_token) {
         try {
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/pond_koi_count?user_id=eq.${user.id}&select=*`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/pond_koi_count?user_id=eq.${user.id}&select=*`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
 
@@ -548,7 +521,7 @@ export function PondProperties() {
             // Table doesn't exist or not accessible - silently ignore
             return
           }
-        } catch (fetchError: any) {
+        } catch (_fetchError) {
           // Silently ignore fetch errors for koi counts
           return
         }
@@ -579,7 +552,7 @@ export function PondProperties() {
           hospital_koi: data.hospital_koi_count || 0
         })
       }
-    } catch (error) {
+    } catch (_error) {
       // Silently ignore errors for koi counts
     }
   }
@@ -598,7 +571,7 @@ export function PondProperties() {
   }, [])
 
   // Debounced auto-save function for filter segments (legacy)
-  const debouncedAutoSaveSegments = useCallback((segments: FilterSegment[]) => {
+  const _debouncedAutoSaveSegments = useCallback((segments: FilterSegment[]) => {
     // Clear existing timeout
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current)
@@ -616,7 +589,6 @@ export function PondProperties() {
 
     try {
       // Debug: log the properties data before saving
-      console.log('Auto-saving pond properties to database:', properties)
 
       // Check if Supabase has a session
       const { data: { session: currentSession } } = await supabase.auth.getSession()
@@ -637,17 +609,12 @@ export function PondProperties() {
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Saving pond properties using direct fetch with access token...')
           
           // First, try to get existing record to determine if we should PATCH or POST
           const checkResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?user_id=eq.${user.id}&select=id`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_preferences?user_id=eq.${user.id}&select=id`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
 
@@ -658,24 +625,18 @@ export function PondProperties() {
             // Use PATCH for update, POST for insert
             const method = recordExists ? 'PATCH' : 'POST'
             const url = recordExists 
-              ? `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?user_id=eq.${user.id}&select=*`
-              : `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?select=*`
+              ? `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_preferences?user_id=eq.${user.id}&select=*`
+              : `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_preferences?select=*`
 
             const saveResponse = await fetch(url, {
               method,
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
+              headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
               body: JSON.stringify(dataToSave)
             })
 
             if (saveResponse.ok) {
               const responseData = await saveResponse.json()
               data = Array.isArray(responseData) ? (responseData.length > 0 ? responseData[0] : null) : responseData
-              console.log('Pond properties saved successfully (direct fetch)')
             } else {
               const errorData = await saveResponse.json().catch(() => ({ message: `HTTP ${saveResponse.status}` }))
               error = { message: errorData.message || `HTTP error! status: ${saveResponse.status}` }
@@ -683,7 +644,7 @@ export function PondProperties() {
           } else {
             error = { message: `Failed to check existing record: ${checkResponse.status}` }
           }
-        } catch (fetchError: any) {
+        } catch (fetchError) {
           console.error('Error saving pond properties with direct fetch:', fetchError)
           error = fetchError
           // Fall through to try normal Supabase query
@@ -703,8 +664,6 @@ export function PondProperties() {
         error = queryResult.error
       }
 
-      console.log('Upsert result:', { data, error })
-
       if (error) {
         console.error('Error auto-saving pond properties:', error)
         toast({
@@ -713,7 +672,6 @@ export function PondProperties() {
           variant: "destructive"
         })
       } else {
-        console.log('Pond properties saved successfully')
       }
     } catch (error) {
       console.error('Error in autoSavePondProperties:', error)
@@ -731,7 +689,6 @@ export function PondProperties() {
 
     try {
       // Debug: log the filter_segments data before saving
-      console.log('Auto-saving filter_segments to database:', segments)
 
       // Check if Supabase has a session
       const { data: { session: currentSession } } = await supabase.auth.getSession()
@@ -752,17 +709,12 @@ export function PondProperties() {
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Saving filter segments using direct fetch with access token...')
           
           // First, try to get existing record to determine if we should PATCH or POST
           const checkResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?user_id=eq.${user.id}&select=id`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_preferences?user_id=eq.${user.id}&select=id`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
 
@@ -773,24 +725,18 @@ export function PondProperties() {
             // Use PATCH for update, POST for insert
             const method = recordExists ? 'PATCH' : 'POST'
             const url = recordExists 
-              ? `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?user_id=eq.${user.id}&select=*`
-              : `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/user_preferences?select=*`
+              ? `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_preferences?user_id=eq.${user.id}&select=*`
+              : `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_preferences?select=*`
 
             const saveResponse = await fetch(url, {
               method,
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
+              headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
               body: JSON.stringify(dataToSave)
             })
 
             if (saveResponse.ok) {
               const responseData = await saveResponse.json()
               data = Array.isArray(responseData) ? (responseData.length > 0 ? responseData[0] : null) : responseData
-              console.log('Filter segments saved successfully (direct fetch)')
             } else {
               const errorData = await saveResponse.json().catch(() => ({ message: `HTTP ${saveResponse.status}` }))
               error = { message: errorData.message || `HTTP error! status: ${saveResponse.status}` }
@@ -798,7 +744,7 @@ export function PondProperties() {
           } else {
             error = { message: `Failed to check existing record: ${checkResponse.status}` }
           }
-        } catch (fetchError: any) {
+        } catch (fetchError) {
           console.error('Error saving filter segments with direct fetch:', fetchError)
           error = fetchError
           // Fall through to try normal Supabase query
@@ -818,8 +764,6 @@ export function PondProperties() {
         error = queryResult.error
       }
 
-      console.log('Upsert result:', { data, error })
-
       if (error) {
         console.error('Error auto-saving filter segments:', error)
         toast({
@@ -828,7 +772,6 @@ export function PondProperties() {
           variant: "destructive"
         })
       } else {
-        console.log('Filter segments saved successfully')
       }
     } catch (error) {
       console.error('Error in autoSaveFilterSegments:', error)
@@ -839,7 +782,6 @@ export function PondProperties() {
       })
     }
   }
-
 
   if (loading) {
     return (
@@ -1271,7 +1213,7 @@ export function PondProperties() {
                                       type="radio"
                                       name={`media-${segment.id}`}
                                       value={media.value}
-                                      onChange={(e) => {
+                                      onChange={(_e) => {
                                         const newSegments = pondProperties.filter_segments.map(s => 
                                           s.id === segment.id ? { ...s, media: [media.value] } : s
                                         )

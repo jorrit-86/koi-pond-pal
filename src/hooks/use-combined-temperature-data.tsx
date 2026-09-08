@@ -55,9 +55,8 @@ export function useCombinedTemperatureData(timeRange: string = "7d", specificSen
         })
         
         queryResult = await Promise.race([sensorQuery, timeoutPromise])
-      } catch (timeoutError: any) {
+      } catch (timeoutError) {
         if (timeoutError.message === 'Query timeout after 10 seconds') {
-          console.warn('Sensor data query timed out after 10 seconds')
           setCombinedData([])
           setError('Query timeout - please try again')
           return
@@ -89,8 +88,7 @@ export function useCombinedTemperatureData(timeRange: string = "7d", specificSen
         } else {
           configData = configResult
         }
-      } catch (configError) {
-        console.warn('Config query timed out or failed:', configError)
+      } catch (_configError) {
         // Continue without config data
       }
 
@@ -212,7 +210,7 @@ export function useCombinedTemperatureData(timeRange: string = "7d", specificSen
       // For 24h, show 1 point per hour to reduce clutter
       if (timeRange === "24h") {
         
-        const hourlyData: TemperatureDataPoint[] = []
+        const _hourlyData: TemperatureDataPoint[] = []
         const hourMap = new Map<string, TemperatureDataPoint>()
         
         // Group data by hour AND sensor_id, take the first measurement of each hour for each sensor
@@ -235,7 +233,7 @@ export function useCombinedTemperatureData(timeRange: string = "7d", specificSen
       
       // For longer periods (7d or more), show only the first measurement of each hour
       if (timeRange === "7d" || timeRange === "14d" || timeRange === "30d" || timeRange === "90d" || timeRange === "365d") {
-        const hourlyData: TemperatureDataPoint[] = []
+        const _hourlyData: TemperatureDataPoint[] = []
         const hourMap = new Map<string, TemperatureDataPoint>()
         
         recentData.forEach(point => {
@@ -256,7 +254,7 @@ export function useCombinedTemperatureData(timeRange: string = "7d", specificSen
 
       setCombinedData(recentData)
 
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading combined temperature data:', err.message)
       setError(err.message)
       // Ensure data is set to empty array on error
@@ -284,7 +282,6 @@ export function useCombinedTemperatureData(timeRange: string = "7d", specificSen
   useEffect(() => {
     if (loading && user) {
       const timeout = setTimeout(() => {
-        console.warn('Combined temperature data loading timeout - forcing loading to false')
         setLoading(false)
         setError('Loading timeout - please try again')
       }, 15000) // 15 second timeout

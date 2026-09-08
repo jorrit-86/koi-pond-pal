@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  BarChart3, 
-  TrendingUp, 
-  TrendingDown, 
-  Minus, 
-  Calendar,
+import {
+  BarChart3,
   RefreshCw,
-  Download,
   Filter,
   ArrowLeft,
   FileText
@@ -18,7 +12,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { ReportDialog } from './report-dialog'
 import jsPDF from 'jspdf'
 // @ts-ignore - jspdf-autotable doesn't have proper TypeScript definitions
@@ -42,7 +36,7 @@ interface ChartData {
 }
 
 export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
-  const { t } = useTranslation()
+  const { _t } = useTranslation()
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [chartData, setChartData] = useState<ChartData[]>([])
@@ -119,7 +113,6 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
 
     setChartData(chartDataArray)
   }
-
 
   const getParameterName = (param: string) => {
     const names: Record<string, string> = {
@@ -463,7 +456,7 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
           }
 
           // Draw colored line/box for legend
-          const color = `hsl(${index * 60}, 70%, 50%)`
+          const _color = `hsl(${index * 60}, 70%, 50%)`
           const rgb = hslToRgb(index * 60, 70, 50)
           doc.setDrawColor(rgb[0], rgb[1], rgb[2])
           doc.setFillColor(rgb[0], rgb[1], rgb[2])
@@ -589,7 +582,6 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
           </div>
         </CardContent>
       </Card>
-
 
       {/* Charts */}
       <Card>

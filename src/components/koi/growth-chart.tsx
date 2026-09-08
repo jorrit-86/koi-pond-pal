@@ -3,9 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { supabase } from '../../lib/supabase';
+import { supabase, createSupabaseHeaders } from '../../lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { TrendingUp, Calendar, Ruler, Download, Target, Award, Activity } from 'lucide-react';
+import { TrendingUp, Ruler, Download, Target, Award, Activity } from 'lucide-react';
 
 interface GrowthDataPoint {
   date: string;
@@ -26,8 +26,8 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
   const { user, session } = useAuth();
   const [growthData, setGrowthData] = useState<GrowthDataPoint[]>([]);
   const [loading, setLoading] = useState(false);
-  const [koiData, setKoiData] = useState<any>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState<'all' | '6months' | '1year' | '2years'>('all');
+  const [_koiData, setKoiData] = useState<any>(null);
+  const [_selectedPeriod, _setSelectedPeriod] = useState<'all' | '6months' | '1year' | '2years'>('all');
 
   useEffect(() => {
     if (isOpen && koiId && user) {
@@ -42,12 +42,10 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
     }
 
     try {
-      console.log('loadGrowthData called with koiId:', koiId); // Debug log
       setLoading(true);
       
       // Set a timeout to reset loading state in case of authentication timeout
       const timeoutId = setTimeout(() => {
-        console.log('Loading timeout - resetting loading state'); // Debug log
         setLoading(false);
       }, 10000); // 10 second timeout
       
@@ -60,37 +58,27 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading growth data using direct fetch with access token...');
           
           // Load koi basic data
           const koiResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi?id=eq.${koiId}&select=name,length_at_purchase,purchase_date`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi?id=eq.${koiId}&select=name,length_at_purchase,purchase_date`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           );
           
           if (koiResponse.ok) {
             const koiDataArray = await koiResponse.json();
             koiData = Array.isArray(koiDataArray) ? koiDataArray[0] : koiDataArray;
-            console.log('Koi data loaded (direct fetch):', koiData);
           } else {
             console.error('Error loading koi data (direct fetch):', koiResponse.status);
           }
           
           // Load measurement data from logbook
           const measurementsResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi_log_entries?koi_id=eq.${koiId}&entry_type=eq.measurement&select=entry_date,length_cm,description&order=entry_date.asc`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi_log_entries?koi_id=eq.${koiId}&entry_type=eq.measurement&select=entry_date,length_cm,description&order=entry_date.asc`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           );
           
@@ -99,11 +87,10 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
             measurements = Array.isArray(measurementsData) ? measurementsData : [measurementsData];
             // Filter out null length_cm values
             measurements = measurements.filter((m: any) => m.length_cm != null);
-            console.log('Measurements data loaded (direct fetch):', measurements.length, 'measurements');
           } else {
             console.error('Error loading measurements (direct fetch):', measurementsResponse.status);
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error loading growth data with direct fetch:', error);
           // Fall through to try normal Supabase query
         }
@@ -117,8 +104,6 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
           .eq('id', koiId)
           .single();
 
-        console.log('Koi data loaded (normal query):', koiDataResult);
-        console.log('Koi error:', koiError);
 
         if (koiError) {
           console.error('Error loading koi data:', koiError);
@@ -142,8 +127,6 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
           .not('length_cm', 'is', null)
           .order('entry_date', { ascending: true });
 
-        console.log('Measurements data loaded (normal query):', measurementsResult);
-        console.log('Measurements error:', measurementsError);
 
         if (measurementsError) {
           console.error('Error loading measurements:', measurementsError);
@@ -156,11 +139,9 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
       // Combine purchase data and measurements
       const dataPoints: GrowthDataPoint[] = [];
 
-      console.log('Combining data - koiData:', koiData); // Debug log
 
       // Add purchase data if available
       if (koiData.length_at_purchase && koiData.purchase_date) {
-        console.log('Adding purchase data:', { date: koiData.purchase_date, length: koiData.length_at_purchase }); // Debug log
         dataPoints.push({
           date: koiData.purchase_date,
           length: koiData.length_at_purchase,
@@ -170,9 +151,7 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
       }
 
       // Add measurements
-      console.log('Adding measurements:', measurements); // Debug log
       measurements?.forEach((measurement: any) => {
-        console.log('Adding measurement:', measurement); // Debug log
         dataPoints.push({
           date: measurement.entry_date,
           length: measurement.length_cm,
@@ -184,13 +163,11 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
       // Sort by date - ensure chronological order
       dataPoints.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
-      console.log('Final growth data:', dataPoints); // Debug log
       setGrowthData(dataPoints);
       clearTimeout(timeoutId); // Clear timeout on success
       
       // If no data points, show the "add measurement" message immediately
       if (dataPoints.length === 0) {
-        console.log('No growth data found - showing add measurement message'); // Debug log
       }
     } catch (error) {
       console.error('Error loading growth data:', error);
@@ -376,16 +353,13 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        console.log('Eerste meting knop geklikt'); // Debug log
                         
                         // Close the growth chart first
                         onClose();
                         
                         if (onAddMeasurement) {
-                          console.log('Calling onAddMeasurement'); // Debug log
                           onAddMeasurement(); // Trigger add measurement
                         } else {
-                          console.log('onAddMeasurement is not defined'); // Debug log
                         }
                       }}
                     >
@@ -487,7 +461,7 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
                             }
                             
                             // Reverse the order so highest values are at the top
-                            return steps.reverse().map((value, index) => (
+                            return steps.reverse().map((value, _index) => (
                               <div key={value} className="flex items-center justify-end">
                                 <div className="text-xs text-gray-600 font-medium">
                                   {value}cm
@@ -516,7 +490,7 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
                                   steps.push(i);
                                 }
                                 
-                                return steps.map((value, index) => {
+                                return steps.map((value, _index) => {
                                   const yPosition = 100 - ((value - (minLength - 5)) / ((maxLength + 5) - (minLength - 5))) * 100;
                                   return (
                                     <div 
@@ -578,8 +552,8 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
                               const minLength = Math.min(...growthData.map(p => p.length));
                               const x = (index / (growthData.length - 1)) * 100;
                               const y = 100 - ((point.length - (minLength - 5)) / ((maxLength + 5) - (minLength - 5))) * 100;
-                              const isHighest = point.length === maxLength;
-                              const isLowest = point.length === minLength;
+                              const _isHighest = point.length === maxLength;
+                              const _isLowest = point.length === minLength;
                               
                               
                               return (
@@ -630,7 +604,7 @@ export function GrowthChart({ koiId, koiName, isOpen, onClose, onAddMeasurement 
                             // Show days - keep chronological order (old to new)
                             for (let i = 0; i < growthData.length; i++) {
                               const date = new Date(growthData[i].date);
-                              const shortYear = date.getFullYear().toString().slice(-2);
+                              const _shortYear = date.getFullYear().toString().slice(-2);
                               labels.push({
                                 text: `${date.getDate()}-${date.getMonth() + 1}`,
                                 fullText: date.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })

@@ -2,11 +2,10 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Thermometer, 
-  TrendingUp, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  Thermometer,
+  TrendingUp,
+  AlertTriangle,
   Target,
   BarChart3,
   Activity,
@@ -88,7 +87,7 @@ export function TemperatureAnalysisDashboard() {
 
     try {
       // Get recent readings from both sensors
-      const { data: sensor1Data, error: sensor1Error } = await supabase
+      const { data: sensor1Data, error: _sensor1Error } = await supabase
         .from('sensor_data')
         .select('temperature, created_at')
         .eq('sensor_id', 'KOIoT-001122-01')
@@ -97,7 +96,7 @@ export function TemperatureAnalysisDashboard() {
         .limit(1)
         .single()
 
-      const { data: sensor2Data, error: sensor2Error } = await supabase
+      const { data: sensor2Data, error: _sensor2Error } = await supabase
         .from('sensor_data')
         .select('temperature, created_at')
         .eq('sensor_id', 'KOIoT-001122-02')
@@ -390,5 +389,4 @@ export function TemperatureAnalysisDashboard() {
     </div>
   )
 }
-
 

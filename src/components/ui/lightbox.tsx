@@ -104,7 +104,7 @@ export function Lightbox({
         title: "Download Started",
         description: "Photo is being downloaded.",
       })
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Download Failed",
         description: "Could not download the photo.",

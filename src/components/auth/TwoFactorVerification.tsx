@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Shield, Smartphone, Key } from 'lucide-react'
+import { Shield, Key } from 'lucide-react'
 
 interface TwoFactorVerificationProps {
   userEmail: string

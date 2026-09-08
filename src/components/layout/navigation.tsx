@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Waves, Droplets, Fish, Settings, BarChart3, Menu, LogOut, User, Sparkles, Utensils, Calculator } from "lucide-react"
+import { Waves, Droplets, Fish, Settings, BarChart3, Menu, LogOut, Utensils, Calculator } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"

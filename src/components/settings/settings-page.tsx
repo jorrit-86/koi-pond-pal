@@ -45,7 +45,7 @@ export function SettingsPage() {
     document.documentElement.lang = newLang
   }
 
-  const getLanguageName = (langCode: string) => {
+  const _getLanguageName = (langCode: string) => {
     switch (langCode) {
       case 'en': return 'English'
       case 'nl': return 'Nederlands'

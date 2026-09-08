@@ -6,14 +6,13 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Waves, 
-  Droplets, 
-  Fish, 
-  BarChart3, 
-  Shield, 
-  Smartphone, 
-  Globe, 
+import {
+  Droplets,
+  Fish,
+  BarChart3,
+  Shield,
+  Smartphone,
+  Globe,
   Users,
   CheckCircle,
   LogIn
@@ -71,7 +70,6 @@ export function LandingPage() {
     setShowAuthModal(true)
   }
 
-
   if (user) {
     // Redirect to dashboard if user is logged in
     window.location.href = '/dashboard'
@@ -121,7 +119,6 @@ export function LandingPage() {
           </p>
         </div>
       </section>
-
 
       {/* Features Section */}
       <section className="py-20 bg-white">

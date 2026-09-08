@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, createSupabaseHeaders } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { use3DayAverage } from './use-3day-average'
 
@@ -25,7 +25,7 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
   const { user, session } = useAuth()
   const { pondTemp, ambientTemp, refreshAverages } = use3DayAverage()
   const [lastAutoCalculation, setLastAutoCalculation] = useState<AutomaticCalculationResult | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [_loading, _setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
 
@@ -40,15 +40,10 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading last calculation using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/feed_advice_history?user_id=eq.${user.id}&source=eq.auto&select=*&order=calculation_date.desc&limit=1`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/feed_advice_history?user_id=eq.${user.id}&source=eq.auto&select=*&order=calculation_date.desc&limit=1`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -60,7 +55,7 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
               return
             }
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error loading last calculation with direct fetch:', error)
           // Fall through to try normal Supabase query
         }
@@ -79,7 +74,6 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
       if (fetchError && fetchError.code !== 'PGRST116') {
         console.error('Error loading last calculation:', fetchError)
         if (fetchError.code === 'PGRST205') {
-          console.warn('feed_advice_history table not found - please run the SQL script first')
         }
         return
       }
@@ -108,7 +102,6 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
       // Show warning if insufficient data
       const insufficientData = !pondTemp.hasEnoughData || !ambientTemp.hasEnoughData
       if (insufficientData) {
-        console.warn('Onvoldoende data voor 3-daags gemiddelde - gebruik fallback waarden')
       }
 
       // Check if Supabase has a session
@@ -121,17 +114,12 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading data for automatic calculation using direct fetch...')
           
           // Load pond properties
           const pondResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/pond_properties?user_id=eq.${user.id}&select=*`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/pond_properties?user_id=eq.${user.id}&select=*`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -142,13 +130,9 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
           
           // Load koi data
           const koiResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi?user_id=eq.${user.id}&select=*`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi?user_id=eq.${user.id}&select=*`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -159,13 +143,9 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
           
           // Load water parameters
           const waterResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/water_parameters?user_id=eq.${user.id}&parameter_type=in.(ammonia,nitrite)&select=parameter_type,value,created_at&order=created_at.desc&limit=10`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/water_parameters?user_id=eq.${user.id}&parameter_type=in.(ammonia,nitrite)&select=parameter_type,value,created_at&order=created_at.desc&limit=10`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -173,7 +153,7 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
             const waterDataArray = await waterResponse.json()
             waterData = Array.isArray(waterDataArray) ? waterDataArray : [waterDataArray]
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error loading data with direct fetch:', error)
           // Fall through to try normal Supabase queries
         }
@@ -207,7 +187,6 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
         }
       }
 
-      console.log('Automatic calculation - loaded koi data:', koiData?.length || 0, 'fish')
 
       if (waterData.length === 0) {
         const { data: waterDataResult, error: waterError } = await supabase
@@ -320,13 +299,9 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
         if (!currentSession && session?.access_token) {
           try {
             const feedBrandResponse = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/feed_brands?merk=eq.${encodeURIComponent(selectedFeedBrand)}&select=rendement`,
+              `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/feed_brands?merk=eq.${encodeURIComponent(selectedFeedBrand)}&select=rendement`,
               {
-                headers: {
-                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                  'Authorization': `Bearer ${session.access_token}`,
-                  'Content-Type': 'application/json'
-                }
+                headers: createSupabaseHeaders(session.access_token)
               }
             )
             
@@ -343,7 +318,7 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
               const { getFeedBrandRendement } = await import('@/lib/feed-brand-database')
               feedBrandRendement = getFeedBrandRendement(selectedFeedBrand)
             }
-          } catch (error) {
+          } catch (_error) {
             const { getFeedBrandRendement } = await import('@/lib/feed-brand-database')
             feedBrandRendement = getFeedBrandRendement(selectedFeedBrand)
           }
@@ -363,7 +338,7 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
             feedBrandRendement = getFeedBrandRendement(selectedFeedBrand)
           }
         }
-      } catch (error) {
+      } catch (_error) {
         // Fallback to local database
         const { getFeedBrandRendement } = await import('@/lib/feed-brand-database')
         feedBrandRendement = getFeedBrandRendement(selectedFeedBrand)
@@ -382,11 +357,9 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
       
       // Assign koi to bands and calculate weights
       if (koiData && Array.isArray(koiData)) {
-        console.log('Processing koi data for automatic calculation:', koiData.length, 'fish')
-        koiData.forEach((koi, index) => {
+        koiData.forEach((koi, _index) => {
           // Use size_cm field from database
           const length = parseFloat(koi.size_cm) || 0
-          console.log(`Koi ${index + 1}: ${koi.name}, length: ${length}cm`)
           if (length > 0) {
             const weight = 0.014 * Math.pow(length, 3)
             if (length <= 30) {
@@ -480,17 +453,11 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSessionForSave && session?.access_token) {
         try {
-          console.log('Saving calculation using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/feed_advice_history`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/feed_advice_history`,
             {
               method: 'POST',
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
+              headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' }),
               body: JSON.stringify(calculationData)
             }
           )
@@ -499,7 +466,6 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
             const data = await response.json()
             calculation = Array.isArray(data) ? data[0] : data
             setLastAutoCalculation(calculation)
-            console.log('Calculation saved successfully:', calculation)
             return
           } else {
             const errorData = await response.json()
@@ -508,7 +474,7 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
             }
             throw new Error(`Fout bij opslaan berekening: ${errorData.message || response.statusText}`)
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error saving calculation with direct fetch:', error)
           throw error
         }
@@ -529,7 +495,6 @@ export function useAutomaticFeedCalculation(): UseAutomaticFeedCalculationResult
 
         calculation = calculationResult
         setLastAutoCalculation(calculation)
-        console.log('Calculation saved successfully:', calculation)
       }
       
     } catch (err) {

@@ -305,7 +305,7 @@ export function useFeedLogic() {
     const feedAmount = totalFeed / numFeeds
     const schedule: FeedSchedule[] = []
 
-    suggestedTimes.forEach((time, index) => {
+    suggestedTimes.forEach((time, _index) => {
       const timeString = time.toLocaleTimeString('nl-NL', { 
         hour: '2-digit', 
         minute: '2-digit' 

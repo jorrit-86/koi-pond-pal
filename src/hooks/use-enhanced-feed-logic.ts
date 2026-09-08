@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, createSupabaseHeaders } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { getFeedBrandRendement } from '@/lib/feed-brand-database'
 
@@ -65,15 +65,10 @@ export function useEnhancedFeedLogic() {
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading koi data for feed advisor using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi?user_id=eq.${user.id}&select=*&order=created_at.desc`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi?user_id=eq.${user.id}&select=*&order=created_at.desc`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -90,10 +85,9 @@ export function useEnhancedFeedLogic() {
             variety: koi.species || 'Onbekend'
           }))
 
-          console.log('Loaded koi data (direct fetch):', transformedData.length, 'fish')
           setKoiList(transformedData)
           return
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error loading koi data with direct fetch:', error)
           // Fall through to try normal Supabase query
         }
@@ -120,7 +114,6 @@ export function useEnhancedFeedLogic() {
         variety: koi.species || 'Onbekend'
       }))
 
-      console.log('Loaded koi data (normal query):', transformedData.length, 'fish')
       setKoiList(transformedData)
     } catch (error) {
       console.error('Error in loadKoiData:', error)
@@ -146,17 +139,12 @@ export function useEnhancedFeedLogic() {
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading pond profile using direct fetch with access token...')
           
           // Load pond properties
           const pondResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/pond_properties?user_id=eq.${user.id}&select=*`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/pond_properties?user_id=eq.${user.id}&select=*`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -167,13 +155,9 @@ export function useEnhancedFeedLogic() {
           
           // Load latest water parameters
           const waterResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/water_parameters?user_id=eq.${user.id}&parameter_type=in.(ammonia,nitrite)&select=parameter_type,value,created_at&order=created_at.desc&limit=10`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/water_parameters?user_id=eq.${user.id}&parameter_type=in.(ammonia,nitrite)&select=parameter_type,value,created_at&order=created_at.desc&limit=10`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -181,7 +165,7 @@ export function useEnhancedFeedLogic() {
             const waterDataArray = await waterResponse.json()
             waterData = Array.isArray(waterDataArray) ? waterDataArray : [waterDataArray]
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error loading pond profile with direct fetch:', error)
           // Fall through to try normal Supabase query
         }
@@ -411,7 +395,7 @@ export function useEnhancedFeedLogic() {
   }
 
   // Main calculation function - Cohort-weighted approach
-  const calculateFeed = async (pondTemp: number, ambientTemp: number): Promise<FeedCalculation> => {
+  const calculateFeed = async (pondTemp: number, _ambientTemp: number): Promise<FeedCalculation> => {
     const warnings: string[] = []
     let status: 'good' | 'warning' | 'critical' = 'good'
     let statusMessage = ''
@@ -457,7 +441,6 @@ export function useEnhancedFeedLogic() {
 
     // 2) Temperature scale factor (applied to all bands)
     const tempScale = getTemperatureScale(pondTemp)
-    console.log(`🌡️ Feed Calculation: ${pondTemp}°C → tempScale: ${tempScale}`)
 
     // 3) Get current season and filter factor
     const seasonInfo = getSeason()
@@ -495,13 +478,9 @@ export function useEnhancedFeedLogic() {
       if (!currentSession && session?.access_token) {
         try {
           const feedBrandResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/feed_brands?merk=eq.${encodeURIComponent(selectedFeedBrand)}&select=rendement`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/feed_brands?merk=eq.${encodeURIComponent(selectedFeedBrand)}&select=rendement`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
@@ -516,7 +495,7 @@ export function useEnhancedFeedLogic() {
           } else {
             feedBrandRendement = getFeedBrandRendement(selectedFeedBrand)
           }
-        } catch (error) {
+        } catch (_error) {
           feedBrandRendement = getFeedBrandRendement(selectedFeedBrand)
         }
       } else {
@@ -534,7 +513,7 @@ export function useEnhancedFeedLogic() {
           feedBrandRendement = getFeedBrandRendement(selectedFeedBrand)
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // Fallback to local database
       feedBrandRendement = getFeedBrandRendement(selectedFeedBrand)
     }

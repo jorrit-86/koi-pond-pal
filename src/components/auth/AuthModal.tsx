@@ -9,7 +9,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { TwoFactorVerification } from './TwoFactorVerification'
-import { supabase } from '@/lib/supabase'
 
 interface AuthModalProps {
   isOpen: boolean
@@ -17,9 +16,9 @@ interface AuthModalProps {
   initialTab?: 'login' | 'register'
 }
 
-export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalProps) {
-  const { t } = useTranslation()
-  const { signIn, signUp, signOut, loading } = useAuth()
+export function AuthModal({ isOpen, onClose, initialTab: _initialTab = 'login' }: AuthModalProps) {
+  const { _t } = useTranslation()
+  const { signIn, signUp, _signOut, _loading } = useAuth()
   const [activeTab, setActiveTab] = useState('login') // Altijd 'login' - registratie is verborgen
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -33,10 +32,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
   const [show2FA, setShow2FA] = useState(false)
   const [pendingUser, setPendingUser] = useState<any>(null)
 
-  const isValidEmail = (email: string) => {
-    // More flexible email validation
-    return email.includes('@') && email.length > 3
-  }
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,7 +70,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
           setError('Registration successful! Your account is pending approval. You will receive an email once an administrator approves your registration.')
         }
       }
-    } catch (err) {
+    } catch (_err) {
       setError('An unexpected error occurred')
     } finally {
       setIsSubmitting(false)

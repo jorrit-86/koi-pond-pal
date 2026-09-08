@@ -1,4 +1,4 @@
-import { useState } from "react"
+﻿import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,11 +17,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import { SensorQrScanner } from "./sensor-qr-scanner"
+import { KoiotDevicePanel } from "./koiot-device-panel"
 // import { SensorTransferDialog } from "./sensor-transfer-dialog"
 // import { SensorStatusCard } from "./sensor-status-card"
 
 export function KOIoTSettings() {
-  const { t } = useTranslation()
+  const { _t } = useTranslation()
   const {
     sensors,
     transferRequests,
@@ -31,20 +32,21 @@ export function KOIoTSettings() {
     removeSensor,
     respondToTransferRequest,
     updateSensorName,
-    refreshSensors,
-    refreshTransferRequests
+    refreshSensors: _refreshSensors,
+    refreshTransferRequests: _refreshTransferRequests
   } = useSensorManagement()
 
   const {
     sensors: configSensors,
     loading: configLoading,
     error: configError,
+    loadSensors: refreshConfigSensors,
     updateSensorConfiguration,
     requestSensorRestart,
     formatMeasurementInterval,
     validateConfiguration,
-    getSensorDisplayName,
-    formatLatestReading
+    getSensorDisplayName: _getSensorDisplayName,
+    formatLatestReading: _formatLatestReading
   } = useKOIoTConfig()
 
   const [newSensorId, setNewSensorId] = useState("")
@@ -54,9 +56,11 @@ export function KOIoTSettings() {
   const [qrScanActive, setQrScanActive] = useState(false)
   const [editingSensor, setEditingSensor] = useState<UserSensor | null>(null)
   const [editingName, setEditingName] = useState("")
-  const [showTransferDialog, setShowTransferDialog] = useState(false)
+  const [_showTransferDialog, setShowTransferDialog] = useState(false)
   const [expandedSensors, setExpandedSensors] = useState<Record<string, boolean>>({})
-  const [individualSensorConfigs, setIndividualSensorConfigs] = useState<Record<string, Record<string, IndividualSensorConfig>>>({})
+  const [expandedDevices, setExpandedDevices] = useState<Record<string, boolean>>({})
+  const [expandedDeviceConfig, setExpandedDeviceConfig] = useState<Record<string, boolean>>({})
+  const [_individualSensorConfigs, setIndividualSensorConfigs] = useState<Record<string, Record<string, IndividualSensorConfig>>>({})
   
   // Configuration state
   const [editingConfig, setEditingConfig] = useState<string | null>(null)
@@ -73,6 +77,15 @@ export function KOIoTSettings() {
     log_level: 'info' as 'error' | 'warn' | 'info' | 'debug'
   })
   const [savingConfig, setSavingConfig] = useState(false)
+
+  // After ownership heal/provision, refresh the overview list from sensor_configurations
+  useEffect(() => {
+    if (!loading) {
+      void refreshConfigSensors()
+    }
+    // Only re-run when management loading finishes / sensor list size changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, sensors.length])
 
   const handleAddSensor = async () => {
     if (!newSensorId.trim()) {
@@ -92,19 +105,26 @@ export function KOIoTSettings() {
       const result = await addSensor(fullSensorId, newSensorName.trim() || undefined)
       
       if (result.success) {
-        toast.success("Sensor succesvol toegevoegd!")
+        await refreshConfigSensors()
+        toast.success(
+          result.healed
+            ? "Sensor opnieuw gekoppeld en zichtbaar gemaakt in het overzicht!"
+            : "Sensor succesvol toegevoegd!"
+        )
         setNewSensorId("")
         setNewSensorName("")
+        setQrScanActive(false)
         setShowAddDialog(false)
       } else if (result.requiresTransfer) {
         toast.info(result.error)
         setNewSensorId("")
         setNewSensorName("")
+        setQrScanActive(false)
         setShowAddDialog(false)
       } else {
         toast.error(result.error)
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("Er is een fout opgetreden bij het toevoegen van de sensor")
     } finally {
       setIsAddingSensor(false)
@@ -119,11 +139,12 @@ export function KOIoTSettings() {
     try {
       const result = await removeSensor(sensorId)
       if (result.success) {
+        await refreshConfigSensors()
         toast.success("Sensor succesvol verwijderd!")
       } else {
         toast.error(result.error)
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("Er is een fout opgetreden bij het verwijderen van de sensor")
     }
   }
@@ -143,7 +164,7 @@ export function KOIoTSettings() {
       } else {
         toast.error(result.error)
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("Er is een fout opgetreden bij het verwerken van het transfer verzoek")
     }
   }
@@ -158,7 +179,7 @@ export function KOIoTSettings() {
       } else {
         toast.error(result.error)
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("Er is een fout opgetreden bij het bijwerken van de sensor naam")
     }
   }
@@ -195,7 +216,7 @@ export function KOIoTSettings() {
       await updateSensorConfiguration(sensorId, configFormData)
       setEditingConfig(null)
       toast.success('Configuratie opgeslagen! ESP32 zal de nieuwe instellingen ophalen bij de volgende verbinding.')
-    } catch (err: any) {
+    } catch (err) {
       toast.error('Fout bij opslaan configuratie: ' + err.message)
     } finally {
       setSavingConfig(false)
@@ -206,7 +227,7 @@ export function KOIoTSettings() {
     try {
       await requestSensorRestart(sensorId)
       toast.success('Herstart aangevraagd! De ESP32 zal binnenkort herstarten.')
-    } catch (error: any) {
+    } catch (error) {
       toast.error(`Fout bij aanvragen herstart: ${error.message}`)
     }
   }
@@ -219,12 +240,9 @@ export function KOIoTSettings() {
         [sensorType]: config
       }
     }))
-    
-    // Show success message
-    toast.success(`Sensor configuratie voor ${config.display_name} opgeslagen!`)
   }
 
-  const toggleSensorExpansion = (sensorId: string) => {
+  const _toggleSensorExpansion = (sensorId: string) => {
     setExpandedSensors(prev => ({
       ...prev,
       [sensorId]: !prev[sensorId]
@@ -271,7 +289,6 @@ export function KOIoTSettings() {
       </div>
     )
   }
-
 
   // Show error if there's a critical error
   if (error || configError) {
@@ -415,460 +432,111 @@ export function KOIoTSettings() {
         </DialogContent>
       </Dialog>
 
-      {/* Sensors List */}
-      <div className="grid gap-4">
+      {/* Devices with nested sensor configuration */}
+      <div className="space-y-4">
         {configSensors.length === 0 ? (
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
                 <Wifi className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Geen sensoren gekoppeld</h3>
+                <h3 className="text-lg font-semibold mb-2">Geen devices gekoppeld</h3>
                 <p className="text-muted-foreground mb-4">
-                  Voeg je eerste KOIoT sensor toe om automatische waterkwaliteit monitoring te starten.
+                  Voeg je eerste KOIoT device toe om automatische monitoring te starten.
                 </p>
                 <Button onClick={() => setShowAddDialog(true)}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Eerste Sensor Toevoegen
+                  Eerste Device Toevoegen
                 </Button>
               </div>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <ErrorBoundary>
             {configSensors.map((device) => (
-              <div key={device.sensor_id} className="space-y-2">
-                {/* Sensor Status Card - Temporarily disabled */}
-                {/* <SensorStatusCard 
-                  sensorId={device.sensor_id} 
-                  sensorName={sensor.sensor_name || undefined}
-                /> */}
-                
-                {/* Sensor Management Card */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        {getStatusIcon('active')}
-                        <div>
-                          <CardTitle className="text-lg">
-                            {editingSensor?.id === device.sensor_id ? (
-                              <div className="flex items-center space-x-2">
-                                <Input
-                                  value={editingName}
-                                  onChange={(e) => setEditingName(e.target.value)}
-                                  className="h-8 w-48"
-                                />
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleUpdateSensorName(device.sensor_id, editingName)}
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setEditingSensor(null)
-                                    setEditingName("")
-                                  }}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-2">
-                                <span>{device.sensor_name || device.sensor_id}</span>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setEditingSensor({id: device.sensor_id, sensor_id: device.sensor_id, sensor_name: device.sensor_name || device.sensor_id, status: 'active'})
-                                    setEditingName(device.sensor_name || device.sensor_id)
-                                  }}
-                                >
-                                  <Settings className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </CardTitle>
-                          <CardDescription>
-                            ID: {device.sensor_id}
-                          </CardDescription>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {getStatusBadge('active')}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleRemoveSensor(device.sensor_id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-muted-foreground">
-                      Device: {device.sensor_id}
-                      {device.individual_sensors && device.individual_sensors.length > 0 && (
-                        <span> ÔÇó {device.individual_sensors.length} sensor(s) gekoppeld</span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              <KoiotDevicePanel
+                key={device.sensor_id}
+                device={device}
+                isDeviceOpen={expandedDevices[device.sensor_id] !== false}
+                isConfigOpen={
+                  expandedDeviceConfig[device.sensor_id] === true ||
+                  editingConfig === device.sensor_id
+                }
+                isSensorsOpen={expandedSensors[device.sensor_id] !== false}
+                isEditingConfig={editingConfig === device.sensor_id}
+                editingSensor={editingSensor}
+                editingName={editingName}
+                configFormData={configFormData}
+                savingConfig={savingConfig}
+                statusIcon={getStatusIcon('active')}
+                statusBadge={getStatusBadge('active')}
+                formatMeasurementInterval={formatMeasurementInterval}
+                onToggleDevice={() =>
+                  setExpandedDevices((prev) => ({
+                    ...prev,
+                    [device.sensor_id]: !(prev[device.sensor_id] !== false),
+                  }))
+                }
+                onToggleConfig={() => {
+                  const currentlyOpen =
+                    expandedDeviceConfig[device.sensor_id] === true ||
+                    editingConfig === device.sensor_id
+                  if (currentlyOpen) {
+                    setEditingConfig(null)
+                    setExpandedDeviceConfig((prev) => ({
+                      ...prev,
+                      [device.sensor_id]: false,
+                    }))
+                  } else {
+                    setExpandedDeviceConfig((prev) => ({
+                      ...prev,
+                      [device.sensor_id]: true,
+                    }))
+                  }
+                }}
+                onToggleSensors={() =>
+                  setExpandedSensors((prev) => ({
+                    ...prev,
+                    [device.sensor_id]: !(prev[device.sensor_id] !== false),
+                  }))
+                }
+                onEditingNameChange={setEditingName}
+                onStartRename={() => {
+                  setEditingSensor({
+                    id: device.sensor_id,
+                    sensor_id: device.sensor_id,
+                    sensor_name: device.sensor_name || device.sensor_id,
+                    status: 'active',
+                    user_id: '',
+                    created_at: '',
+                    updated_at: '',
+                  })
+                  setEditingName(device.sensor_name || device.sensor_id)
+                }}
+                onSaveRename={() =>
+                  handleUpdateSensorName(device.sensor_id, editingName)
+                }
+                onCancelRename={() => {
+                  setEditingSensor(null)
+                  setEditingName('')
+                }}
+                onRemoveDevice={() => handleRemoveSensor(device.sensor_id)}
+                onEditConfig={() => {
+                  setExpandedDeviceConfig((prev) => ({
+                    ...prev,
+                    [device.sensor_id]: true,
+                  }))
+                  handleEditConfig(device.sensor_id)
+                }}
+                onCancelEditConfig={() => setEditingConfig(null)}
+                onSaveConfig={() => handleSaveConfig(device.sensor_id)}
+                onConfigFormChange={setConfigFormData}
+                onRequestRestart={() => handleRequestRestart(device.sensor_id)}
+                onIndividualConfigUpdate={handleIndividualSensorConfigUpdate}
+              />
             ))}
-          </div>
+          </ErrorBoundary>
         )}
       </div>
-
-      {/* Sensor Configuration */}
-      {configSensors.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Sensor Configuratie
-            </CardTitle>
-            <CardDescription>
-              Configureer ESP32 instellingen voor je sensoren
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <ErrorBoundary>
-              {configSensors.map((device) => {
-                const isEditing = editingConfig === device.sensor_id
-                
-                return (
-                  <div key={device.sensor_id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="font-semibold">{device.sensor_name || device.sensor_id}</h4>
-                      <p className="text-sm text-muted-foreground">Device ID: {device.sensor_id}</p>
-                      {device.individual_sensors && device.individual_sensors.length > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          {device.individual_sensors.length} sensor(s) gekoppeld
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {device.pending_changes && (
-                        <Badge variant="outline" className="text-orange-600 border-orange-200">
-                          Pending Changes
-                        </Badge>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => isEditing ? setEditingConfig(null) : handleEditConfig(device.sensor_id)}
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        {isEditing ? 'Annuleren' : 'Configureren'}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {isEditing ? (
-                    <div className="space-y-6">
-                      {/* Measurement Settings */}
-                      <div className="space-y-4">
-                        <h5 className="font-medium flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          Meetinstellingen
-                        </h5>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor={`measurement_interval_${device.sensor_id}`}>Meetinterval (seconden)</Label>
-                            <Input
-                              id={`measurement_interval_${device.sensor_id}`}
-                              type="number"
-                              min="60"
-                              max="3600"
-                              value={configFormData.measurement_interval}
-                              onChange={(e) => setConfigFormData({
-                                ...configFormData,
-                                measurement_interval: parseInt(e.target.value) || 300
-                              })}
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Huidig: {formatMeasurementInterval(configFormData.measurement_interval)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* WiFi Settings */}
-                      <div className="space-y-4">
-                        <h5 className="font-medium flex items-center gap-2">
-                          <Wifi className="h-4 w-4" />
-                          WiFi Instellingen
-                        </h5>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor={`wifi_ssid_${device.sensor_id}`}>WiFi SSID</Label>
-                            <Input
-                              id={`wifi_ssid_${device.sensor_id}`}
-                              value={configFormData.wifi_ssid}
-                              onChange={(e) => setConfigFormData({
-                                ...configFormData,
-                                wifi_ssid: e.target.value
-                              })}
-                              placeholder="WiFi netwerk naam"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`wifi_password_${device.sensor_id}`}>WiFi Wachtwoord</Label>
-                            <Input
-                              id={`wifi_password_${device.sensor_id}`}
-                              type="password"
-                              value={configFormData.wifi_password}
-                              onChange={(e) => setConfigFormData({
-                                ...configFormData,
-                                wifi_password: e.target.value
-                              })}
-                              placeholder="WiFi wachtwoord"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id={`wifi_auto_connect_${device.sensor_id}`}
-                            checked={configFormData.wifi_auto_connect}
-                            onCheckedChange={(checked) => setConfigFormData({
-                              ...configFormData,
-                              wifi_auto_connect: checked
-                            })}
-                          />
-                          <Label htmlFor={`wifi_auto_connect_${device.sensor_id}`}>Automatisch verbinden</Label>
-                        </div>
-                      </div>
-
-                      {/* Sensor Settings */}
-                      <div className="space-y-4">
-                        <h5 className="font-medium flex items-center gap-2">
-                          <Thermometer className="h-4 w-4" />
-                          Sensor Instellingen
-                        </h5>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor={`temperature_offset_${device.sensor_id}`}>Temperatuur Offset (┬░C)</Label>
-                            <Input
-                              id={`temperature_offset_${device.sensor_id}`}
-                              type="number"
-                              step="0.1"
-                              value={configFormData.temperature_offset}
-                              onChange={(e) => setConfigFormData({
-                                ...configFormData,
-                                temperature_offset: parseFloat(e.target.value) || 0
-                              })}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`temperature_scale_${device.sensor_id}`}>Temperatuur Schaal</Label>
-                            <Input
-                              id={`temperature_scale_${device.sensor_id}`}
-                              type="number"
-                              step="0.1"
-                              min="0.1"
-                              value={configFormData.temperature_scale}
-                              onChange={(e) => setConfigFormData({
-                                ...configFormData,
-                                temperature_scale: parseFloat(e.target.value) || 1.0
-                              })}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Power Management */}
-                      <div className="space-y-4">
-                        <h5 className="font-medium flex items-center gap-2">
-                          <Power className="h-4 w-4" />
-                          Energiebeheer
-                        </h5>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id={`deep_sleep_enabled_${device.sensor_id}`}
-                            checked={configFormData.deep_sleep_enabled}
-                            onCheckedChange={(checked) => setConfigFormData({
-                              ...configFormData,
-                              deep_sleep_enabled: checked
-                            })}
-                          />
-                          <Label htmlFor={`deep_sleep_enabled_${device.sensor_id}`}>Deep Sleep inschakelen</Label>
-                        </div>
-                        {configFormData.deep_sleep_enabled && (
-                          <div>
-                            <Label htmlFor={`deep_sleep_duration_${device.sensor_id}`}>Deep Sleep Duur (seconden)</Label>
-                            <Input
-                              id={`deep_sleep_duration_${device.sensor_id}`}
-                              type="number"
-                              min="60"
-                              value={configFormData.deep_sleep_duration}
-                              onChange={(e) => setConfigFormData({
-                                ...configFormData,
-                                deep_sleep_duration: parseInt(e.target.value) || 3600
-                              })}
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Debug Settings */}
-                      <div className="space-y-4">
-                        <h5 className="font-medium flex items-center gap-2">
-                          <Bug className="h-4 w-4" />
-                          Debug Instellingen
-                        </h5>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id={`debug_mode_${device.sensor_id}`}
-                            checked={configFormData.debug_mode}
-                            onCheckedChange={(checked) => setConfigFormData({
-                              ...configFormData,
-                              debug_mode: checked
-                            })}
-                          />
-                          <Label htmlFor={`debug_mode_${device.sensor_id}`}>Debug Mode</Label>
-                        </div>
-                        <div>
-                          <Label htmlFor={`log_level_${device.sensor_id}`}>Log Level</Label>
-                          <Select
-                            value={configFormData.log_level}
-                            onValueChange={(value: 'error' | 'warn' | 'info' | 'debug') => setConfigFormData({
-                              ...configFormData,
-                              log_level: value
-                            })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="error">Error</SelectItem>
-                              <SelectItem value="warn">Warning</SelectItem>
-                              <SelectItem value="info">Info</SelectItem>
-                              <SelectItem value="debug">Debug</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center gap-2 pt-4 border-t">
-                        <Button 
-                          onClick={() => handleSaveConfig(device.sensor_id)}
-                          disabled={savingConfig}
-                        >
-                          {savingConfig ? 'Opslaan...' : 'Opslaan'}
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setEditingConfig(null)}
-                        >
-                          Annuleren
-                        </Button>
-                        <Button 
-                          variant="destructive" 
-                          onClick={() => handleRequestRestart(device.sensor_id)}
-                          className="ml-auto"
-                        >
-                          <Power className="h-4 w-4 mr-2" />
-                          Herstart ESP32
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      {/* Latest Readings Section */}
-
-                      <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                        <div>
-                          <span className="font-medium">Meetinterval:</span>
-                          <p className="text-muted-foreground">
-                            {device ? formatMeasurementInterval(device.measurement_interval) : '300 seconden'}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium">WiFi:</span>
-                          <p className="text-muted-foreground">
-                            {device?.wifi_ssid || 'Niet ingesteld'}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium">Temperatuur Offset:</span>
-                          <p className="text-muted-foreground">
-                            {device?.temperature_offset || 0}┬░C
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium">Deep Sleep:</span>
-                          <p className="text-muted-foreground">
-                            {device?.deep_sleep_enabled ? 'Ingeschakeld' : 'Uitgeschakeld'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex justify-end">
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => handleRequestRestart(device.sensor_id)}
-                        >
-                          <Power className="h-4 w-4 mr-2" />
-                          Herstart ESP32
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Individual Sensor Configurations */}
-                  {/* Individual Sensors */}
-                  {device.individual_sensors && device.individual_sensors.length > 0 && (
-                    <div className="mt-6 pt-6 border-t">
-                      <div className="flex items-center justify-between mb-4">
-                        <h5 className="font-medium flex items-center gap-2">
-                          <Thermometer className="h-4 w-4" />
-                          Individuele Sensoren
-                        </h5>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setExpandedSensors(prev => ({
-                            ...prev,
-                            [device.sensor_id]: !prev[device.sensor_id]
-                          }))}
-                        >
-                          {expandedSensors[device.sensor_id] ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                          {expandedSensors[device.sensor_id] ? 'Inklappen' : 'Uitklappen'}
-                        </Button>
-                      </div>
-
-                      {expandedSensors[device.sensor_id] && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          {device.individual_sensors.map((individualSensor) => (
-                            <IndividualSensorConfigComponent
-                              key={individualSensor.sensor_id}
-                              sensorId={individualSensor.sensor_id}
-                              sensorType={individualSensor.sensor_type}
-                              config={individualSensor}
-                              onConfigUpdate={(sensorId, sensorType, config) => handleIndividualSensorConfigUpdate(sensorId, sensorType, config)}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-            </ErrorBoundary>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Transfer Requests */}
       {transferRequests.length > 0 && (

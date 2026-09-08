@@ -76,7 +76,7 @@ export function KoiAddPage({ onNavigate }: KoiAddPageProps) {
 
     try {
       // Save to database
-      const { data, error } = await supabase
+      const { _data, error } = await supabase
         .from('koi')
         .insert({
           user_id: user.id,

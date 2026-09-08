@@ -3,10 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Thermometer, Calendar, Filter, Info, Settings, AlertTriangle, CheckCircle, XCircle, RefreshCw, Clock } from 'lucide-react'
+import { Thermometer, Settings, AlertTriangle, CheckCircle, XCircle, RefreshCw, Clock } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { createSupabaseHeaders } from '@/lib/supabase'
 import { useEnhancedFeedLogic, FeedCalculation } from '@/hooks/use-enhanced-feed-logic'
 import { useAutoFeedCalculation } from '@/hooks/use-auto-feed-calculation'
 import { useAutomaticFeedCalculation } from '@/hooks/use-automatic-feed-calculation'
@@ -21,21 +21,21 @@ interface EnhancedFeedAdvisorProps {
 
 export function EnhancedFeedAdvisor({ onNavigate }: EnhancedFeedAdvisorProps) {
   const { user, session } = useAuth()
-  const { koiList, pondProfile, loading, error, loadKoiData, loadPondProfile, calculateFeed } = useEnhancedFeedLogic()
-  const { 
-    lastCalculation, 
-    schedule, 
-    isCalculating, 
-    error: autoError, 
-    triggerManualCalculation, 
-    checkCalculationDue 
+  const { koiList, pondProfile, loading, error, _loadKoiData, _loadPondProfile, calculateFeed } = useEnhancedFeedLogic()
+  const {
+    lastCalculation: _lastCalculation,
+    schedule: _schedule,
+    isCalculating: _isCalculating,
+    error: _autoError,
+    triggerManualCalculation: _triggerManualCalculation,
+    checkCalculationDue: _checkCalculationDue
   } = useAutoFeedCalculation()
   
   // New 3-day average and automatic calculation hooks
-  const { pondTemp: pondTempAvg, ambientTemp: ambientTempAvg, loading: avgLoading, error: avgError, refreshAverages } = use3DayAverage()
+  const { pondTemp: _pondTempAvg, ambientTemp: _ambientTempAvg, loading: _avgLoading, error: _avgError, _refreshAverages } = use3DayAverage()
   const { 
     lastAutoCalculation, 
-    loading: autoCalcLoading, 
+    loading: _autoCalcLoading,
     error: autoCalcError, 
     triggerManualCalculation: triggerNewManualCalc, 
     isCalculating: isAutoCalculating 
@@ -234,24 +234,18 @@ export function EnhancedFeedAdvisor({ onNavigate }: EnhancedFeedAdvisorProps) {
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token && user?.id) {
         try {
-          console.log('Loading sensor data using direct fetch with access token...')
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/sensor_data?user_id=eq.${user.id}&sensor_type=eq.temperatuurmeter&select=sensor_id,temperature,measurement_time,sensor_name,sensor_type&order=measurement_time.desc&limit=20`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/sensor_data?user_id=eq.${user.id}&sensor_type=eq.temperatuurmeter&select=sensor_id,temperature,measurement_time,sensor_name,sensor_type&order=measurement_time.desc&limit=20`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
           if (response.ok) {
             const data = await response.json()
             tempData = Array.isArray(data) ? data : [data]
-            console.log('Loaded sensor data (direct fetch):', tempData.length, 'records')
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error loading sensor data with direct fetch:', error)
           // Fall through to try normal Supabase query
         }
@@ -309,7 +303,6 @@ export function EnhancedFeedAdvisor({ onNavigate }: EnhancedFeedAdvisorProps) {
         pondSensor = uniqueSensors.find(s => s.sensor_id === savedPondSensor)
         // Verify it's actually a pond sensor (ends with -01)
         if (pondSensor && !pondSensor.sensor_id.endsWith('-01')) {
-          console.warn('Saved pond sensor is not sensor -01, using sensor -01 instead')
           pondSensor = null
         }
       }
@@ -318,7 +311,6 @@ export function EnhancedFeedAdvisor({ onNavigate }: EnhancedFeedAdvisorProps) {
       if (!pondSensor) {
         pondSensor = uniqueSensors.find(s => s.sensor_id.endsWith('-01'))
         if (pondSensor) {
-          console.log('Using sensor -01 for vijverwatertemperatuur:', pondSensor.sensor_id)
         }
       }
 
@@ -327,7 +319,6 @@ export function EnhancedFeedAdvisor({ onNavigate }: EnhancedFeedAdvisorProps) {
         ambientSensor = uniqueSensors.find(s => s.sensor_id === savedAmbientSensor)
         // Verify it's actually an ambient sensor (ends with -02)
         if (ambientSensor && !ambientSensor.sensor_id.endsWith('-02')) {
-          console.warn('Saved ambient sensor is not sensor -02, using sensor -02 instead')
           ambientSensor = null
         }
       }
@@ -336,7 +327,6 @@ export function EnhancedFeedAdvisor({ onNavigate }: EnhancedFeedAdvisorProps) {
       if (!ambientSensor) {
         ambientSensor = uniqueSensors.find(s => s.sensor_id.endsWith('-02'))
         if (ambientSensor) {
-          console.log('Using sensor -02 for buitentemperatuur:', ambientSensor.sensor_id)
         }
       }
 
@@ -344,7 +334,6 @@ export function EnhancedFeedAdvisor({ onNavigate }: EnhancedFeedAdvisorProps) {
         pondTemp = pondSensor.temperature
         pondSensorConnected = true
         lastUpdate = pondSensor.measurement_time
-        console.log('Selected pond sensor:', pondSensor.sensor_id, pondSensor.sensor_name, 'temp:', pondTemp)
       }
 
       if (ambientSensor) {
@@ -353,7 +342,6 @@ export function EnhancedFeedAdvisor({ onNavigate }: EnhancedFeedAdvisorProps) {
         if (!lastUpdate || new Date(ambientSensor.measurement_time) > new Date(lastUpdate)) {
           lastUpdate = ambientSensor.measurement_time
         }
-        console.log('Selected ambient sensor:', ambientSensor.sensor_id, ambientSensor.sensor_name, 'temp:', ambientTemp)
       }
 
       setSensorData({
@@ -422,7 +410,6 @@ export function EnhancedFeedAdvisor({ onNavigate }: EnhancedFeedAdvisorProps) {
   // Update feed rendement when brand changes
   useEffect(() => {
     const updateFeedRendement = async () => {
-      console.log('Badge update: Starting for brand:', selectedFeedBrand)
       try {
         const { supabase } = await import('@/lib/supabase')
         const { data: feedBrandData, error } = await supabase
@@ -432,17 +419,14 @@ export function EnhancedFeedAdvisor({ onNavigate }: EnhancedFeedAdvisorProps) {
           .single()
         
         if (!error && feedBrandData) {
-          console.log('Badge update: Supabase data found:', feedBrandData.rendement)
           setSelectedFeedRendement(feedBrandData.rendement)
         } else {
-          console.log('Badge update: Supabase error, using fallback')
           // Fallback to local database
           const { getFeedBrandRendement } = await import('@/lib/feed-brand-database')
           const rendement = getFeedBrandRendement(selectedFeedBrand)
-          console.log('Badge update: Local fallback:', rendement)
           setSelectedFeedRendement(rendement)
         }
-      } catch (error) {
+      } catch (_error) {
         // Fallback to local database
         const { getFeedBrandRendement } = await import('@/lib/feed-brand-database')
         const rendement = getFeedBrandRendement(selectedFeedBrand)

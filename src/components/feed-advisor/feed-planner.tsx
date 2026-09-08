@@ -1,6 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Clock, Droplets } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { FeedSchedule } from '@/hooks/use-feed-logic'
 
 interface FeedPlannerProps {
@@ -45,7 +44,7 @@ export function FeedPlanner({ feedSchedule, totalFeed, temperature, seasonInfo, 
     return null
   }
 
-  const getTemperatureColor = (temp: number) => {
+  const _getTemperatureColor = (temp: number) => {
     if (temp < 15) return 'text-blue-600'
     if (temp < 20) return 'text-green-600'
     return 'text-orange-600'

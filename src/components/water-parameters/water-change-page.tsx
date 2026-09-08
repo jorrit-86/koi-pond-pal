@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { ParameterPageTemplate } from "./parameter-page-template"
-import { supabase } from "@/lib/supabase"
+import { supabase, createSupabaseHeaders } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
 
 interface WaterChangePageProps {
@@ -112,23 +112,17 @@ export const WaterChangePage = ({ onNavigate }: WaterChangePageProps) => {
       // If no Supabase session but we have React session, use direct fetch
       if (!currentSession && session?.access_token) {
         try {
-          console.log('Loading water changes using direct fetch with access token...', { timeRange, startDate })
           const encodedStartDate = encodeURIComponent(startDate)
           const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/water_changes?user_id=eq.${user.id}&changed_at=gte.${encodedStartDate}&select=*&order=changed_at.desc`,
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/water_changes?user_id=eq.${user.id}&changed_at=gte.${encodedStartDate}&select=*&order=changed_at.desc`,
             {
-              headers: {
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-              }
+              headers: createSupabaseHeaders(session.access_token)
             }
           )
           
           if (response.ok) {
             const data = await response.json()
             waterChanges = Array.isArray(data) ? data : [data]
-            console.log('Loaded water changes (direct fetch):', waterChanges.length, 'records')
           } else if (response.status === 406 || response.status === 404) {
             // Table doesn't exist or not accessible - silently ignore
             setHistoricData([])
@@ -137,7 +131,7 @@ export const WaterChangePage = ({ onNavigate }: WaterChangePageProps) => {
             setStatus("critical")
             return
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error loading water changes with direct fetch:', error)
           // Fall through to try normal Supabase query
         }
@@ -186,17 +180,9 @@ export const WaterChangePage = ({ onNavigate }: WaterChangePageProps) => {
         const lastChange = waterChanges[0]
         const timeDiff = now.getTime() - new Date(lastChange.changed_at).getTime()
         const daysSinceLastChange = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
-        const hoursSinceLastChange = Math.floor(timeDiff / (1000 * 60 * 60))
-        const minutesSinceLastChange = Math.floor(timeDiff / (1000 * 60))
+        const _hoursSinceLastChange = Math.floor(timeDiff / (1000 * 60 * 60))
+        const _minutesSinceLastChange = Math.floor(timeDiff / (1000 * 60))
         
-        console.log('Water change calculation:', {
-          now: now.toISOString(),
-          lastChange: lastChange.changed_at,
-          timeDiff: timeDiff,
-          daysSinceLastChange: daysSinceLastChange,
-          hoursSinceLastChange: hoursSinceLastChange,
-          minutesSinceLastChange: minutesSinceLastChange
-        })
         
         // Store the raw time difference for proper formatting
         setCurrentValue(timeDiff)
@@ -241,12 +227,6 @@ export const WaterChangePage = ({ onNavigate }: WaterChangePageProps) => {
     const hours = Math.floor(timeDiffMs / (1000 * 60 * 60))
     const minutes = Math.floor(timeDiffMs / (1000 * 60))
     
-    console.log('Format display calculation:', {
-      timeDiffMs: timeDiffMs,
-      days: days,
-      hours: hours,
-      minutes: minutes
-    })
     
     if (days === 0) {
       if (hours === 0) {

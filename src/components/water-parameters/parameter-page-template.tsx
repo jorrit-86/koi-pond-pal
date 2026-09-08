@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Info, Timer, Play, Pause, RotateCcw, Clock } from "lucide-react"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine } from "recharts"
+import { ArrowLeft, Info, Timer, Play, Pause, RotateCcw } from "lucide-react"
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart"
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts"
 import { useParameterTimers } from "@/hooks/use-parameter-timers"
 import { useTranslation } from "react-i18next"
 
@@ -75,7 +75,7 @@ const transformDataForChart = (
     sensor_id?: string;
     sensor_name?: string;
   }>, 
-  timeRangeInfo?: { range: string; startDate: string; endDate: string }
+  _timeRangeInfo?: { range: string; startDate: string; endDate: string }
 ) => {
   if (!data || data.length === 0) {
     return []
@@ -179,7 +179,7 @@ export const ParameterPageTemplate = ({
 }: ParameterPageProps) => {
   const { t } = useTranslation()
   const [showInfo, setShowInfo] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
+  const [_isMobile, setIsMobile] = useState(false)
   
   // Detect available sensors from data
   const availableSensors = useMemo(() => {
@@ -239,11 +239,6 @@ export const ParameterPageTemplate = ({
       
       // Only update if the available sensors have changed
       if (initializedRef.current !== availableKeysStr) {
-        console.log('Initializing/updating visible sensors:', {
-          previous: initializedRef.current,
-          new: availableKeysStr,
-          availableSensors: availableSensors.map(s => ({ key: s.key, name: s.name }))
-        })
         setVisibleSensors(availableKeys)
         initializedRef.current = availableKeysStr
       }
@@ -252,26 +247,12 @@ export const ParameterPageTemplate = ({
   
   // Debug logging
   useEffect(() => {
-    console.log(`ParameterPageTemplate for ${parameterName}:`, {
-      historicDataLength: historicData?.length || 0,
-      currentValue,
-      hasDataInTimeRange,
-      availableSensors: availableSensors.length,
-      availableSensorKeys: availableSensors.map(s => ({ key: s.key, name: s.name, id: s.id })),
-      visibleSensors: Array.from(visibleSensors),
-      sampleData: historicData?.slice(0, 5).map(d => ({
-        sensor_id: d.sensor_id,
-        sensor_name: d.sensor_name,
-        value: d.value,
-        timestamp: d.timestamp
-      }))
-    })
   }, [parameterName, historicData, currentValue, hasDataInTimeRange, availableSensors, visibleSensors])
   
   
   // For now, we only show manual data (simplified)
-  const hasSensor1Data = false
-  const hasSensor2Data = false
+  const _hasSensor1Data = false
+  const _hasSensor2Data = false
   const { timerConfigs, timerStates, startTimer, stopTimer, resetTimer } = useParameterTimers()
 
   // Detect screen size for mobile/desktop
@@ -311,7 +292,7 @@ export const ParameterPageTemplate = ({
     }
   }
 
-  const formatDateRange = (startDate: string, endDate: string) => {
+  const _formatDateRange = (startDate: string, endDate: string) => {
     const start = new Date(startDate)
     const end = new Date(endDate)
     
@@ -420,12 +401,6 @@ export const ParameterPageTemplate = ({
           const domainStart = minDate - padding
           const domainEnd = endDate + padding
           
-          console.log('XAxis domain from data:', {
-            minDate: new Date(minDate).toLocaleDateString('nl-NL'),
-            maxDate: new Date(maxDate).toLocaleDateString('nl-NL'),
-            domainStart: new Date(domainStart).toLocaleDateString('nl-NL'),
-            domainEnd: new Date(domainEnd).toLocaleDateString('nl-NL')
-          })
           
           return [domainStart, domainEnd]
         }
@@ -680,7 +655,7 @@ export const ParameterPageTemplate = ({
                     const date = new Date(value)
                     if (isNaN(date.getTime())) return ""
                     // Show date in DD-MM format
-                    const [year, month, day] = date.toISOString().split('T')[0].split('-')
+                    const [_year, month, day] = date.toISOString().split('T')[0].split('-')
                     return `${day}-${month}`
                   }}
                 />
@@ -701,7 +676,7 @@ export const ParameterPageTemplate = ({
                   }}
                 />
                 <ChartTooltip 
-                  content={({ active, payload, label }) => {
+                  content={({ active, payload, label: _label }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload
                       
@@ -720,7 +695,6 @@ export const ParameterPageTemplate = ({
                       
                       // Validate the date
                       if (isNaN(date.getTime())) {
-                        console.warn('Invalid date parsed:', { data, dateTimeString: data.date + 'T' + data.time })
                         date = new Date()
                       }
                       

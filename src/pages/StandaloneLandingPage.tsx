@@ -6,18 +6,16 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Waves, 
-  Droplets, 
-  Fish, 
-  BarChart3, 
-  Shield, 
-  Smartphone, 
-  Globe, 
+import {
+  Droplets,
+  Fish,
+  BarChart3,
+  Shield,
+  Smartphone,
+  Globe,
   Users,
   CheckCircle,
-  LogIn,
-  Settings
+  LogIn
 } from 'lucide-react'
 import koiSenseiLogo from '@/assets/koi-sensei-logo.svg'
 
@@ -73,7 +71,7 @@ export function StandaloneLandingPage() {
     setShowAuthModal(true)
   }
 
-  const handleHiddenLoginClick = () => {
+  const _handleHiddenLoginClick = () => {
     setShowHiddenLogin(true)
   }
 

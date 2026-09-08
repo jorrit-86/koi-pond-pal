@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { useTranslation } from 'react-i18next'
 import { useMaintenanceTasks } from '@/hooks/use-maintenance-tasks'
-import { SkippedTask, MaintenanceTask, WaterChangeDetails, WaterParametersDetails } from '@/types/maintenance'
+import { WaterChangeDetails, WaterParametersDetails } from '@/types/maintenance'
 import { History, Calendar, X, CheckCircle, SkipForward, ChevronDown, ChevronUp, Droplets, TestTube, Filter } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
@@ -27,7 +27,7 @@ interface HistoryItem {
 }
 
 export function MaintenanceHistory({ onNavigate }: MaintenanceHistoryProps) {
-  const { t } = useTranslation()
+  const { _t } = useTranslation()
   const { 
     getSkippedTasks, 
     getCompletedTasks, 

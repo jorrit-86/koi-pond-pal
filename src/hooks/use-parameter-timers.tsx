@@ -1,6 +1,4 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import { supabase } from "@/lib/supabase"
-import { useAuth } from "@/contexts/AuthContext"
 
 interface TimerConfig {
   enabled: boolean
@@ -37,16 +35,6 @@ const defaultTimerConfigs: Record<string, TimerConfig> = {
 }
 
 export function ParameterTimersProvider({ children }: { children: ReactNode }) {
-  // Use try-catch to handle cases where AuthProvider is not available
-  let user = null
-  try {
-    const authContext = useAuth()
-    user = authContext?.user || null
-  } catch (error) {
-    // AuthProvider not available, continue without user
-    console.log('AuthProvider not available, using localStorage only')
-  }
-  
   const [isLoading, setIsLoading] = useState(false) // Set to false since we're using localStorage only
   
   // Load timer configs from localStorage immediately
@@ -56,7 +44,6 @@ export function ParameterTimersProvider({ children }: { children: ReactNode }) {
       if (saved) {
         try {
           const configs = JSON.parse(saved)
-          console.log('Initialized timer configs from localStorage:', configs)
           return configs
         } catch (error) {
           console.error('Error loading timer configs from localStorage:', error)
@@ -66,17 +53,8 @@ export function ParameterTimersProvider({ children }: { children: ReactNode }) {
     return defaultTimerConfigs
   })
   
-  // Sync localStorage configs to database (DISABLED - using localStorage only)
-  const syncLocalStorageToDatabase = async (configs: Record<string, TimerConfig>) => {
-    console.log('Database sync disabled - using localStorage only')
-    console.log('Timer configs are stored in localStorage:', configs)
-    // Database sync is disabled for now
-    return
-  }
-
   // Load timer configs from localStorage only (database sync disabled)
-  const loadTimerConfigsFromDatabase = async () => {
-    console.log('Loading timer configs from localStorage only')
+  const _loadTimerConfigsFromDatabase = async () => {
     
     // Always load from localStorage
     if (typeof window !== 'undefined') {
@@ -84,14 +62,12 @@ export function ParameterTimersProvider({ children }: { children: ReactNode }) {
       if (saved) {
         try {
           const configs = JSON.parse(saved)
-          console.log('Loaded from localStorage:', configs)
           setTimerConfigs(configs)
         } catch (error) {
           console.error('Error loading timer configs from localStorage:', error)
           setTimerConfigs(defaultTimerConfigs)
         }
       } else {
-        console.log('No localStorage data, using defaults')
         setTimerConfigs(defaultTimerConfigs)
       }
     }
@@ -207,7 +183,6 @@ export function ParameterTimersProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const updateTimerConfig = async (parameter: string, config: TimerConfig) => {
-    console.log('Updating timer config:', parameter, config)
     
     // Update local state immediately
     setTimerConfigs(prev => ({
@@ -222,11 +197,9 @@ export function ParameterTimersProvider({ children }: { children: ReactNode }) {
         [parameter]: config
       }
       localStorage.setItem('parameter-timer-configs', JSON.stringify(updatedConfigs))
-      console.log('Saved to localStorage:', updatedConfigs)
     }
 
     // Database sync is disabled - using localStorage only
-    console.log('Timer config saved to localStorage only (database sync disabled)')
   }
 
   const startTimer = (parameter: string) => {

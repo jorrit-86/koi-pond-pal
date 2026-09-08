@@ -129,7 +129,7 @@ export class SeasonalLogicService {
   /**
    * Get feeding advice based on seasonal phase
    */
-  private static getFeedingAdvice(phase: SeasonalPhase, temperature: number): FeedingAdvice {
+  private static getFeedingAdvice(phase: SeasonalPhase, _temperature: number): FeedingAdvice {
     switch (phase) {
       case 'deep_winter':
         return {
@@ -226,7 +226,7 @@ export class SeasonalLogicService {
   /**
    * Get filter advice based on seasonal phase
    */
-  private static getFilterAdvice(phase: SeasonalPhase, temperature: number): FilterAdvice {
+  private static getFilterAdvice(phase: SeasonalPhase, _temperature: number): FilterAdvice {
     switch (phase) {
       case 'deep_winter':
       case 'winter':
@@ -291,7 +291,7 @@ export class SeasonalLogicService {
   /**
    * Get water advice based on seasonal phase
    */
-  private static getWaterAdvice(phase: SeasonalPhase, temperature: number): WaterAdvice {
+  private static getWaterAdvice(phase: SeasonalPhase, _temperature: number): WaterAdvice {
     switch (phase) {
       case 'deep_winter':
       case 'winter':
@@ -356,7 +356,7 @@ export class SeasonalLogicService {
   /**
    * Generate seasonal recommendations
    */
-  private static generateRecommendations(phase: SeasonalPhase, temperature: number): string[] {
+  private static generateRecommendations(phase: SeasonalPhase, _temperature: number): string[] {
     const recommendations: string[] = []
     
     switch (phase) {
@@ -411,7 +411,7 @@ export class SeasonalLogicService {
   /**
    * Get educational explanation for seasonal behavior
    */
-  private static getEducationalExplanation(phase: SeasonalPhase, season: Season): string {
+  private static getEducationalExplanation(phase: SeasonalPhase, _season: Season): string {
     const explanations: Record<SeasonalPhase, string> = {
       'deep_winter': '❄️ Diepe winter: Koi zijn in winterslaap, metabolisme op minimum. Filter bacteriën zijn inactief.',
       'winter': '❄️ Winter: Koi zijn traag, filter werkt minimaal. Alleen circulatie nodig.',

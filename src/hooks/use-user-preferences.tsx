@@ -24,7 +24,6 @@ export const useUserPreferences = () => {
       if (error) {
         // Handle 406 errors gracefully - usually means RLS policy issue or table structure mismatch
         if ((error as any).status === 406 || error.code === 'PGRST116') {
-          console.warn('406 error loading preferences (RLS or schema issue):', error.message)
           setPreferences({})
           setLoading(false)
           return
@@ -35,7 +34,7 @@ export const useUserPreferences = () => {
 
       if (data) {
         // Filter out dashboard_sensor_selection if it exists (legacy field)
-        const { dashboard_sensor_selection, ...otherPreferences } = data
+        const { _dashboard_sensor_selection, ...otherPreferences } = data
         setPreferences(otherPreferences as UserPreferences)
       } else {
         setPreferences({})

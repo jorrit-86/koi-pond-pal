@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useSensorManagement, SensorTransferRequest } from "@/hooks/use-sensor-management"
-import { CheckCircle, XCircle, Clock, AlertTriangle, Wifi, Bell } from "lucide-react"
+import { CheckCircle, XCircle, AlertTriangle, Wifi, Bell } from "lucide-react"
 import { toast } from "sonner"
 
 export function SensorTransferNotification() {
@@ -41,7 +40,7 @@ export function SensorTransferNotification() {
       setProcessedRequests(prev => new Set([...prev, currentRequest.id]))
       setShowNotification(false)
       setCurrentRequest(null)
-    } catch (error) {
+    } catch (_error) {
       toast.error("Er is een fout opgetreden bij het accepteren van de transfer")
     }
   }
@@ -55,12 +54,12 @@ export function SensorTransferNotification() {
       setProcessedRequests(prev => new Set([...prev, currentRequest.id]))
       setShowNotification(false)
       setCurrentRequest(null)
-    } catch (error) {
+    } catch (_error) {
       toast.error("Er is een fout opgetreden bij het weigeren van de transfer")
     }
   }
 
-  const handleDismiss = () => {
+  const _handleDismiss = () => {
     if (currentRequest) {
       setProcessedRequests(prev => new Set([...prev, currentRequest.id]))
     }

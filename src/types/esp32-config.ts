@@ -18,6 +18,12 @@ export interface LatestReading {
   temperature: number
   sensor_type: string
   created_at: string
+  humidity?: number | null
+  ph?: number | null
+  /** Current flow in L/min — optional, only when flow meter is connected */
+  flow_rate?: number | null
+  /** Cumulative volume in L — monotonic counter; always use latest value, never average */
+  flow_total?: number | null
 }
 
 // KOIoT Sensor Configuration Types (Integrated)

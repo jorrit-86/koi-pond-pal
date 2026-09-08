@@ -1,9 +1,9 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Fish, Plus, Calendar, Ruler, Heart, BarChart3, ArrowLeft, Calculator, Archive } from "lucide-react"
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
+import { supabase, createSupabaseHeaders } from '@/lib/supabase'
 import { useAuth } from "@/contexts/AuthContext"
 import { calculateCurrentAge, getAgeDisplayText } from "@/lib/koi-age-utils"
 import { GrowthChart } from "./growth-chart"
@@ -54,7 +54,6 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
   // Load koi data from database with retry for auth errors
   const loadKoiData = async (retryCount = 0) => {
     if (!user) {
-      console.log('No user available, skipping koi data load')
       return
     }
     
@@ -66,7 +65,6 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
     
     if (!currentSession && !useDirectToken) {
       if (retryCount < 3) {
-        console.log(`No session available (attempt ${retryCount + 1}/3), waiting...`)
         await new Promise(resolve => setTimeout(resolve, 500))
         return loadKoiData(retryCount + 1)
       } else {
@@ -79,20 +77,14 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
     
     try {
       setLoading(true)
-      console.log('Loading koi data for user:', user.id, useDirectToken ? '(using direct fetch)' : '')
       
       // If using direct token, use fetch directly (don't call setSession - it causes 403 errors)
       if (useDirectToken && session?.access_token) {
         // Use fetch directly with the access token
         const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi?user_id=eq.${user.id}&select=*&order=created_at.desc`,
+          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi?user_id=eq.${user.id}&select=*&order=created_at.desc`,
           {
-            headers: {
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-              'Authorization': `Bearer ${session.access_token}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=representation'
-            }
+            headers: createSupabaseHeaders(session.access_token, { 'Prefer': 'return=representation' })
           }
         )
         
@@ -101,17 +93,8 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
         }
         
         const data = await response.json()
-        const error = null
-        
-        // Process the data as if it came from Supabase query
-        if (error) {
-          throw error
-        }
-        
-        console.log('Loaded koi data:', data?.length || 0, 'koi found')
-        
+
         if (!data || data.length === 0) {
-          console.log('No koi data found, setting empty list')
           setKoiList([])
           setLoading(false)
           return
@@ -125,13 +108,9 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
         if (koiIds.length > 0) {
           try {
             const photosResponse = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi_photos?koi_id=in.(${koiIds.join(',')})&is_primary=eq.true&select=koi_id,photo_url`,
+              `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi_photos?koi_id=in.(${koiIds.join(',')})&is_primary=eq.true&select=koi_id,photo_url`,
               {
-                headers: {
-                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                  'Authorization': `Bearer ${session.access_token}`,
-                  'Content-Type': 'application/json'
-                }
+                headers: createSupabaseHeaders(session.access_token)
               }
             )
             if (photosResponse.ok) {
@@ -140,8 +119,7 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
                 primaryPhotos.set(photo.koi_id, photo.photo_url)
               })
             }
-          } catch (error) {
-            console.log('Error loading photos:', error)
+          } catch (_error) {
           }
         }
         
@@ -153,13 +131,9 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
             // Use proper PostgREST syntax: in.(id1,id2,id3)
             const koiIdsParam = koiIds.map(id => encodeURIComponent(id)).join(',')
             const lengthResponse = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL || 'https://pbpuvumeshaeplbwbwzv.supabase.co'}/rest/v1/koi_log_entries?koi_id=in.(${koiIdsParam})&entry_type=eq.measurement&select=koi_id,length_cm,entry_date&order=entry_date.desc`,
+              `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/koi_log_entries?koi_id=in.(${koiIdsParam})&entry_type=eq.measurement&select=koi_id,length_cm,entry_date&order=entry_date.desc`,
               {
-                headers: {
-                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBicHV2dW1lc2hhZXBsYndid3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDc2MDMsImV4cCI6MjA3MzAyMzYwM30.RK3zOzlTGZ38ieRc7o6phdrHW8yhJTiXDHwUnEOrKt4',
-                  'Authorization': `Bearer ${session.access_token}`,
-                  'Content-Type': 'application/json'
-                }
+                headers: createSupabaseHeaders(session.access_token)
               }
             )
             
@@ -175,10 +149,8 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
                 }
               })
               
-              console.log('Loaded current lengths from logbook (direct fetch):', currentLengths.size, 'koi with measurements')
             }
-          } catch (error) {
-            console.log('Error loading lengths from logbook:', error)
+          } catch (_error) {
           }
         }
         
@@ -222,7 +194,6 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
       if (error) {
         // If auth error and we have React session, fall back to direct fetch
         if ((error.code === 'PGRST301' || error.message?.includes('JWT') || error.message?.includes('session')) && session?.access_token && retryCount === 0) {
-          console.log('Auth error detected, falling back to direct fetch...')
           // Skip to direct fetch path - the useDirectToken check at the top will handle it
           // Just return and let the function retry, which will trigger useDirectToken
           await new Promise(resolve => setTimeout(resolve, 100))
@@ -235,10 +206,8 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
         return
       }
 
-      console.log('Loaded koi data:', data?.length || 0, 'koi found')
 
       if (!data || data.length === 0) {
-        console.log('No koi data found, setting empty list')
         setKoiList([])
         setLoading(false)
         return
@@ -326,16 +295,13 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
   }, [refreshTrigger, user, session])
 
   const handleEditKoi = (koi: Koi) => {
-    console.log('handleEditKoi called for koi:', koi.name); // Debug log
     onEditKoi(koi.id, koi.name)
     onNavigate("koi-edit")
   }
 
   const handleShowGrowthChart = (koiId: string) => {
-    console.log('handleShowGrowthChart called with koiId:', koiId); // Debug log
     const koi = koiList.find(k => k.id === koiId)
     const koiName = koi?.name || koi?.species || koi?.variety || 'Onbekend'
-    console.log('Selected koi:', koi, 'Name:', koiName); // Debug log
     setSelectedKoiId(koiId)
     setSelectedKoiName(koiName)
     setShowGrowthChart(true)
@@ -586,7 +552,6 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
 
       {/* Growth Chart Dialog */}
       {selectedKoiId && (
-        console.log('Rendering GrowthChart with koiId:', selectedKoiId, 'koiName:', selectedKoiName, 'isOpen:', showGrowthChart) || 
         <GrowthChart
           koiId={selectedKoiId}
           koiName={selectedKoiName}
@@ -597,7 +562,6 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
             setSelectedKoiName('')
           }}
           onAddMeasurement={() => {
-            console.log('onAddMeasurement called from koi-management'); // Debug log
             
             // Close the growth chart first
             setShowGrowthChart(false)
@@ -605,14 +569,11 @@ export function KoiManagement({ onNavigate, onEditKoi, refreshTrigger }: KoiMana
             setSelectedKoiName('')
             
             // Use the existing edit function to open koi-edit with the selected koi
-            console.log('Using existing edit function to open koi-edit'); // Debug log
             const koi = koiList.find(k => k.id === selectedKoiId);
             if (koi) {
-              console.log('Opening koi-edit for koi:', koi.name); // Debug log
               onEditKoi(koi.id, koi.name);
               onNavigate("koi-edit");
             } else {
-              console.log('Koi not found, using fallback navigation'); // Debug log
               onNavigate("koi-edit");
             }
           }}

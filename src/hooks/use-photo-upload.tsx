@@ -39,10 +39,9 @@ export function usePhotoUpload() {
       const finalFileName = fileName || `${timestamp}.${fileExtension}`
       const filePath = `${user.id}/${folder}/${finalFileName}`
 
-      console.log('Attempting to upload photo:', { filePath, fileSize: file.size, fileType: file.type })
 
       // Upload file to Supabase Storage
-      const { data, error } = await supabase.storage
+      const { _data, error } = await supabase.storage
         .from('photos')
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -65,8 +64,7 @@ export function usePhotoUpload() {
         
         // Try with upsert: true if the file already exists
         if (error.message.includes('already exists')) {
-          console.log('File exists, trying with upsert')
-          const { data: retryData, error: retryError } = await supabase.storage
+          const { data: _retryData, error: retryError } = await supabase.storage
             .from('photos')
             .upload(filePath, file, {
               cacheControl: '3600',
@@ -100,7 +98,6 @@ export function usePhotoUpload() {
         }
         
         // If upload fails, try to save locally as fallback
-        console.log('Upload failed, trying local fallback')
         const localUrl = URL.createObjectURL(file)
         const localPath = `local/${user.id}/${folder}/${finalFileName}`
         
@@ -122,7 +119,6 @@ export function usePhotoUpload() {
         .from('photos')
         .getPublicUrl(filePath)
 
-      console.log('Upload successful:', { url: urlData.publicUrl, path: filePath })
 
       toast({
         title: t('photoUpload.photoUploaded'),
