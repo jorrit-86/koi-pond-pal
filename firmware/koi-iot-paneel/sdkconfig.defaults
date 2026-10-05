@@ -1,0 +1,149 @@
+# KOIoT Paneel - sdkconfig.defaults
+#
+# Blok 1 is letterlijk overgenomen uit Elecrow Lesson16 (V1.2) sdkconfig.defaults.
+# Blok 2 komt uit de bijgeleverde Elecrow-sdkconfig (de werkende configuratie) en
+# stond NIET in hun defaults maar is wel nodig (flash, partities, esp_hosted-SDIO-pinnen V1.2).
+# Blok 3 zijn eigen KOIoT-keuzes (gedocumenteerd in ARCHITECTUUR.md).
+
+# ---------------------------------------------------------------------------
+# 1. Elecrow Lesson16 V1.2 defaults (niet opschonen, zie brief par. 3)
+# ---------------------------------------------------------------------------
+CONFIG_IDF_TARGET="esp32p4"
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
+CONFIG_ESP32P4_REV_MIN_100=y
+CONFIG_ESP32P4_REV_MAX_FULL=199
+CONFIG_SPIRAM=y
+# Elecrow-defaults noemt CONFIG_SPIRAM_MODE_QUAD; dat symbool bestaat niet voor de
+# ESP32-P4 (alleen HEX, zie esp_psram/esp32p4/Kconfig.spiram) en de werkende
+# Elecrow-sdkconfig gebruikt HEX. Daarom hier expliciet HEX (32 MB PSRAM).
+CONFIG_SPIRAM_MODE_HEX=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_LV_COLOR_DEPTH_16=y
+CONFIG_LV_USE_CANVAS=y
+CONFIG_LV_FONT_MONTSERRAT_24=y
+CONFIG_LV_FONT_MONTSERRAT_30=y
+CONFIG_LV_FONT_MONTSERRAT_42=y
+CONFIG_LV_FONT_MONTSERRAT_48=y
+
+# ---------------------------------------------------------------------------
+# 2. Uit de Elecrow-sdkconfig (werkende config), nodig voor dit board
+# ---------------------------------------------------------------------------
+# Flash: 16 MB, DIO, 80 MHz
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+
+# Partitietabel: Elecrow partitions.csv (nvs, otadata, phy_init, factory, ota_0, ota_1)
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_OFFSET=0x8000
+
+# CPU / cache zoals Elecrow
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_360=y
+CONFIG_CACHE_L2_CACHE_128KB=y
+CONFIG_CACHE_L2_CACHE_LINE_64B=y
+
+# PSRAM-heapgedrag zoals Elecrow. 96 KB DMA-reserve (m15f) sneed de contiguous
+# intern+DMA-heap in stukken (m15g: grootste blok 212 KB i.p.v. ~304 KB).
+# Terug naar Elecrow 32 KB zodat hosted-RX één groot DMA-blok houdt. Hosted 2.7.0.
+CONFIG_SPIRAM_USE_MALLOC=y
+CONFIG_SPIRAM_MEMTEST=y
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=16384
+CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=32768
+CONFIG_SPIRAM_ALLOW_STACK_EXTERNAL_MEMORY=y
+
+# Wifi via ESP32-C6 co-processor: esp_hosted over SDIO (esp_wifi_remote)
+CONFIG_ESP_WIFI_REMOTE_ENABLED=y
+CONFIG_SLAVE_IDF_TARGET_ESP32C6=y
+CONFIG_ESP_HOSTED_ENABLED=y
+CONFIG_ESP_HOSTED_P4_DEV_BOARD_NONE=y
+CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE=y
+CONFIG_ESP_HOSTED_SDIO_RESET_ACTIVE_HIGH=y
+CONFIG_ESP_HOSTED_SDIO_OPTIMIZATION_RX_STREAMING_MODE=y
+CONFIG_ESP_HOSTED_SDIO_SLOT_1=y
+CONFIG_ESP_HOSTED_SDIO_4_BIT_BUS=y
+CONFIG_ESP_HOSTED_SDIO_CLOCK_FREQ_KHZ=40000
+# SDIO-pinnen hardwareversie V1.2 (LET OP: D0..D3 staan in omgekeerde volgorde
+# t.o.v. de Espressif P4-devboard-defaults 14/15/16/17; dit is het bekende V1.x-verschil).
+# De instelbare Kconfig-symbolen zijn de *_PRIV_*_SLOT_1-varianten; CONFIG_ESP_HOSTED_SDIO_PIN_*
+# zijn daarvan afgeleid (esp_hosted 2.7.0 Kconfig) en kunnen hier NIET direct gezet worden.
+CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_CMD_SLOT_1=19
+CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_CLK_SLOT_1=18
+CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D0_SLOT_1=17
+CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D1_4BIT_BUS_SLOT_1=16
+CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D2_4BIT_BUS_SLOT_1=15
+CONFIG_ESP_HOSTED_PRIV_SDIO_PIN_D3_4BIT_BUS_SLOT_1=14
+CONFIG_ESP_HOSTED_SDIO_GPIO_RESET_SLAVE=54
+CONFIG_ESP_HOSTED_SDIO_TX_Q_SIZE=20
+CONFIG_ESP_HOSTED_SDIO_RX_Q_SIZE=20
+CONFIG_ESP_HOSTED_SDIO_RESET_DELAY_MS=1500
+CONFIG_ESP_HOSTED_SLAVE_RESET_ON_EVERY_HOST_BOOTUP=y
+CONFIG_ESP_HOSTED_CLI_ENABLED=y
+
+# Touch (GT911, 5 punten) zoals Elecrow
+CONFIG_ESP_LCD_TOUCH_MAX_POINTS=5
+
+# BSP-Kconfig van Elecrow (defaults zijn al juist; expliciet voor de duidelijkheid)
+CONFIG_BSP_DISPLAY_ENABLED=y
+CONFIG_BSP_TOUCH_ENABLED=y
+CONFIG_H_SIZE=1024
+CONFIG_V_SIZE=600
+CONFIG_BITS_PER_PIXEL=16
+CONFIG_LCD_GPIO_BLIGHT=31
+CONFIG_BLIGHT_PWM_Hz=30000
+CONFIG_TOUCH_GPIO_RST=40
+CONFIG_TOUCH_GPIO_INT=42
+CONFIG_BSP_I2C_ENABLED=y
+CONFIG_I2C_PORT_NUM=0
+CONFIG_I2C_GPIO_SCL=46
+CONFIG_I2C_GPIO_SDA=45
+CONFIG_I2C_GPIO_PULLUP=y
+
+# ---------------------------------------------------------------------------
+# 3. KOIoT-keuzes
+# ---------------------------------------------------------------------------
+# R6: task-watchdog aan; timeout 10 s omdat esp_hosted-RPC's naar de C6 enkele
+# seconden kunnen blokkeren (net_manager-taak is bij de TWDT aangemeld).
+CONFIG_ESP_TASK_WDT_EN=y
+CONFIG_ESP_TASK_WDT_INIT=y
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=10
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0=y
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1=y
+
+# app_main doet meer (C++, LDO, display-init): ruimere stack
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# SNTP (R5): 1 server, herhaal elke 60 min (IDF-default)
+CONFIG_LWIP_SNTP_MAX_SERVERS=1
+CONFIG_LWIP_SNTP_UPDATE_DELAY=3600000
+
+# Extra LVGL-fonts voor het startscherm (ASCII-only; eigen Latin-1-fonts volgen later, brief par. 7)
+CONFIG_LV_FONT_MONTSERRAT_14=y
+CONFIG_LV_FONT_MONTSERRAT_20=y
+CONFIG_LV_FONT_DEFAULT_MONTSERRAT_24=y
+CONFIG_LV_USE_FLEX=y
+CONFIG_LV_USE_LINE=y
+# Geen lv_keyboard in de wizard (TWDT in allocate_button_areas). textarea/buttonmatrix
+# blijven aan: LVGL-msgbox/spinbox eisen ze; het paneel maakt ze niet aan.
+CONFIG_LV_USE_TEXTAREA=y
+CONFIG_LV_USE_BUTTONMATRIX=y
+CONFIG_LV_USE_KEYBOARD=n
+# Widgets via C-malloc (SPIRAM_USE_MALLOC kan PSRAM gebruiken). Builtin TLSF
+# is 64 KB en raakt vol na Overzicht+idle+invoerscherm (m2d: overlay_build
+# lv_obj_create -> init_obj(NULL) terwijl ESP-intern heap ~400 KB vrij was).
+# Niet LV_MEM_SIZE ophogen: dat eet intern/DMA. Hosted houdt 32 KB DMA-reserve.
+CONFIG_LV_USE_CLIB_MALLOC=y
+
+# Logniveau
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+
+# HTTPS naar Supabase (ha-status, later manual-measurement): certificaatbundel
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
+
+# R8 / M3f: OTA-rollback. Nieuwe image start als PENDING_VERIFY; zonder
+# esp_ota_mark_app_valid_cancel_rollback (of bij crash daarvoor) gaat de
+# bootloader terug naar de vorige app-partitie. Geen anti-rollback
+# (secure_version) — dat kan een image weigeren en het apparaat vastzetten.
+# Factory + ota_0 + ota_1 blijven 0x3F0000; hosted-DMA ongewijzigd.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y

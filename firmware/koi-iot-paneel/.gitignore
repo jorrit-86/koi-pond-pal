@@ -1,0 +1,19 @@
+# ESP-IDF build-uitvoer en gegenereerde configuratie
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+# dependencies.lock wordt WEL gecommit (gepinde componentversies uit het Elecrow-voorbeeld)
+
+# Secrets (W6): alleen het voorbeeldbestand main/secrets.example.h wordt gecommit
+main/secrets.h
+
+# Tijdelijke C++-compilerkopie (Device Guard blokkeert de Espressif g++-wrapper)
+.tmp-cxx/
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store
