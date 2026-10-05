@@ -1,0 +1,36 @@
+# Voorbeeld: paneelscherm aan/uit via een aanwezigheids- of deursensor in het pomphuis (B8).
+#
+# Het paneel kent de sensor niet. Home Assistant schakelt alleen de MQTT-switch
+# "Paneelscherm" (commandotopic koiiot/<panel_id>/scherm/set).
+#
+# Vervang:
+#   binary_sensor.POMPHUIS_SENSOR  -> de echte aanwezigheids- of deursensor
+#   switch.paneelscherm            -> de entiteit die HA na discovery aanmaakt
+#                                      (Instellingen -> Apparaten -> Koi IoT Paneel)
+
+alias: Pomphuis paneelscherm bij aanwezigheid
+description: >
+  Wekt het KOIoT-paneel naar Actief als er iemand in het pomphuis is,
+  en zet het scherm uit als de ruimte leeg is.
+mode: restart
+
+trigger:
+  - platform: state
+    entity_id: binary_sensor.POMPHUIS_SENSOR
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state in ['on', 'open'] }}"
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: switch.paneelscherm
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state in ['off', 'closed'] }}"
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: switch.paneelscherm
